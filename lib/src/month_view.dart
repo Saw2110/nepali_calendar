@@ -104,7 +104,7 @@ class _MonthViewState extends State<_MonthView>
 
   late NepaliDateTime _todayDate;
   late NepaliDateTime _currentDisplayedMonthDate;
-  late Timer _timer;
+  Timer? _timer;
   late PageController _dayPickerController;
   late AnimationController _chevronOpacityController;
   late Animation<double> _chevronOpacityAnimation;
@@ -119,7 +119,7 @@ class _MonthViewState extends State<_MonthView>
     var timeUntilTomorrow = tomorrow.difference(_todayDate);
     timeUntilTomorrow +=
         const Duration(seconds: 1); // so we don't miss it by rounding
-    _timer.cancel();
+    _timer!.cancel();
     _timer = Timer(timeUntilTomorrow, () {
       setState(_updateCurrentDate);
     });
@@ -282,7 +282,7 @@ class _MonthViewState extends State<_MonthView>
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer!.cancel();
     _dayPickerController.dispose();
     super.dispose();
   }
