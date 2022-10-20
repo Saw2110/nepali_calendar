@@ -34,7 +34,7 @@ class _MonthView extends StatefulWidget {
 
   final NepaliDateTime lastDate;
 
-  final SelectableDayPredicate selectableDayPredicate;
+  final SelectableDayPredicate? selectableDayPredicate;
 
   final DragStartBehavior dragStartBehavior;
 
