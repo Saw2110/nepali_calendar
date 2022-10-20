@@ -12,8 +12,8 @@ const int _kMaxDayPickerRowCount = 6; // A 31 day month that starts on Saturday.
 const double _kMaxDayPickerHeight =
     _kDayPickerRowHeight * (_kMaxDayPickerRowCount + 2);
 
-class CleanNepaliCalendar extends StatefulWidget {
-  const CleanNepaliCalendar({
+class NepaliCalendar extends StatefulWidget {
+  const NepaliCalendar({
     Key? key,
     required this.initialDate,
     required this.firstDate,
@@ -36,7 +36,7 @@ class CleanNepaliCalendar extends StatefulWidget {
   final NepaliDateTime firstDate;
   final NepaliDateTime lastDate;
   final Function(NepaliDateTime) onDaySelected;
-  final SelectableDayPredicate selectableDayPredicate;
+  final SelectableDayPredicate? selectableDayPredicate;
   final Language language;
   final CalendarStyle calendarStyle;
   final HeaderStyle headerStyle;
@@ -49,10 +49,10 @@ class CleanNepaliCalendar extends StatefulWidget {
   final HeaderBuilder headerBuilder;
 
   @override
-  _CleanNepaliCalendarState createState() => _CleanNepaliCalendarState();
+  _NepaliCalendarState createState() => _NepaliCalendarState();
 }
 
-class _CleanNepaliCalendarState extends State<CleanNepaliCalendar> {
+class _NepaliCalendarState extends State<NepaliCalendar> {
   @override
   void initState() {
     super.initState();
@@ -83,7 +83,7 @@ class _CleanNepaliCalendarState extends State<CleanNepaliCalendar> {
   }
 
   @override
-  void didUpdateWidget(CleanNepaliCalendar oldWidget) {
+  void didUpdateWidget(NepaliCalendar oldWidget) {
     super.didUpdateWidget(oldWidget);
     _selectedDate = widget.initialDate;
     widget.controller.setSelectedDay(widget.initialDate);

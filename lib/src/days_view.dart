@@ -67,7 +67,7 @@ class _DaysView extends StatelessWidget {
 
   final NepaliDateTime displayedMonth;
 
-  final SelectableDayPredicate selectableDayPredicate;
+  final SelectableDayPredicate? selectableDayPredicate;
 
   final DragStartBehavior dragStartBehavior;
 
@@ -158,7 +158,7 @@ class _DaysView extends StatelessWidget {
         final disabled = dayToBuild.isAfter(lastDate) ||
             dayToBuild.isBefore(firstDate) ||
             (selectableDayPredicate != null &&
-                !selectableDayPredicate(dayToBuild));
+                !selectableDayPredicate!(dayToBuild));
 
         final isSelectedDay = selectedDate.year == year &&
             selectedDate.month == month &&
