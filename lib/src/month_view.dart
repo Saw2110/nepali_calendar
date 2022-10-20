@@ -12,7 +12,7 @@ class _MonthView extends StatefulWidget {
     required this.language,
     required this.calendarStyle,
     required this.headerStyle,
-     this.selectableDayPredicate,
+    this.selectableDayPredicate,
     required this.onHeaderLongPressed,
     required this.onHeaderTapped,
     this.headerDayType = HeaderDayType.initial,
@@ -104,7 +104,7 @@ class _MonthViewState extends State<_MonthView>
 
   late NepaliDateTime _todayDate;
   late NepaliDateTime _currentDisplayedMonthDate;
-  Timer? _timer;
+  late Timer? _timer = Timer(const Duration(seconds: 0), () {});
   late PageController _dayPickerController;
   late AnimationController _chevronOpacityController;
   late Animation<double> _chevronOpacityAnimation;
