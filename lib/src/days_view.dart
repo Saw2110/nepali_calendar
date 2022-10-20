@@ -41,7 +41,7 @@ class _DaysView extends StatelessWidget {
     required this.language,
     required this.calendarStyle,
     required this.headerStyle,
-    required this.selectableDayPredicate,
+     this.selectableDayPredicate,
     this.dragStartBehavior = DragStartBehavior.start,
     this.headerDayType = HeaderDayType.initial,
     required this.headerDayBuilder,

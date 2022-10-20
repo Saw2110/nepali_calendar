@@ -18,7 +18,7 @@ class NepaliCalendar extends StatefulWidget {
     required this.initialDate,
     required this.firstDate,
     required this.lastDate,
-    required this.selectableDayPredicate,
+    this.selectableDayPredicate,
     this.language = Language.nepali,
     required this.onDaySelected,
     this.headerStyle = const HeaderStyle(),
