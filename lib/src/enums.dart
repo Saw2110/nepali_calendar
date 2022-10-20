@@ -1,3 +1,3 @@
-part of nepali_calender;
+part of nepali_calendar;
 
 enum HeaderDayType { initial, halfName, fullName }
