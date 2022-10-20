@@ -12,7 +12,7 @@ class _MonthView extends StatefulWidget {
     required this.language,
     required this.calendarStyle,
     required this.headerStyle,
-    required this.selectableDayPredicate,
+     this.selectableDayPredicate,
     required this.onHeaderLongPressed,
     required this.onHeaderTapped,
     this.headerDayType = HeaderDayType.initial,
