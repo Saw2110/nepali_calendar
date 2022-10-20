@@ -1,4 +1,4 @@
-library nepali_calender;
+library nepali_calendar;
 
 import 'dart:async';
 import 'dart:math' as math;

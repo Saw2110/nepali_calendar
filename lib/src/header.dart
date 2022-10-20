@@ -1,30 +1,30 @@
-part of nepali_calender;
+part of nepali_calendar;
 
-typedef HeaderBuilder = Widget Function(
+typedef Widget HeaderBuilder(
   BoxDecoration decoration,
   double height,
   Function nextMonthHandler,
   Function prevMonthHandler,
-  NepaliDateTime? nepaliDateTime,
+  NepaliDateTime nepaliDateTime,
 );
 
 class _CalendarHeader extends StatelessWidget {
   const _CalendarHeader({
     Key? key,
     required Language language,
-    required Animation<double>? chevronOpacityAnimation,
+    required Animation<double> chevronOpacityAnimation,
     required bool isDisplayingFirstMonth,
-    required NepaliDateTime? previousMonthDate,
-    this.date,
+    required NepaliDateTime previousMonthDate,
+    required this.date,
     required bool isDisplayingLastMonth,
-    required NepaliDateTime? nextMonthDate,
+    required NepaliDateTime nextMonthDate,
     required HeaderStyle headerStyle,
     required Function() handleNextMonth,
     required Function() handlePreviousMonth,
     required this.onHeaderTapped,
     required this.onHeaderLongPressed,
     required changeToToday,
-    HeaderBuilder? headerBuilder,
+    required HeaderBuilder headerBuilder,
   })  : _chevronOpacityAnimation = chevronOpacityAnimation,
         _isDisplayingFirstMonth = isDisplayingFirstMonth,
         _previousMonthDate = previousMonthDate,
@@ -38,30 +38,30 @@ class _CalendarHeader extends StatelessWidget {
         _headerBuilder = headerBuilder,
         super(key: key);
 
-  final Animation<double>? _chevronOpacityAnimation;
+  final Animation<double> _chevronOpacityAnimation;
   final bool _isDisplayingFirstMonth;
-  final NepaliDateTime? _previousMonthDate;
-  final NepaliDateTime? date;
+  final NepaliDateTime _previousMonthDate;
+  final NepaliDateTime date;
   final bool _isDisplayingLastMonth;
-  final NepaliDateTime? _nextMonthDate;
+  final NepaliDateTime _nextMonthDate;
   final HeaderStyle _headerStyle;
   final Function() _handleNextMonth;
   final Function() _handlePreviousMonth;
   final Function() _changeToToday;
   final Language _language;
-  final HeaderGestureCallback? onHeaderTapped;
-  final HeaderGestureCallback? onHeaderLongPressed;
-  final HeaderBuilder? _headerBuilder;
+  final HeaderGestureCallback onHeaderTapped;
+  final HeaderGestureCallback onHeaderLongPressed;
+  final HeaderBuilder _headerBuilder;
 
   _onHeaderTapped() {
     if (onHeaderTapped != null) {
-      onHeaderTapped!(date);
+      onHeaderTapped(date);
     }
   }
 
   _onHeaderLongPressed() {
     if (onHeaderLongPressed != null) {
-      onHeaderLongPressed!(date);
+      onHeaderLongPressed(date);
     }
   }
 
@@ -71,7 +71,7 @@ class _CalendarHeader extends StatelessWidget {
       onTap: _onHeaderTapped,
       onLongPress: _onHeaderLongPressed,
       child: (_headerBuilder != null)
-          ? _headerBuilder!(_headerStyle.decoration, _kDayPickerRowHeight,
+          ? _headerBuilder(_headerStyle.decoration, _kDayPickerRowHeight,
               _handleNextMonth, _handlePreviousMonth, date)
           : Container(
               decoration: _headerStyle.decoration,
@@ -89,19 +89,21 @@ class _CalendarHeader extends StatelessWidget {
                     onTap: _changeToToday,
                     child: Text(
                       _language == Language.nepali ? "आज" : 'Today',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   Semantics(
                     sortKey: _MonthPickerSortKey.previousMonth,
                     child: FadeTransition(
-                      opacity: _chevronOpacityAnimation!,
+                      opacity: _chevronOpacityAnimation,
                       child: IconButton(
                         padding: _headerStyle.leftChevronPadding,
                         icon: _headerStyle.leftChevronIcon,
                         tooltip: _isDisplayingFirstMonth
                             ? null
-                            : 'Previous month ${formattedMonth(_previousMonthDate!.month, Language.english)} ${_previousMonthDate!.year}',
+                            : 'Previous month ${formattedMonth(_previousMonthDate.month, Language.english)} ${_previousMonthDate.year}',
                         onPressed: _isDisplayingFirstMonth
                             ? null
                             : _handlePreviousMonth,
@@ -111,13 +113,13 @@ class _CalendarHeader extends StatelessWidget {
                   Semantics(
                     sortKey: _MonthPickerSortKey.nextMonth,
                     child: FadeTransition(
-                      opacity: _chevronOpacityAnimation!,
+                      opacity: _chevronOpacityAnimation,
                       child: IconButton(
                         padding: _headerStyle.rightChevronPadding,
                         icon: _headerStyle.rightChevronIcon,
                         tooltip: _isDisplayingLastMonth
                             ? null
-                            : 'Next month ${formattedMonth(_nextMonthDate!.month, Language.english)} ${_nextMonthDate!.year}',
+                            : 'Next month ${formattedMonth(_nextMonthDate.month, Language.english)} ${_nextMonthDate.year}',
                         onPressed:
                             _isDisplayingLastMonth ? null : _handleNextMonth,
                       ),
@@ -131,7 +133,7 @@ class _CalendarHeader extends StatelessWidget {
 
   Widget _buildTitle() {
     return FadeTransition(
-      opacity: _chevronOpacityAnimation!,
+      opacity: _chevronOpacityAnimation,
       child: ExcludeSemantics(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -146,7 +148,7 @@ class _CalendarHeader extends StatelessWidget {
                             date,
                             _language,
                           )
-                        : '${formattedMonth(date!.month, _language)} - ${_language == Language.english ? date!.year : NepaliUnicode.convert('${date!.year}')}',
+                        : '${formattedMonth(date.month, _language)} - ${_language == Language.english ? date.year : NepaliUnicode.convert('${date.year}')}',
                     style: _headerStyle.titleTextStyle,
                     textAlign: _headerStyle.centerHeaderTitle
                         ? TextAlign.center
@@ -161,7 +163,7 @@ class _CalendarHeader extends StatelessWidget {
                         date,
                         _language,
                       )
-                    : "${getFormattedEnglishMonth(date!.toDateTime().month)}/${getFormattedEnglishMonth(date!.toDateTime().month + 1)} - ${date!.toDateTime().year}",
+                    : "${getFormattedEnglishMonth(date.toDateTime().month)}/${getFormattedEnglishMonth(date.toDateTime().month + 1)} - ${date.toDateTime().year}",
                 style: _headerStyle.titleTextStyle
                     .copyWith(fontWeight: FontWeight.normal, fontSize: 14),
                 textAlign: _headerStyle.centerHeaderTitle

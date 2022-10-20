@@ -1,7 +1,7 @@
 //  Copyright (c) 2019 Aleksander Woźniak
 //  Licensed under Apache License v2.0
 
-part of nepali_calender;
+part of nepali_calendar;
 
 /// Class containing styling for `TableCalendar`'s content.
 class CalendarStyle {

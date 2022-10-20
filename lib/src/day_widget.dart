@@ -1,6 +1,6 @@
-part of nepali_calender;
+part of nepali_calendar;
 
-typedef DateCellBuilder = Widget Function(
+typedef Widget DateCellBuilder(
   bool isToday,
   bool isSelected,
   bool isDisabled,
@@ -8,7 +8,7 @@ typedef DateCellBuilder = Widget Function(
   String label,
   String text,
   CalendarStyle calendarStyle,
-  bool? isWeekend,
+  bool isWeekend,
 );
 
 class _DayWidget extends StatelessWidget {
@@ -22,8 +22,8 @@ class _DayWidget extends StatelessWidget {
     required this.onTap,
     required this.calendarStyle,
     required this.day,
-    this.builder,
-    this.isWeekend,
+    required this.builder,
+    required this.isWeekend,
   }) : super(key: key);
 
   final bool isSelected;
@@ -34,12 +34,12 @@ class _DayWidget extends StatelessWidget {
   final Function() onTap;
   final CalendarStyle calendarStyle;
   final NepaliDateTime day;
-  final DateCellBuilder? builder;
-  final bool? isWeekend;
+  final DateCellBuilder builder;
+  final bool isWeekend;
 
   @override
   Widget build(BuildContext context) {
-    Decoration buildCellDecoration() {
+    Decoration _buildCellDecoration() {
       if (isSelected && calendarStyle.highlightSelected) {
         return BoxDecoration(
           color: calendarStyle.selectedColor,
@@ -57,7 +57,7 @@ class _DayWidget extends StatelessWidget {
       }
     }
 
-    TextStyle buildCellTextStyle() {
+    TextStyle _buildCellTextStyle() {
       if (isDisabled) {
         return calendarStyle.unavailableStyle;
       } else if (isSelected && calendarStyle.highlightSelected) {
@@ -70,19 +70,19 @@ class _DayWidget extends StatelessWidget {
     }
 
     return (builder != null)
-        ? builder!(isToday, isSelected, isDisabled, day, label, text,
+        ? builder(isToday, isSelected, isDisabled, day, label, text,
             calendarStyle, isWeekend)
         : AnimatedContainer(
             duration: const Duration(milliseconds: 2000),
-            decoration: buildCellDecoration(),
+            decoration: _buildCellDecoration(),
             child: Center(
               child: Semantics(
                 label: label,
                 selected: isSelected,
                 child: ExcludeSemantics(
                   child: Text(text,
-                      style: buildCellTextStyle().copyWith(
-                          color: isWeekend!
+                      style: _buildCellTextStyle().copyWith(
+                          color: isWeekend
                               ? calendarStyle.weekEndTextColor
                               : null)),
                 ),
