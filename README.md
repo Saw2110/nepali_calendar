@@ -45,20 +45,29 @@ lib
 
 ### Installation
 
-1. **Clone the repository**:
+1. **Add the dependency**:
 
-   ```bash
-   git clone https://github.com/your-username/nepali-calendar-flutter.git
-   cd nepali-calendar-flutter
+   Add the following to your `pubspec.yaml` file:
+
+   ```yaml
+   dependencies:
+     flutter:
+       sdk: flutter
+     mycalendar:
+       path: https://github.com/Saw2110/nepali_calendar.git
    ```
 
 2. **Install dependencies**:
+
+   Run the following command to install the dependencies:
 
    ```bash
    flutter pub get
    ```
 
 3. **Run the app**:
+
+   Use the following command to run the app:
 
    ```bash
    flutter run
@@ -72,7 +81,7 @@ lib
 
 ## Customization
 
-You can customize the appearance of the calendar by modifying the `NepaliCalenderStyle` class in `models/my_calendar_style.dart`. Available customization options include:
+You can customize the appearance of the calendar by modifying the `MyCalendarStyle` class. Available customization options include:
 
 - `selectedDateColor`: Color for the selected date.
 - `selectedTextColor`: Text color for the selected date.
