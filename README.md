@@ -111,7 +111,7 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         child: NepaliCalendar(
           initialDate: NepaliDateTime(year: 2080, month: 9),
-          calendarStyle: NepaliCalenderStyle(
+          calendarStyle: NepaliCalendarStyle(
             selectedDateColor: Colors.blueAccent,
             selectedTextColor: Colors.yellow,
             todayColor: Colors.greenAccent,

@@ -1,16 +1,25 @@
+// Import Flutter material package for UI components
 import 'package:flutter/material.dart';
 
+// Import custom source file containing calendar-related utilities
 import '../src.dart';
 
+// Widget to display a monthly calendar view with generic event type T
 class CalendarMonthView<T> extends StatelessWidget {
+  // Year to display in the calendar
   final int year;
+  // Month to display in the calendar
   final int month;
+  // Currently selected date
   final NepaliDateTime selectedDate;
+  // Optional list of calendar events
   final List<CalendarEvent<T>>? eventList;
-  final bool Function(T? event)? checkIsHoliday;
+  // Callback function when a day is selected
   final void Function(NepaliDateTime) onDaySelected;
-  final NepaliCalenderStyle calendarStyle;
+  // Style configuration for the calendar
+  final NepaliCalendarStyle calendarStyle;
 
+  // Constructor requiring all necessary parameters
   const CalendarMonthView({
     super.key,
     required this.year,
@@ -18,7 +27,6 @@ class CalendarMonthView<T> extends StatelessWidget {
     required this.selectedDate,
     required this.eventList,
     required this.onDaySelected,
-    this.checkIsHoliday,
     required this.calendarStyle,
   });
 
@@ -26,22 +34,16 @@ class CalendarMonthView<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const WeekdayHeader(),
+        // Display header row showing weekday names
+        WeekdayHeader(style: calendarStyle),
+        // Display grid of days for the month
         CalendarGrid<T>(
           year: year,
           month: month,
           selectedDate: selectedDate,
           eventList: eventList,
-          checkIsHoliday: checkIsHoliday,
           onDaySelected: onDaySelected,
           calendarStyle: calendarStyle,
-        ),
-        Flexible(
-          child: EventList<T>(
-            eventList: eventList,
-            selectedDate: selectedDate,
-            checkIsHoliday: checkIsHoliday,
-          ),
         ),
       ],
     );
