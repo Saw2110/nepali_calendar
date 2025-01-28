@@ -61,11 +61,15 @@ lib
 
    Run the following command to install the dependencies:
 
+   Run the following command to install the dependencies:
+
    ```bash
    flutter pub get
    ```
 
 3. **Run the app**:
+
+   Use the following command to run the app:
 
    Use the following command to run the app:
 
@@ -81,6 +85,7 @@ lib
 
 ## Customization
 
+You can customize the appearance of the calendar by modifying the `MyCalendarStyle` class. Available customization options include:
 You can customize the appearance of the calendar by modifying the `MyCalendarStyle` class. Available customization options include:
 
 - `selectedDateColor`: Color for the selected date.
