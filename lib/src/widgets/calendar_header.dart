@@ -33,7 +33,7 @@ class CalendarHeader extends StatelessWidget {
             // Check if controller is attached before navigating
             if (pageController.hasClients) {
               pageController.previousPage(
-                duration: const Duration(milliseconds: 300),
+                duration: const Duration(milliseconds: 500),
                 curve: Curves.easeInOut,
               );
             }

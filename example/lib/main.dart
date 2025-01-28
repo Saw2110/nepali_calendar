@@ -20,6 +20,8 @@ class MainApp extends StatelessWidget {
   }
 }
 
+final calendarController = NepaliCalendarController();
+
 /// Example screen demonstrating the usage of NepaliCalendar widget
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -30,6 +32,8 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         // Implementation of NepaliCalendar with various customization options
         child: NepaliCalendar(
+          controller: calendarController,
+
           // Pass the sorted list of events
           eventList: _sortedList(),
           // Define function to check if an event is a holiday
@@ -40,6 +44,11 @@ class HomeScreen extends StatelessWidget {
           },
           // Callback when selected day changes
           onDayChanged: (nepaliDateTime) {
+            // calendarController.jumpToToday();
+            calendarController.jumpToDate(
+              NepaliDateTime(year: 2080, month: 5, day: 15),
+            );
+
             debugPrint("ON DAY CHANGE => $nepaliDateTime");
           },
           // Callback when month changes
