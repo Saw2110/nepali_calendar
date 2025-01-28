@@ -4,22 +4,17 @@ import 'package:flutter/material.dart';
 // Import custom source file containing calendar utilities
 import 'src.dart';
 
-// Main Nepali Calendar widget with generic event type T
+// // Main Nepali Calendar widget with generic event type T
 class NepaliCalendar<T> extends StatefulWidget {
-  // Initial date to display in calendar
   final NepaliDateTime? initialDate;
-  // Optional list of calendar events
   final List<CalendarEvent<T>>? eventList;
-  // Optional function to determine if an event is a holiday
   final bool Function(CalendarEvent<T> event)? checkIsHoliday;
-  // Style configuration for the calendar
   final NepaliCalendarStyle calendarStyle;
-  // Callback when month is changed
   final void Function(NepaliDateTime _)? onMonthChanged;
-  // Callback when day is changed
   final void Function(NepaliDateTime _)? onDayChanged;
+  // Add controller parameter
+  final NepaliCalendarController? controller;
 
-  // Optional custom builder for event items
   final Widget? Function(
     BuildContext context,
     int index,
@@ -27,7 +22,6 @@ class NepaliCalendar<T> extends StatefulWidget {
     CalendarEvent<T> event,
   )? eventBuilder;
 
-  // Constructor with optional parameters
   const NepaliCalendar({
     super.key,
     this.initialDate,
@@ -37,32 +31,40 @@ class NepaliCalendar<T> extends StatefulWidget {
     this.onMonthChanged,
     this.onDayChanged,
     this.eventBuilder,
+    this.controller, // Add controller to constructor
   }) : assert(
           eventList == null || checkIsHoliday != null,
           'checkIsHoliday must be provided when eventList is not null',
         );
+
   @override
   State<NepaliCalendar> createState() => _NepaliCalendarState<T>();
 }
 
-// State class for NepaliCalendar
+// Modified State class
 class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
-  // Controller for page view
   late PageController _pageController;
-  // Currently displayed date
   late NepaliDateTime _currentDate;
-  // Currently selected date
   late NepaliDateTime _selectedDate;
-  // Current page index in page view
   late int _currentPageIndex;
 
   @override
   void initState() {
     super.initState();
-    // Initialize dates with provided initial date or current date
     _currentDate = widget.initialDate ?? NepaliDateTime.now();
     _selectedDate = _currentDate;
     _initializePageController();
+
+    // Attach controller if provided
+    widget.controller?._attach(this);
+  }
+
+  @override
+  void dispose() {
+    // Detach controller when widget is disposed
+    widget.controller?._detach();
+    _pageController.dispose();
+    super.dispose();
   }
 
   // Initialize page controller with correct initial page
@@ -176,4 +178,42 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
       },
     );
   }
+}
+
+class NepaliCalendarController {
+  _NepaliCalendarState? _calendarState;
+
+  // Attach state to controller
+  void _attach(_NepaliCalendarState state) {
+    _calendarState = state;
+  }
+
+  // Detach state from controller
+  void _detach() {
+    _calendarState = null;
+  }
+
+  // Jump to specific date
+  void jumpToDate(NepaliDateTime date) {
+    if (_calendarState == null) return;
+
+    final pageIndex =
+        ((date.year - CalendarUtils.calenderyearStart) * 12) + date.month - 1;
+
+    _calendarState!._pageController.animateToPage(
+      pageIndex,
+      duration: Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
+    _calendarState!._updateCurrentDate(date.year, date.month, date.day);
+  }
+
+  // Jump to today's date
+  void jumpToToday() {
+    final today = NepaliDateTime.now();
+    jumpToDate(today);
+  }
+
+  // Get currently selected date
+  NepaliDateTime? get selectedDate => _calendarState?._selectedDate;
 }
