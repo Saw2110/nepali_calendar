@@ -2,7 +2,7 @@ import '../src.dart';
 
 /// Represents a date and time in the Nepali calendar system (BS - Bikram Sambat)
 // class NepaliDateTime implements DateTime {
-class NepaliDateTime {
+class NepaliDateTime implements Comparable<NepaliDateTime> {
   /// Constructs a NepaliDateTime instance
   NepaliDateTime({
     required this.year,
@@ -85,13 +85,26 @@ class NepaliDateTime {
 
   @override
   String toString() {
-    return '$year-$month-$day $hour:$minute:$second.$millisecond';
+    final String twoDigitMonth = _padLeft(month.toString(), 2);
+    final String twoDigitDay = _padLeft(day.toString(), 2);
+    final String twoDigitHour = _padLeft(hour.toString(), 2);
+    final String twoDigitMinute = _padLeft(minute.toString(), 2);
+    final String twoDigitSecond = _padLeft(second.toString(), 2);
+    final String threeDigitMillisecond = _padLeft(millisecond.toString(), 3);
+    final String threeDigitMicrosecond = _padLeft(microsecond.toString(), 3);
+
+    return '$year-$twoDigitMonth-$twoDigitDay $twoDigitHour:$twoDigitMinute:$twoDigitSecond.$threeDigitMillisecond$threeDigitMicrosecond';
+  }
+
+  /// Helper method to pad a string with leading zeros
+  String _padLeft(String value, int padValue) {
+    return value.padLeft(padValue, '0');
   }
 
   int get weekday => _weekDay();
   int _weekDay() {
     final date = toDateTime();
-    return date.weekday +1;
+    return date.weekday + 1;
   }
 
   NepaliDateTime add(Duration duration) {
@@ -102,5 +115,32 @@ class NepaliDateTime {
   NepaliDateTime subtract(Duration duration) {
     final date = toDateTime();
     return date.subtract(duration).toNepaliDateTime();
+  }
+
+  /// Implement the compareTo method for sorting
+  @override
+  int compareTo(NepaliDateTime other) {
+    if (year != other.year) {
+      return year.compareTo(other.year);
+    }
+    if (month != other.month) {
+      return month.compareTo(other.month);
+    }
+    if (day != other.day) {
+      return day.compareTo(other.day);
+    }
+    if (hour != other.hour) {
+      return hour.compareTo(other.hour);
+    }
+    if (minute != other.minute) {
+      return minute.compareTo(other.minute);
+    }
+    if (second != other.second) {
+      return second.compareTo(other.second);
+    }
+    if (millisecond != other.millisecond) {
+      return millisecond.compareTo(other.millisecond);
+    }
+    return microsecond.compareTo(other.microsecond);
   }
 }

@@ -1,7 +1,18 @@
 import '../src.dart';
 
+/// Utility class for calendar-related calculations and operations.
+///
+/// This class provides methods for:
+/// * Checking if a date is today.
+/// * Calculating the difference between two Nepali dates.
+/// * Counting total days in Nepali calendar years.
+/// * Checking if a year is a leap year.
+/// * Accessing predefined English and Nepali calendar data.
 class CalendarUtils {
-  /// Whether or not the day is current day.
+  /// Checks if the given [date] is the current day.
+  ///
+  /// Compares the provided [date] with the current system date.
+  /// Returns `true` if the year, month, and day match; otherwise, `false`.
   static bool isToday(DateTime date) {
     final DateTime today = DateTime.now();
     return date.year == today.year &&
@@ -9,23 +20,43 @@ class CalendarUtils {
         date.day == today.day;
   }
 
+  /// Calculates the difference in days between two Nepali dates.
+  ///
+  /// - [date]: The first Nepali date.
+  /// - [refDate]: The second Nepali date to compare against.
+  /// Returns the absolute difference in days between the two dates.
   static int nepaliDateDifference(NepaliDateTime date, NepaliDateTime refDate) {
-    // Getting difference from the current nepaliDateTime
-    // with the nepaliDateTime provided
-    // final difference = (refDate.year-nepaliDateTime.year)*12*()
     final difference = _countTotalNepaliDays(date.year, date.month, date.day) -
         _countTotalNepaliDays(refDate.year, refDate.month, refDate.day);
     return (difference < 0 ? -difference : difference);
   }
 
+  /// Counts the total number of days from the start of the Nepali calendar
+  /// to the given Nepali date.
+  ///
+  /// - [year]: The Nepali year.
+  /// - [month]: The Nepali month.
+  /// - [day]: The Nepali day.
+  /// Returns the total number of days.
   static int _countTotalNepaliDays(int year, int month, int day) {
     var total = 0;
+
+    // If the year is before the start of the predefined Nepali calendar data,
+    // return 0.
     if (year < calenderyearStart) return 0;
+
+    // Get the Nepali year data for the given year.
     final yearData = nepaliYears[year]!;
+
+    // Add the days from the given day.
     total += day - 1;
+
+    // Add the days from all previous months in the given year.
     for (var i = 1; i < month; i++) {
       total += yearData[i];
     }
+
+    // Add the days from all previous years.
     for (var i = calenderyearStart; i < year; i++) {
       total += nepaliYears[i]!.first;
     }
@@ -33,20 +64,33 @@ class CalendarUtils {
     return total;
   }
 
+  /// Checks if the given [year] is a leap year.
+  ///
+  /// A leap year is divisible by 4 but not by 100, unless it is also divisible by 400.
+  /// Returns `true` if the year is a leap year; otherwise, `false`.
   static bool isLeapYear(int year) {
     return (year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0));
   }
 
+  /// Returns a list of days in each month for a non-leap English year.
   ///
+  /// The list contains the number of days in each month from January to December.
   static List<int> get englishMonths =>
       [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+  /// Returns a list of days in each month for a leap English year.
+  ///
+  /// The list contains the number of days in each month from January to December.
   static List<int> get englishLeapMonths =>
       [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-  ///
+  /// The starting year of the predefined Nepali calendar data.
+  static int calenderyearStart = 1969;
 
-  /// Predefined Nepali calendar year data
-  static const int calenderyearStart = 1969;
+  /// Predefined Nepali calendar year data.
+  ///
+  /// This map contains the total number of days in each Nepali year and the
+  /// number of days in each month for that year.
   static final Map<int, List<int>> nepaliYears = {
     calenderyearStart: [366, 31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
     1970: [365, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],

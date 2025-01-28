@@ -1,9 +1,14 @@
 export 'calendar_widget.dart';
+export 'enum/language.dart';
+export 'enum/title_type.dart';
 export 'extensions/date_extensions.dart';
 export 'models/calendar_style.dart';
 export 'models/event.dart';
 export 'models/nepali_date_time.dart';
 export 'utils/calendar_utils.dart';
+export 'utils/month_utils.dart';
+export 'utils/number_utils.dart';
+export 'utils/week_utils.dart';
 export 'widgets/calendar_cell.dart';
 export 'widgets/calendar_grid.dart';
 export 'widgets/calendar_header.dart';
