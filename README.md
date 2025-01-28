@@ -1,127 +1,86 @@
-# Nepali Calendar Flutter App
+# Nepali Calendar Flutter Package
 
-A Flutter application that displays a Nepali calendar with support for events, holidays, and customizable styles. The app allows users to navigate through months and years, view events, and mark holidays.
+[![Pub Version](https://img.shields.io/pub/v/nepali_calendar.svg)](https://pub.dev/packages/nepalicalendar)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Features
+A feature-rich Flutter package for implementing a Nepali calendar system in your applications. This provides a highly customizable calendar widget with support for Nepali (Bikram Sambat) and extensive styling options.
 
-- **Nepali Calendar**: Displays dates in the Nepali calendar format.
-- **Event Management**: Add and display events on specific dates.
-- **Holiday Marking**: Mark specific dates as holidays.
-- **Customizable Styles**: Customize the appearance of the calendar, including colors and text styles.
-- **Responsive Design**: Works on both mobile and tablet devices.
+## 📱 Preview
 
-## Folder Structure
+[Place screenshots/GIFs here showing different calendar views and features]
 
-``` dart
-lib
-├─ nepalicalender.dart
-└─ src
-   ├─ calendar_widget.dart
-   ├─ extensions
-   │  └─ date_extensions.dart
-   ├─ models
-   │  ├─ calendar_style.dart
-   │  ├─ event.dart
-   │  └─ nepali_date_time.dart
-   ├─ src.dart
-   ├─ utils
-   │  └─ calendar_utils.dart
-   └─ widgets
-      ├─ calendar_cell.dart
-      ├─ calendar_grid.dart
-      ├─ calendar_header.dart
-      ├─ calendar_month_view.dart
-      ├─ empty_cell.dart
-      ├─ event_list.dart
-      └─ weekday_header.dart
+## ✨ Key Features
+
+- **Dual Calendar System**
+  - Nepali dates `(Bikram Sambat)` display
+  - Optional English date conversion and display
+  - Automatic today's date highlighting
+  
+- **Navigation & Selection**
+  - Smooth month and year navigation
+  - Date selection with customizable highlighting
+  - Month and year picker dialogs
+  
+- **Events & Holidays**
+  - Event indicators
+  - Holiday highlighting support
+  
+- **Localization**
+  - Bilingual support (Nepali/English)
+  
+- **Customization**
+  - Extensive styling options for all components
+  - Custom themes support
+  - Configurable layouts and views
+
+## 📦 Installation
+
+Run this command:
+
+With Dart:
+
+```yaml
+ dart pub add nepalicalendar
+ ```
+
+With Flutter:
+
+```yaml
+ flutter pub add nepalicalendar
+ ```
+
+This will add a line like this to your package's pubspec.yaml
+
+```yaml
+dependencies:
+  nepalicalendar: ^latest_version
 ```
 
-## Getting Started
+Then run:
 
-### Prerequisites
+```bash
+flutter pub get
+```
 
-- Flutter SDK installed on your machine.
-- An IDE like Android Studio or VS Code with the Flutter plugin installed.
+## 🎯 Quick Start
 
-### Installation
-
-1. **Add the dependency**:
-
-   Add the following to your `pubspec.yaml` file:
-
-   ```yaml
-   dependencies:
-     flutter:
-       sdk: flutter
-     mycalendar:
-       path: https://github.com/Saw2110/nepali_calendar.git
-   ```
-
-2. **Install dependencies**:
-
-   Run the following command to install the dependencies:
-
-   Run the following command to install the dependencies:
-
-   ```bash
-   flutter pub get
-   ```
-
-3. **Run the app**:
-
-   Use the following command to run the app:
-
-   Use the following command to run the app:
-
-   ```bash
-   flutter run
-   ```
-
-## Usage
-
-- **Navigating the Calendar**: Use the left and right arrow buttons to navigate between months and years.
-- **Adding Events**: Modify the `eventList` in the `HomeScreen` to add events to specific dates.
-- **Marking Holidays**: Use the `checkIsHoliday` function to mark specific events as holidays.
-
-## Customization
-
-You can customize the appearance of the calendar by modifying the `MyCalendarStyle` class. Available customization options include:
-You can customize the appearance of the calendar by modifying the `MyCalendarStyle` class. Available customization options include:
-
-- `selectedDateColor`: Color for the selected date.
-- `selectedTextColor`: Text color for the selected date.
-- `todayColor`: Color for today's date.
-- `holidayColor`: Color for holidays.
-- `headerTextStyle`: Text style for the calendar header.
-- `defaultTextColor`: Default text color for dates.
-- `weekendColor`: Color for weekends.
-- `eventColor`: Color for event indicators.
-- `todayTextColor`: Text color for today's date.
-- `dayTextStyle`: Text style for dates.
-
-## Example
+1. Import the package:
 
 ```dart
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+import 'package:nepali_calendar/nepali_calendar.dart';
+```
 
+2. Add the calendar widget to your app:
+
+```dart
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: NepaliCalendar(
-          initialDate: NepaliDateTime(year: 2080, month: 9),
-          calendarStyle: NepaliCalendarStyle(
-            selectedDateColor: Colors.blueAccent,
-            selectedTextColor: Colors.yellow,
-            todayColor: Colors.greenAccent,
-            holidayColor: Colors.redAccent,
-            headerTextStyle: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.purple,
-            ),
-          ),
+      body: NepaliCalendar(
+        calendarStyle: NepaliCalendarStyle(
+          showEnglishDate: true,
+          showBorder: true,
         ),
       ),
     );
@@ -129,19 +88,117 @@ class HomeScreen extends StatelessWidget {
 }
 ```
 
-## Contributing
+## 🎨 Styling & Customization
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue if you find any bugs or have suggestions for improvements.
+### Calendar Style Configuration
 
-## License
+```dart
+NepaliCalendar(
+  calendarStyle: NepaliCalendarStyle(
+    // Basic Configuration
+    showEnglishDate: true,
+    showBorder: true,
+    language: Language.nepali,
+    
+    // Cell Styling
+    cellsStyle: CellStyle(
+      width: 45.0,
+      height: 45.0,
+      dayStyle: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: Colors.black87,
+      ),
+      todayColor: Colors.green.shade300,
+      selectedColor: Colors.blue.shade400,
+      dotColor: Colors.red,
+      holidayColor: Colors.red.shade100,
+    ),
+    
+    // Header Styling
+    headersStyle: HeaderStyle(
+      weekHeaderStyle: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+      ),
+      monthHeaderStyle: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: Colors.blue,
+      ),
+      yearHeaderStyle: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  ),
+)
+```
+
+### Event Management
+
+```dart
+// Define events
+final eventList = [
+  CalendarEvent(
+    date: NepaliDateTime(year: 2081, month: 10, day: 1),
+    isHoliday: true,
+    additionalInfo: Events(
+      title: "Dashain Festival",
+      description: "The biggest Hindu festival in Nepal.",
+      additionalInfo: "Public holiday",
+      eventType: "holiday",
+    ),
+  ),
+];
+
+// Add to calendar
+NepaliCalendar(
+  events: events,
+  onDaySelected: (date, events) {
+    // Handle date selection
+    print('Selected date: $date');
+    print('Events on this date: ${events.length}');
+  },
+)
+```
+
+## 🎮 Controllers
+
+```dart
+final calendarController = NepaliCalendarController();
+
+NepaliCalendar(
+  controller: calendarController,
+)
+
+// Navigate to specific date
+calendarController.jumpToDate(NepaliDateTime(2080, 5, 15));
+
+// Navigate to today
+calendarController.jumpToToday();
+
+// Get selected date
+final selectedDate = calendarController.selectedDate;
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how you can help:
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Open a Pull Request
+
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
+## 📧 Contact
 
-- Flutter team for the amazing framework.
-- Nepali calendar data sources for providing the necessary date information.
+For any queries or support, please:
 
----
-
-Feel free to customize this README file further to suit your project's needs. Happy coding! 🚀
+- Create an issue on GitHub
+- Email: <work.sabinghimire@gmail.com>
