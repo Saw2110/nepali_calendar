@@ -1,7 +1,16 @@
 name: nepalicalendar
-description: "A new Flutter package project."
+description: "A feature-rich flutter package for implementing a Nepali calendar system in your applications." 
 version: 0.0.1
-homepage:
+homepage: https://github.com/Saw2110/nepali_calendar.git
+
+plugin: 
+  platforms:
+    android:
+    ios:
+    # linux:
+    # macos:
+    # web:
+    # windows:
 
 environment:
   sdk: ^3.6.0
