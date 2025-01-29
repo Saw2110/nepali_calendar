@@ -4,7 +4,7 @@
 
 ``` dart
 lib
-├─ nepalicalender.dart
+├─ nepali_calendar_plus.dart
 └─ src
    ├─ calendar_widget.dart
    ├─ extensions
