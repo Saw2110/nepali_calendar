@@ -1,7 +1,7 @@
 // Import required Flutter material package
 import 'package:flutter/material.dart';
 // Import the Nepali Calendar package
-import 'package:nepalicalendar/nepalicalendar.dart';
+import 'package:nepali_calendar_plus/nepali_calendar_plus.dart';
 
 // Main entry point of the application
 void main() {
