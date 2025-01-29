@@ -1,6 +1,6 @@
 # Nepali Calendar Flutter Package
 
-[![Pub Version](https://img.shields.io/pub/v/nepalicalendar.svg)](https://pub.dev/packages/nepali_calendar_plus)
+[![Pub Version](https://img.shields.io/pub/v/nepali_calendar_plus.svg)](https://pub.dev/packages/nepali_calendar_plus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A feature-rich Flutter package for implementing a Nepali calendar system in your applications. This provides a highly customizable calendar widget with support for Nepali (Bikram Sambat) and extensive styling options.
@@ -64,13 +64,13 @@ flutter pub get
 
 ## 🎯 Quick Start
 
-1. Import the package:
+1.Import the package:
 
 ```dart
 import 'package:nepalicalendar/nepalicalendar.dart';
 ```
 
-2. Add the calendar widget to your app:
+2.Add the calendar widget to your app:
 
 ```dart
 class MyApp extends StatelessWidget {

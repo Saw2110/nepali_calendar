@@ -1,11 +1,14 @@
 
 # CHANGELOG
 
+## 0.0.3
+
+- Minor formatting issues in the documentation.
+- fix minor formatting issues in README.md
+
 ## 0.0.2
 
 - Improved documentation for better user understanding and usage guidance.
-
-- Minor formatting issues in the documentation.
 
 ## 0.0.1
 
