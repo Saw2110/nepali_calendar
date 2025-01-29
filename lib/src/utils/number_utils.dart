@@ -7,30 +7,30 @@
 class NepaliNumberConverter {
   /// Mapping of Nepali numerals to their corresponding English numerals.
   static const Map<String, String> _nepaliToEnglish = {
-    '०': '0', 
-    '१': '1', 
-    '२': '2', 
-    '३': '3', 
-    '४': '4', 
-    '५': '5', 
-    '६': '6', 
-    '७': '7', 
-    '८': '8', 
-    '९': '9', 
+    '०': '0',
+    '१': '1',
+    '२': '2',
+    '३': '3',
+    '४': '4',
+    '५': '5',
+    '६': '6',
+    '७': '7',
+    '८': '8',
+    '९': '9',
   };
 
   /// Mapping of English numerals to their corresponding Nepali numerals.
   static const Map<String, String> _englishToNepali = {
-    '0': '०', 
-    '1': '१', 
-    '2': '२', 
-    '3': '३', 
-    '4': '४', 
-    '5': '५', 
-    '6': '६', 
-    '7': '७', 
-    '8': '८', 
-    '9': '९', 
+    '0': '०',
+    '1': '१',
+    '2': '२',
+    '3': '३',
+    '4': '४',
+    '5': '५',
+    '6': '६',
+    '7': '७',
+    '8': '८',
+    '9': '९',
   };
 
   /// List of Nepali ordinal number representations.
@@ -38,14 +38,14 @@ class NepaliNumberConverter {
   /// The index corresponds to the number (e.g., index 1 is "पहिलो" for 1st).
   static const List<String> _ordinalNumbers = [
     'सुन्ना',
-    'पहिलो', 
-    'दोस्रो', 
-    'तेस्रो', 
-    'चौथो', 
-    'पाँचौँ', 
-    'छैटौँ', 
-    'सातौँ', 
-    'आठौँ', 
+    'पहिलो',
+    'दोस्रो',
+    'तेस्रो',
+    'चौथो',
+    'पाँचौँ',
+    'छैटौँ',
+    'सातौँ',
+    'आठौँ',
     'नौ',
   ];
 
