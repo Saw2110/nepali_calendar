@@ -1,6 +1,10 @@
 
 # CHANGELOG
 
+## 0.0.4
+
+- Preview images of the Nepali calendar features in the `README.md` for better visualization and user understanding.
+
 ## 0.0.3
 
 - Minor formatting issues in the documentation.
