@@ -7,7 +7,8 @@ A feature-rich Flutter package for implementing a Nepali calendar system in your
 
 ## 📱 Preview
 
-[Place screenshots/GIFs here showing different calendar views and features]
+| ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/1.jpg) | ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/2.jpg) | ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/3.jpg) | ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/4.jpg)  |
+| ------------- |:-------------:|:-------------:| -----:|
 
 ## ✨ Key Features
 
