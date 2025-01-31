@@ -15,7 +15,7 @@ class CalendarMonthView<T> extends StatelessWidget {
   // Optional list of calendar events
   final List<CalendarEvent<T>>? eventList;
   // Callback function when a day is selected
-  final void Function(NepaliDateTime) onDaySelected;
+  final OnDateSelected onDaySelected;
   // Style configuration for the calendar
   final NepaliCalendarStyle calendarStyle;
 

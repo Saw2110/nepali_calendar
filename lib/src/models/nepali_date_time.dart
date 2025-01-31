@@ -96,6 +96,22 @@ class NepaliDateTime implements Comparable<NepaliDateTime> {
     return '$year-$twoDigitMonth-$twoDigitDay $twoDigitHour:$twoDigitMinute:$twoDigitSecond.$threeDigitMillisecond$threeDigitMicrosecond';
   }
 
+  String toDateFormat() {
+    final String twoDigitMonth = _padLeft(month.toString(), 2);
+    final String twoDigitDay = _padLeft(day.toString(), 2);
+    return '$year-$twoDigitMonth-$twoDigitDay';
+  }
+
+  String toTimeFormat() {
+    final String twoDigitHour = _padLeft(hour.toString(), 2);
+    final String twoDigitMinute = _padLeft(minute.toString(), 2);
+    final String twoDigitSecond = _padLeft(second.toString(), 2);
+    final String threeDigitMillisecond = _padLeft(millisecond.toString(), 3);
+    final String threeDigitMicrosecond = _padLeft(microsecond.toString(), 3);
+
+    return '$twoDigitHour:$twoDigitMinute:$twoDigitSecond.$threeDigitMillisecond$threeDigitMicrosecond';
+  }
+
   /// Helper method to pad a string with leading zeros
   String _padLeft(String value, int padValue) {
     return value.padLeft(padValue, '0');
@@ -143,4 +159,14 @@ class NepaliDateTime implements Comparable<NepaliDateTime> {
     }
     return microsecond.compareTo(other.microsecond);
   }
+
+  // int get getDaysInMonth => getDaysInMonth();
+  // int getDaysInMonth() {
+  //   assert(year >= 1969 && year <= 2250, 'Supported year is 1970-2250');
+  //   assert(month >= 1 && month <= 12, 'Month must be between 1 and 12');
+
+  //   // The list for each year contains days of months, with the first element being the total days in the year
+  //   // The subsequent elements represent days in each month, so we can access the month's days directly
+  //   return CalendarUtils.nepaliYears[year]![month];
+  // }
 }

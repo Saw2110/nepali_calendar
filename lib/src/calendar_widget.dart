@@ -10,8 +10,8 @@ class NepaliCalendar<T> extends StatefulWidget {
   final List<CalendarEvent<T>>? eventList;
   final bool Function(CalendarEvent<T> event)? checkIsHoliday;
   final NepaliCalendarStyle calendarStyle;
-  final void Function(NepaliDateTime _)? onMonthChanged;
-  final void Function(NepaliDateTime _)? onDayChanged;
+  final OnDateSelected? onMonthChanged;
+  final OnDateSelected? onDayChanged;
   // Add controller parameter
   final NepaliCalendarController? controller;
 
@@ -86,9 +86,7 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
   // Update current date and trigger appropriate callbacks
   void _updateCurrentDate(int year, int month, int day) {
     final previousDate = _selectedDate;
-
     _selectedDate = NepaliDateTime(year: year, month: month, day: day);
-
     // Call appropriate callback based on what changed
     if (previousDate.month != month) {
       _onMonthChanged(month);
@@ -153,6 +151,7 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                         pageController: _pageController,
                         calendarStyle: calendarStyle,
                       ),
+
                   // Month view showing days grid
                   CalendarMonthView<T>(
                     year: year,

@@ -7,7 +7,7 @@ class CalendarCell<T> extends StatelessWidget {
   final NepaliDateTime date;
   final NepaliDateTime selectedDate;
   final CalendarEvent<T>? event;
-  final void Function(NepaliDateTime) onDaySelected;
+  final OnDateSelected onDaySelected;
   final NepaliCalendarStyle calendarStyle;
 
   const CalendarCell({
