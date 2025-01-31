@@ -7,7 +7,7 @@ class CalendarGrid<T> extends StatelessWidget {
   final int month;
   final NepaliDateTime selectedDate;
   final List<CalendarEvent<T>>? eventList;
-  final void Function(NepaliDateTime) onDaySelected;
+  final OnDateSelected onDaySelected;
   final NepaliCalendarStyle calendarStyle;
 
   const CalendarGrid({

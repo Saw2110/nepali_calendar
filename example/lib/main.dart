@@ -30,37 +30,57 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      ///
+      ///
       body: SafeArea(
         // Implementation of NepaliCalendar with various customization options
-        child: NepaliCalendar(
-          controller: calendarController,
+        child: Column(
+          children: [
+            ///
+            HorizontalNepaliCalendar(
+              initialDate: NepaliDateTime.now(),
+              calendarStyle: NepaliCalendarStyle(
+                language: Language.nepali,
+              ),
+              onDateSelected: (date) {
+                debugPrint("sad Date $date");
+              },
+            ),
 
-          // Pass the sorted list of events
-          eventList: _sortedList(),
-          // Define function to check if an event is a holiday
-          checkIsHoliday: (event) => event.isHoliday,
-          // Custom builder for event list items
-          eventBuilder: (context, index, _, event) {
-            return EventWidget(event: event);
-          },
-          // Callback when selected day changes
-          onDayChanged: (nepaliDateTime) {
-            // calendarController.jumpToToday();
-            calendarController.jumpToDate(
-              NepaliDateTime(year: 2080, month: 5, day: 15),
-            );
+            ///
+            SizedBox(height: 50.0),
 
-            debugPrint("ON DAY CHANGE => $nepaliDateTime");
-          },
-          // Callback when month changes
-          onMonthChanged: (nepaliDateTime) {
-            debugPrint("ON MONTH CHANGE => $nepaliDateTime");
-          },
-          // Customize calendar appearance
-          calendarStyle: const NepaliCalendarStyle(
-            showEnglishDate: true, // Show English dates alongside Nepali dates
-            showBorder: false, // Hide borders
-          ),
+            ///
+            Expanded(
+              child: NepaliCalendar(
+                controller: calendarController,
+
+                // Pass the sorted list of events
+                eventList: _sortedList(),
+                // Define function to check if an event is a holiday
+                checkIsHoliday: (event) => event.isHoliday,
+                // Custom builder for event list items
+                eventBuilder: (context, index, _, event) {
+                  return EventWidget(event: event);
+                },
+                // Callback when selected day changes
+                onDayChanged: (nepaliDateTime) {
+                  debugPrint("ON DAY CHANGE => $nepaliDateTime");
+                },
+                // Callback when month changes
+                onMonthChanged: (nepaliDateTime) {
+                  debugPrint("ON MONTH CHANGE => $nepaliDateTime");
+                },
+                // Customize calendar appearance
+                calendarStyle: const NepaliCalendarStyle(
+                  showEnglishDate: true,
+                  showBorder: false,
+                ),
+              ),
+            ),
+
+            ///
+          ],
         ),
       ),
     );
