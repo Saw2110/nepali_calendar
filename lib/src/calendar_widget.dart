@@ -15,6 +15,12 @@ class NepaliCalendar<T> extends StatefulWidget {
   // Add controller parameter
   final NepaliCalendarController? controller;
 
+  ///
+  final Widget? Function(
+    NepaliDateTime nepaliDateTime,
+    PageController pageController,
+  )? headerBuilder;
+
   final Widget? Function(
     BuildContext context,
     int index,
@@ -31,7 +37,8 @@ class NepaliCalendar<T> extends StatefulWidget {
     this.onMonthChanged,
     this.onDayChanged,
     this.eventBuilder,
-    this.controller, // Add controller to constructor
+    this.controller,
+    this.headerBuilder,
   }) : assert(
           eventList == null || checkIsHoliday != null,
           'checkIsHoliday must be provided when eventList is not null',
@@ -140,11 +147,12 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
               child: Column(
                 children: [
                   // Calendar header with navigation
-                  CalendarHeader(
-                    selectedDate: _selectedDate,
-                    pageController: _pageController,
-                    calendarStyle: calendarStyle,
-                  ),
+                  widget.headerBuilder?.call(_selectedDate, _pageController) ??
+                      CalendarHeader(
+                        selectedDate: _selectedDate,
+                        pageController: _pageController,
+                        calendarStyle: calendarStyle,
+                      ),
                   // Month view showing days grid
                   CalendarMonthView<T>(
                     year: year,
