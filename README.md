@@ -41,20 +41,20 @@ Run this command:
 With Dart:
 
 ```yaml
- dart pub add nepalicalendar
+ dart pub add nepali_calendar_plus
  ```
 
 With Flutter:
 
 ```yaml
- flutter pub add nepalicalendar
+ flutter pub add nepali_calendar_plus
  ```
 
 This will add a line like this to your package's pubspec.yaml
 
 ```yaml
 dependencies:
-  nepalicalendar: ^latest_version
+  nepali_calendar_plus: ^latest_version
 ```
 
 Then run:
@@ -68,7 +68,7 @@ flutter pub get
 1.Import the package:
 
 ```dart
-import 'package:nepalicalendar/nepalicalendar.dart';
+import 'package:nepali_calendar_plus/nepali_calendar_plus.dart';
 ```
 
 2.Add the calendar widget to your app:
