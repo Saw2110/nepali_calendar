@@ -1,5 +1,9 @@
-
 # CHANGELOG
+
+## 0.0.5
+
+- **Horizontal Calendar**: Introduced a new horizontal calendar feature for enhanced user experience.
+- Resolved various minor issues to improve overall functionality and stability.
 
 ## 0.0.4
 
