@@ -7,14 +7,18 @@ A feature-rich Flutter package for implementing a Nepali calendar system in your
 
 ## 📱 Preview
 
-| ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/1.jpg) | ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/2.jpg) | ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/3.jpg) | ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/4.jpg)  |
-| ------------- |:-------------:|:-------------:| -----:|
+| ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/1.jpg) | ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/2.jpg) | ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/3.jpg) | ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/4.jpg)| ![Image](https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/5.jpg) |
+| ------------- |:-------------:|:-------------:|:-------------:|-----:|
 
 ## ✨ Key Features
 
 - **Dual Calendar System**
   - Nepali dates `(Bikram Sambat)` display
   - Optional English date conversion and display
+  - Automatic today's date highlighting
+  
+- **Horizontal Calendar System**
+  - Nepali dates `(Bikram Sambat)` display
   - Automatic today's date highlighting
   
 - **Navigation & Selection**
@@ -181,6 +185,20 @@ calendarController.jumpToToday();
 
 // Get selected date
 final selectedDate = calendarController.selectedDate;
+```
+
+## Horizontal Calender System
+
+```dart
+HorizontalNepaliCalendar(
+  initialDate: NepaliDateTime.now(),
+  calendarStyle: NepaliCalendarStyle(
+    language: Language.nepali,
+  ),
+  onDateSelected: (date) {
+    debugPrint("sad Date $date");
+  },
+),
 ```
 
 ## 🤝 Contributing
