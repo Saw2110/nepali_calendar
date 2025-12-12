@@ -17,7 +17,7 @@ class CalendarMonthView<T> extends StatelessWidget {
   // Callback function when a day is selected
   final OnDateSelected onDaySelected;
   // Style configuration for the calendar
-  final NepaliCalendarStyle calendarStyle;
+  final CalendarTheme calendarStyle;
 
   // Constructor requiring all necessary parameters
   const CalendarMonthView({
@@ -32,10 +32,14 @@ class CalendarMonthView<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing = calendarStyle.spacing;
+
     return Column(
       children: [
         // Display header row showing weekday names
         WeekdayHeader(style: calendarStyle),
+        // Spacing between weekday labels and cells
+        SizedBox(height: spacing.weekdaysToCellsSpacing),
         // Display grid of days for the month
         CalendarGrid<T>(
           year: year,

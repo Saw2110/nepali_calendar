@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../src.dart';
 
+/// Widget for displaying a single calendar day cell.
 class CalendarCell<T> extends StatelessWidget {
   final int day;
   final NepaliDateTime date;
   final NepaliDateTime selectedDate;
   final CalendarEvent<T>? event;
   final OnDateSelected onDaySelected;
-  final NepaliCalendarStyle calendarStyle;
+  final CalendarTheme calendarStyle;
 
   const CalendarCell({
     super.key,
@@ -22,70 +23,70 @@ class CalendarCell<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Check if the current date is today
+    final cellTheme = calendarStyle.cellTheme;
+
+    // Check various states
     final isToday = CalendarUtils.isToday(date.toDateTime());
-    // Check if the current date is the selected date
     final isSelected = _isSelectedDate(date);
-    // Check if the current date is a holiday
     final isHoliday = event?.isHoliday ?? false;
+    final isWeekend = date.weekday == 7; // Saturday
+    final hasEvent = event != null;
 
     return GestureDetector(
       onTap: () => onDaySelected(date),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          // Set the background color of the cell based on today and selected state
-          color: _getCellColor(isToday, isSelected),
-          // Add a border if the calendar style specifies to show borders
-          border: calendarStyle.showBorder
-              ? Border.all(
-                  color: _getCellColor(isToday, isSelected)
-                      .withValues(alpha: 0.05),
-                )
-              : null,
-          borderRadius: BorderRadius.circular(8),
+      child: Container(
+        decoration: _getCellDecoration(
+          isToday: isToday,
+          isSelected: isSelected,
+          isWeekend: isWeekend,
         ),
         child: Stack(
-          alignment: Alignment.bottomCenter,
+          alignment: Alignment.center,
           children: [
+            // Main date text
             Center(
               child: Text(
-                // Display the day in English or Nepali based on the calendar style
-                calendarStyle.language == Language.english
+                calendarStyle.locale == CalendarLocale.english
                     ? "$day"
                     : NepaliNumberConverter.englishToNepali(day.toString()),
-                style: calendarStyle.cellsStyle.dayStyle.copyWith(
-                  // Set the text color based on today, selected, and weekday
-                  color: _getCellTextColor(isToday, isSelected, date.weekday),
+                style: _getTextStyle(
+                  isToday: isToday,
+                  isSelected: isSelected,
+                  isWeekend: isWeekend,
+                  hasEvent: hasEvent,
                 ),
               ),
             ),
-            // Show the English date if the calendar style specifies to show it
-            if (calendarStyle.showEnglishDate)
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Padding(
-                  padding: const EdgeInsets.all(5.0),
-                  child: Text(
-                    "${date.toDateTime().day}",
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _getCellTextColor(
-                        isToday,
-                        isSelected,
-                        date.weekday,
-                      ),
-                    ),
+
+            // English date display
+            if (cellTheme.showEnglishDate)
+              Positioned(
+                right: 2,
+                bottom: 2,
+                child: Text(
+                  "${date.toDateTime().day}",
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: cellTheme.englishDateColor,
                   ),
                 ),
               ),
-            // Show an event indicator if there is an event
-            if (event != null)
+
+            // Event indicator
+            if (hasEvent)
               Positioned(
-                bottom: 5.0,
-                child: Icon(
-                  Icons.circle,
-                  size: 5,
-                  color: _getEventColor(isHoliday, isToday, date.weekday),
+                bottom: 2,
+                child: Container(
+                  width: cellTheme.eventIndicatorSize,
+                  height: cellTheme.eventIndicatorSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _getEventColor(
+                      isHoliday: isHoliday,
+                      isToday: isToday,
+                      isWeekend: isWeekend,
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -94,36 +95,102 @@ class CalendarCell<T> extends StatelessWidget {
     );
   }
 
-  // Method to get the cell background color based on today and selected state
-  Color _getCellColor(bool isToday, bool isSelected) {
-    if (isToday && isSelected) return calendarStyle.cellsStyle.todayColor;
-    if (isSelected) {
-      return calendarStyle.cellsStyle.selectedColor.withValues(
-        alpha: 0.2,
-      );
+  /// Gets the decoration for the cell based on state.
+  BoxDecoration _getCellDecoration({
+    required bool isToday,
+    required bool isSelected,
+    required bool isWeekend,
+  }) {
+    final cellTheme = calendarStyle.cellTheme;
+
+    // Determine background color
+    Color backgroundColor = Colors.transparent;
+
+    if (isToday) {
+      backgroundColor = cellTheme.todayBackgroundColor;
+    } else if (isSelected) {
+      backgroundColor = cellTheme.selectionColor.withValues(alpha: 0.2);
+    } else if (isWeekend && cellTheme.weekendBackgroundColor != null) {
+      backgroundColor = cellTheme.weekendBackgroundColor!;
     }
-    if (isToday) return calendarStyle.cellsStyle.todayColor;
-    return Colors.transparent;
+
+    return BoxDecoration(
+      color: backgroundColor,
+      border: cellTheme.showBorder ? cellTheme.cellBorder : null,
+      borderRadius: _getBorderRadius(),
+    );
   }
 
-  // Method to get the cell text color based on today, selected, and weekday
-  Color _getCellTextColor(bool isToday, bool isSelected, int weekday) {
-    if (isToday && isSelected) return Colors.white;
-    // if (isSelected) return Colors.white; // Commented out for now
+  /// Gets the border radius based on the cell shape.
+  BorderRadius _getBorderRadius() {
+    final cellTheme = calendarStyle.cellTheme;
+
+    switch (cellTheme.shape) {
+      case CellShape.circle:
+        return BorderRadius.circular(100);
+      case CellShape.roundedSquare:
+        return BorderRadius.circular(cellTheme.borderRadius ?? 8.0);
+      case CellShape.square:
+        return BorderRadius.zero;
+    }
+  }
+
+  /// Gets the text style for the cell based on state.
+  TextStyle _getTextStyle({
+    required bool isToday,
+    required bool isSelected,
+    required bool isWeekend,
+    required bool hasEvent,
+  }) {
+    final cellTheme = calendarStyle.cellTheme;
+
+    // Today
+    if (isToday) {
+      return cellTheme.todayTextStyle ??
+          cellTheme.defaultTextStyle.copyWith(
+            color: cellTheme.todayTextColor ?? Colors.white,
+          );
+    }
+
+    // Selected
+    if (isSelected) {
+      return cellTheme.selectedTextStyle ??
+          cellTheme.defaultTextStyle.copyWith(
+            color: cellTheme.selectedTextColor ?? cellTheme.selectionColor,
+          );
+    }
+
+    // Weekend
+    if (isWeekend) {
+      return cellTheme.weekendTextStyle ??
+          cellTheme.defaultTextStyle.copyWith(
+            color: cellTheme.weekendTextColor,
+          );
+    }
+
+    // Has event
+    if (hasEvent && cellTheme.eventDateTextStyle != null) {
+      return cellTheme.eventDateTextStyle!;
+    }
+
+    // Default
+    return cellTheme.defaultTextStyle;
+  }
+
+  /// Gets the event indicator color.
+  Color _getEventColor({
+    required bool isHoliday,
+    required bool isToday,
+    required bool isWeekend,
+  }) {
+    final cellTheme = calendarStyle.cellTheme;
+
     if (isToday) return Colors.white;
-    if (weekday == 7) return calendarStyle.cellsStyle.weekDayColor;
-    return Colors.black;
+    if (isHoliday || isWeekend) return cellTheme.weekendTextColor;
+    return cellTheme.eventIndicatorColor;
   }
 
-  // Method to get the event indicator color based on holiday, today, and weekday
-  Color _getEventColor(bool isHoliday, bool isToday, int weekday) {
-    if (weekday == 7) return calendarStyle.cellsStyle.weekDayColor;
-    if (isToday) return Colors.white;
-    if (isHoliday) return calendarStyle.cellsStyle.weekDayColor;
-    return calendarStyle.cellsStyle.dotColor;
-  }
-
-  // Method to check if the current date is the selected date
+  /// Checks if the current date is the selected date.
   bool _isSelectedDate(NepaliDateTime date) {
     return date.year == selectedDate.year &&
         date.month == selectedDate.month &&

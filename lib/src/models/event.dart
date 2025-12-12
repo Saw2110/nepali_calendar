@@ -6,26 +6,40 @@ import '../src.dart';
 /// Nepali calendar. It can include additional information and indicate whether
 /// the date is a holiday.
 ///
-/// Example usage: 1
+/// Example usage with new naming convention:
 /// ```dart
 /// final event = CalendarEvent(
-///   date: NepaliDateTime(2080, 1, 1),
+///   eventDate: NepaliDateTime(2080, 1, 1),
 ///   isHoliday: true,
-///   additionalInfo: 'New Year',
+///   eventMetadata: 'New Year',
 /// );
-/// Example usage: 2
+/// ```
+/// 
+/// Example with complex metadata:
 /// ```dart
 /// final event = CalendarEvent(
-///   date: NepaliDateTime(2080, 1, 1),
+///   eventDate: NepaliDateTime(2080, 1, 1),
 ///   isHoliday: true,
-///   additionalInfo: {},
+///   eventMetadata: {
+///     'title': 'New Year',
+///     'description': 'Nepali New Year celebration',
+///   },
+/// );
+/// ```
+/// 
+/// Legacy usage (deprecated but still supported):
+/// ```dart
+/// final event = CalendarEvent(
+///   date: NepaliDateTime(2080, 1, 1), // deprecated
+///   isHoliday: true,
+///   additionalInfo: 'New Year', // deprecated
 /// );
 /// ```
 class CalendarEvent<T> {
   /// The date associated with this event in the Nepali calendar.
   ///
   /// This is the primary identifier for the event.
-  final NepaliDateTime date;
+  final NepaliDateTime eventDate;
 
   /// Indicates whether the date is a holiday.
   ///
@@ -37,16 +51,42 @@ class CalendarEvent<T> {
   ///
   /// This can be used to store custom data related to the event, such as
   /// event descriptions, tags, or metadata.
-  final T? additionalInfo;
+  final T? eventMetadata;
+
+  // Deprecated properties for backward compatibility
+  
+  /// The date associated with this event in the Nepali calendar.
+  ///
+  /// This is the primary identifier for the event.
+  @Deprecated('Use eventDate instead. This will be removed in the next major version.')
+  NepaliDateTime get date => eventDate;
+
+  /// Additional information associated with the event.
+  ///
+  /// This can be used to store custom data related to the event, such as
+  /// event descriptions, tags, or metadata.
+  @Deprecated('Use eventMetadata instead. This will be removed in the next major version.')
+  T? get additionalInfo => eventMetadata;
 
   /// Creates a [CalendarEvent] instance.
   ///
-  /// - [date]: The Nepali date associated with the event.
+  /// - [eventDate]: The Nepali date associated with the event.
+  /// - [date]: Deprecated. Use [eventDate] instead.
   /// - [isHoliday]: Whether the date is a holiday. Default is `false`.
-  /// - [additionalInfo]: Optional additional information about the event.
+  /// - [eventMetadata]: Optional additional information about the event.
+  /// - [additionalInfo]: Deprecated. Use [eventMetadata] instead.
   CalendarEvent({
-    required this.date,
+    NepaliDateTime? eventDate,
+    @Deprecated('Use eventDate parameter instead. This will be removed in the next major version.')
+    NepaliDateTime? date,
     this.isHoliday = false,
-    this.additionalInfo,
-  });
+    T? eventMetadata,
+    @Deprecated('Use eventMetadata parameter instead. This will be removed in the next major version.')
+    T? additionalInfo,
+  })  : assert(
+          eventDate != null || date != null,
+          'Either eventDate or date (deprecated) must be provided',
+        ),
+        eventDate = eventDate ?? date!,
+        eventMetadata = eventMetadata ?? additionalInfo;
 }

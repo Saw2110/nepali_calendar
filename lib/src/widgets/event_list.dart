@@ -33,8 +33,8 @@ class EventList<T> extends StatelessWidget {
     // Filter events for selected month and year
     final eventsForMonth = eventList!.where(
       (event) =>
-          event.date.month == selectedDate.month &&
-          event.date.year == selectedDate.year,
+          event.eventDate.month == selectedDate.month &&
+          event.eventDate.year == selectedDate.year,
     );
 
     // Build scrollable list of events
@@ -50,7 +50,7 @@ class EventList<T> extends StatelessWidget {
         // Use custom item builder if provided, otherwise use default ListTile
         return itemBuilder?.call(context, index, event) ??
             ListTile(
-              title: Text(event.date.toString()),
+              title: Text(event.eventDate.toString()),
               leading: Icon(
                 Icons.circle,
                 size: 5,

@@ -8,7 +8,7 @@ class CalendarGrid<T> extends StatelessWidget {
   final NepaliDateTime selectedDate;
   final List<CalendarEvent<T>>? eventList;
   final OnDateSelected onDaySelected;
-  final NepaliCalendarStyle calendarStyle;
+  final CalendarTheme calendarStyle;
 
   const CalendarGrid({
     super.key,
@@ -34,12 +34,17 @@ class CalendarGrid<T> extends StatelessWidget {
     // Add the days of the month to the grid items
     gridItems.addAll(_buildMonthDays(year, month, daysCountInMonth));
 
+    // Get spacing from theme
+    final spacing = calendarStyle.spacing;
+
     return GridView.builder(
       shrinkWrap: true,
       padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7, // 7 columns for 7 days in a week
+        mainAxisSpacing: spacing.cellVerticalSpacing,
+        crossAxisSpacing: spacing.cellHorizontalSpacing,
       ),
       itemCount: gridItems.length,
       itemBuilder: (context, index) => gridItems[index],
@@ -74,14 +79,13 @@ class CalendarGrid<T> extends StatelessWidget {
 
   // Method to get the event for a specific date
   CalendarEvent<T>? _getEventForDate(NepaliDateTime date) {
-    if (eventList == null) return null; // Return null if no events are provided
+    if (eventList == null) return null;
     try {
-      // Find the event that matches the given date
       return eventList!.firstWhere(
         (e) =>
-            e.date.year == date.year &&
-            e.date.month == date.month &&
-            e.date.day == date.day,
+            e.eventDate.year == date.year &&
+            e.eventDate.month == date.month &&
+            e.eventDate.day == date.day,
       );
     } catch (e) {
       return null;

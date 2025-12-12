@@ -11,9 +11,10 @@ class HorizontalNepaliCalendar extends StatefulWidget {
     this.selectedColor,
     this.showMonth = true,
     required this.onDateSelected,
-    this.calendarStyle = const NepaliCalendarStyle(),
+    CalendarTheme? theme,
+    @Deprecated('Use theme instead') CalendarTheme? calendarStyle,
     this.headerBuilder,
-  });
+  }) : theme = theme ?? calendarStyle ?? const CalendarTheme.defaults();
 
   final NepaliDateTime? initialDate;
   final Color? textColor;
@@ -21,7 +22,15 @@ class HorizontalNepaliCalendar extends StatefulWidget {
   final Color? selectedColor;
   final bool showMonth;
   final OnDateSelected onDateSelected;
-  final NepaliCalendarStyle calendarStyle;
+
+  /// @Deprecated: Use theme instead
+  @Deprecated(
+    'Use theme instead. This will be removed in the next major version.',
+  )
+  CalendarTheme get calendarStyle => theme;
+
+  /// Theme configuration for the calendar.
+  final CalendarTheme theme;
   final Widget Function(
     NepaliDateTime currentDateTime,
     NepaliDateTime selectedDateTime,
@@ -66,19 +75,18 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
   Widget _buildMonthTitle() {
     final month = MonthUtils.formattedMonth(
       _selectedDate.month,
-      widget.calendarStyle.language,
+      widget.theme.locale,
     );
-    final year = widget.calendarStyle.language == Language.english
+    final year = widget.theme.locale == CalendarLocale.english
         ? "${_selectedDate.year}"
         : NepaliNumberConverter.englishToNepali(
             _selectedDate.year.toString(),
           );
 
-    ///
     return Text(
       "$year, $month",
       textAlign: TextAlign.start,
-      style: widget.calendarStyle.headersStyle.monthHeaderStyle,
+      style: widget.theme.headerTheme.monthTextStyle,
     );
   }
 
@@ -106,7 +114,7 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
                       _getCellTextColor(isToday, isSelected, date.weekday),
                   backgroundColor:
                       _getCellColor(isToday, isSelected, date.weekday),
-                  style: widget.calendarStyle,
+                  style: widget.theme,
                   onDatePressed: () => _handleDateSelection(date),
                 );
               },
@@ -135,18 +143,16 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
 // Method to get the cell background color based on today, selected state, and weekday
   Color _getCellColor(bool isToday, bool isSelected, int weekday) {
     if (isToday && weekday != 7) {
-      return widget.calendarStyle.cellsStyle.todayColor;
+      return widget.theme.cellTheme.todayBackgroundColor;
     }
     if (isToday && weekday == 7) {
-      return widget.calendarStyle.cellsStyle.weekDayColor;
+      return widget.theme.cellTheme.weekendTextColor;
     }
     if (isSelected && weekday != 7) {
-      return widget.calendarStyle.cellsStyle.selectedColor
-          .withValues(alpha: 0.2);
+      return widget.theme.cellTheme.selectionColor.withValues(alpha: 0.2);
     }
     if (isSelected && weekday == 7) {
-      return widget.calendarStyle.cellsStyle.weekDayColor
-          .withValues(alpha: 0.2);
+      return widget.theme.cellTheme.weekendTextColor.withValues(alpha: 0.2);
     }
 
     return Colors.transparent; // Default case
@@ -154,15 +160,20 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
 
 // Method to get the cell text color based on today, selected state, and weekday
   Color _getCellTextColor(bool isToday, bool isSelected, int weekday) {
-    if (isToday) return Colors.white; // Today always white text
+    final cellTheme = widget.theme.cellTheme;
+
+    if (isToday) {
+      return cellTheme.todayTextColor ?? Colors.white;
+    }
     if (isSelected && weekday != 7) {
-      return widget.calendarStyle.cellsStyle.selectedColor;
+      return cellTheme.selectedTextColor ?? cellTheme.selectionColor;
     }
     if (isSelected && weekday == 7) {
-      return widget.calendarStyle.cellsStyle.weekDayColor;
+      return cellTheme.weekendTextColor;
     }
-    if (weekday == 7) return widget.calendarStyle.cellsStyle.weekDayColor;
-    return Colors.black; // Default text color
+    if (weekday == 7) return cellTheme.weekendTextColor;
+    // Use default text style color
+    return cellTheme.defaultTextStyle.color ?? Colors.black;
   }
 }
 
@@ -180,7 +191,7 @@ class CalendarItem extends StatelessWidget {
   final Color textColor;
   final Color backgroundColor;
   final VoidCallback onDatePressed;
-  final NepaliCalendarStyle style;
+  final CalendarTheme style;
 
   @override
   Widget build(BuildContext context) {
@@ -202,10 +213,12 @@ class CalendarItem extends StatelessWidget {
             Text(
               WeekUtils.formattedWeekDay(
                 adjustedWeekday,
-                style.language,
-                style.headersStyle.weekTitleType,
+                style.locale,
+                style.weekdayTheme.format,
               ),
-              style: style.headersStyle.weekHeaderStyle.copyWith(
+              style: (style.weekdayTheme.textStyle ??
+                      const TextStyle(fontWeight: FontWeight.bold))
+                  .copyWith(
                 color: textColor,
                 fontWeight: FontWeight.normal,
                 fontSize: 13.0,
@@ -213,10 +226,10 @@ class CalendarItem extends StatelessWidget {
             ),
             // Display the day of the month
             Text(
-              style.language == Language.english
+              style.locale == CalendarLocale.english
                   ? "${date.day}"
                   : NepaliNumberConverter.englishToNepali(date.day.toString()),
-              style: style.cellsStyle.dayStyle.copyWith(
+              style: style.cellTheme.defaultTextStyle.copyWith(
                 color: textColor,
                 fontSize: 16.0,
                 fontWeight: FontWeight.bold,

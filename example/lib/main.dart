@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 // Import the Nepali Calendar package
 import 'package:nepali_calendar_plus/nepali_calendar_plus.dart';
 
+// Import the new theme example screen
+import 'new_theme_example.dart';
+
 // Main entry point of the application
 void main() {
   runApp(const MainApp());
@@ -14,9 +17,72 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HomeScreen(),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      home: const ExampleSelectionScreen(),
+    );
+  }
+}
+
+/// Screen to select between old and new API examples
+class ExampleSelectionScreen extends StatelessWidget {
+  const ExampleSelectionScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nepali Calendar Plus'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Choose Example',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+              ),
+              icon: const Icon(Icons.history),
+              label: const Text('Legacy API Example'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const NewThemeExampleScreen()),
+              ),
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('New Theme System Example'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -34,64 +100,105 @@ class HomeScreen extends StatelessWidget {
       ///
       body: SafeArea(
         // Implementation of NepaliCalendar with various customization options
-        child: Column(
-          children: [
-            ///
-            HorizontalNepaliCalendar(
-              initialDate: NepaliDateTime.now(),
-              calendarStyle: NepaliCalendarStyle(
-                language: Language.nepali,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              ///
+              HorizontalNepaliCalendar(
+                initialDate: NepaliDateTime.now(),
+                theme: CalendarTheme(
+                  locale: CalendarLocale.nepali,
+                ),
+                onDateSelected: (date) {
+                  debugPrint("sad Date $date");
+                },
               ),
-              onDateSelected: (date) {
-                debugPrint("sad Date $date");
-              },
-            ),
 
-            ///
-            SizedBox(height: 50.0),
+              ///
+              SizedBox(height: 50.0),
 
-            ///
-            Expanded(
-              child: NepaliCalendar(
-                controller: calendarController,
+              ///
+              SizedBox(
+                height: 450,
+                child: NepaliCalendar(
+                  controller: calendarController,
 
-                // Pass the sorted list of events
-                eventList: _sortedList(),
-                // Define function to check if an event is a holiday
-                checkIsHoliday: (event) => event.isHoliday,
-                // Custom builder for event list items
-                eventBuilder: (context, index, _, event) {
-                  return EventWidget(event: event);
-                },
-                // Callback when selected day changes
-                onDayChanged: (nepaliDateTime) {
-                  debugPrint("ON DAY CHANGE => $nepaliDateTime");
-                },
-                // Callback when month changes
-                onMonthChanged: (nepaliDateTime) {
-                  debugPrint("ON MONTH CHANGE => $nepaliDateTime");
-                },
-                // Customize calendar appearance
-                calendarStyle: const NepaliCalendarStyle(
-                  showEnglishDate: true,
-                  showBorder: false,
+                  // Pass the sorted list of events
+                  eventList: _sortedList(),
+                  // Define function to check if an event is a holiday
+                  checkIsHoliday: (event) => event.isHoliday,
+                  // Custom builder for event list items
+                  eventBuilder: (context, index, _, event) {
+                    return EventWidget(event: event);
+                  },
+                  // Callback when selected day changes
+                  onDayChanged: (nepaliDateTime) {
+                    debugPrint("ON DAY CHANGE => $nepaliDateTime");
+                  },
+                  // Callback when month changes
+                  onMonthChanged: (nepaliDateTime) {
+                    debugPrint("ON MONTH CHANGE => $nepaliDateTime");
+                  },
+                  // Customize calendar appearance (using deprecated params for backward compatibility)
+                  theme: CalendarTheme(
+                    showEnglishDate: true,
+                    showBorder: false,
+                  ),
                 ),
               ),
-            ),
 
-            ///
-          ],
+              ///
+              SizedBox(height: 50.0),
+
+              ///
+              SizedBox(
+                height: 450,
+                child: NepaliCalendar(
+                  controller: calendarController,
+
+                  // Pass the sorted list of events
+                  eventList: _sortedList(),
+                  // Define function to check if an event is a holiday
+                  checkIsHoliday: (event) => event.isHoliday,
+                  // Custom builder for event list items
+                  eventBuilder: (context, index, _, event) {
+                    return EventWidget(event: event);
+                  },
+                  // Callback when selected day changes
+                  onDayChanged: (nepaliDateTime) {
+                    debugPrint("ON DAY CHANGE => $nepaliDateTime");
+                  },
+                  // Callback when month changes
+                  onMonthChanged: (nepaliDateTime) {
+                    debugPrint("ON MONTH CHANGE => $nepaliDateTime");
+                  },
+                  // Customize calendar appearance (NEW API - recommended)
+                  theme: CalendarTheme(
+                    showBorder: true,
+                    showEnglishDate: true,
+                    cellTheme: const CellTheme(
+                      showEnglishDate: true,
+                      showBorder: false,
+                    ),
+                  ),
+                ),
+              ),
+
+              ///
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  /// Helper method to sort events by date
-  List<CalendarEvent<Events>> _sortedList() {
-    final sortedList = List<CalendarEvent<Events>>.from(eventList);
-    sortedList.sort((a, b) => a.date.compareTo(b.date));
-    return sortedList;
-  }
+/// Helper method to sort events by date
+List<CalendarEvent<Events>> get sortedList => _sortedList();
+List<CalendarEvent<Events>> _sortedList() {
+  final sortedList = List<CalendarEvent<Events>>.from(eventList);
+  sortedList.sort((a, b) => a.date.compareTo(b.date));
+  return sortedList;
 }
 
 /// Custom widget to display individual events in the list
@@ -158,54 +265,76 @@ class Events {
 /// Each event includes date, holiday status, and additional information
 final List<CalendarEvent<Events>> eventList = [
   CalendarEvent(
-    date: NepaliDateTime(year: 2081, month: 10, day: 1),
+    date: NepaliDateTime(year: 2082, month: 07, day: 03),
     isHoliday: true,
-    additionalInfo: Events(
-      title: "Dashain Festival",
-      description: "The biggest Hindu festival in Nepal.",
-      additionalInfo: "Public holiday",
-      eventType: "holiday",
-    ),
-  ),
-  CalendarEvent(
-    date: NepaliDateTime(year: 2081, month: 10, day: 18),
-    isHoliday: false,
     additionalInfo: Events(
       title: "Tihar Festival",
-      description: "The festival of lights.",
+      description:
+          "लक्ष्मी पूजा/कुकुर तिहार/महाकवि लक्ष्मीप्रसाद देवकोटाको जन्म जयन्ती/नरक चतुर्दशी/सुखरात्री",
       additionalInfo: "Public holiday",
       eventType: "holiday",
     ),
   ),
   CalendarEvent(
-    date: NepaliDateTime(year: 2081, month: 9, day: 11),
+    date: NepaliDateTime(year: 2082, month: 07, day: 04),
     isHoliday: true,
     additionalInfo: Events(
-      title: "Constitution Day",
-      description: "Celebration of Nepal's constitution.",
+      title: "Tihar Festival",
+      description: "तिहार बिदा",
       additionalInfo: "Public holiday",
       eventType: "holiday",
     ),
   ),
   CalendarEvent(
-    date: NepaliDateTime(year: 2081, month: 10, day: 10),
+    date: NepaliDateTime(year: 2082, month: 07, day: 05),
     isHoliday: true,
     additionalInfo: Events(
-      title: "Team Meeting",
-      description: "Monthly team meeting to discuss progress.",
-      additionalInfo: "Office event",
-      eventType: "notHoliday",
+      title: "Tihar Festival",
+      description:
+          "गोवर्धन पूजा/गाईगोरु पूजा/म्हपूजा/हलि तिहार/नेपाल सम्वत ११४६ प्रारम्भ",
+      additionalInfo: "Public holiday",
+      eventType: "holiday",
     ),
   ),
   CalendarEvent(
-    date: NepaliDateTime(year: 2081, month: 9, day: 25),
+    date: NepaliDateTime(year: 2082, month: 07, day: 05),
+    isHoliday: true,
+    additionalInfo: Events(
+      title: "Tihar Festival",
+      description: "भाइटीका/किजा पूजा",
+      additionalInfo: "Public holiday",
+      eventType: "holiday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2082, month: 08, day: 18),
     isHoliday: false,
     additionalInfo: Events(
-      title: "Project Deadline",
-      description: "Deadline for submitting the project report.",
-      additionalInfo: "Work-related",
-      eventType: "notHoliday",
+      title: "Festival",
+      description:
+          "उँधौली पर्व/य:मरि पुन्हि/ज्यापु दिवस/पूर्णिमा व्रत/धान्यपुर्णिमा",
+      additionalInfo: "Public holiday",
+      eventType: "holiday",
     ),
   ),
-  // You can add more events following the same pattern
+  CalendarEvent(
+    date: NepaliDateTime(year: 2082, month: 09, day: 10),
+    isHoliday: true,
+    additionalInfo: Events(
+      title: "Christmas Day",
+      description: "क्रिसमस-डे",
+      additionalInfo: "Public holiday",
+      eventType: "holiday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2082, month: 09, day: 15),
+    isHoliday: false,
+    additionalInfo: Events(
+      title: "Festival",
+      description: "तमु ल्होसार/कवि शिरोमणि लेखनाथ जयन्ती/पुत्रदा एकादशी व्रत",
+      additionalInfo: "Public holiday",
+      eventType: "holiday",
+    ),
+  ),
 ];

@@ -1,4 +1,5 @@
 export 'calendar_widget.dart';
+export 'controllers/controller.dart';
 export 'enum/language.dart';
 export 'enum/title_type.dart';
 export 'extensions/date_extensions.dart';
@@ -6,6 +7,7 @@ export 'horizontal_calendar.dart';
 export 'models/calendar_style.dart';
 export 'models/event.dart';
 export 'models/nepali_date_time.dart';
+export 'theme/theme.dart';
 export 'utils/calendar_utils.dart';
 export 'utils/month_utils.dart';
 export 'utils/number_utils.dart';
