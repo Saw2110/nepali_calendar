@@ -176,7 +176,7 @@ class CalendarTheme {
         headerTheme = headerTheme ?? headersStyle ?? const HeaderTheme(),
         cellTheme = _buildCellTheme(
           cellTheme: cellTheme ?? cellsStyle,
-          showEnglishDate:  showEnglishDate,
+          showEnglishDate: showEnglishDate,
           showBorder: showBorder,
         );
 
@@ -363,8 +363,6 @@ class CalendarTheme {
       backgroundColor: colorScheme.surface,
       colorScheme: colorScheme,
       cellTheme: CellTheme(
-        showBorder: false,
-        showEnglishDate: false,
         todayBackgroundColor: colorScheme.today,
         selectionColor: colorScheme.selectedDate,
         weekendTextColor: colorScheme.weekend,
@@ -413,8 +411,6 @@ class CalendarTheme {
       backgroundColor: colorScheme.surface,
       colorScheme: colorScheme,
       cellTheme: CellTheme(
-        showBorder: false,
-        showEnglishDate: false,
         todayBackgroundColor: colorScheme.today,
         selectionColor: colorScheme.selectedDate,
         weekendTextColor: colorScheme.weekend,
@@ -470,8 +466,6 @@ class CalendarTheme {
       backgroundColor: colorScheme.surface,
       colorScheme: colorScheme,
       cellTheme: CellTheme(
-        showBorder: false,
-        showEnglishDate: false,
         todayBackgroundColor: colorScheme.today,
         selectionColor: colorScheme.selectedDate,
         weekendTextColor: colorScheme.weekend,
@@ -798,7 +792,7 @@ class CellTheme {
   ///
   /// Used when [shape] is [CellShape.roundedSquare] to define corner radius.
   /// When null, a default radius of 8.0 is used for rounded squares.
-  final double? borderRadius;
+  final double borderRadius;
 
   /// Creates a [CellTheme] instance with comprehensive styling options.
   ///
@@ -834,7 +828,7 @@ class CellTheme {
     this.cellHeight = 40.0,
     this.cellWidth = 40.0,
     this.shape = CellShape.roundedSquare,
-    this.borderRadius,
+    this.borderRadius = 8.0,
   });
 
   /// Creates a copy of this theme with the given fields replaced with new values.
@@ -949,7 +943,7 @@ class CellTheme {
         'disabledTextColor': _colorToHex(disabledTextColor!),
       if (weekendBackgroundColor != null)
         'weekendBackgroundColor': _colorToHex(weekendBackgroundColor!),
-      if (borderRadius != null) 'borderRadius': borderRadius,
+      'borderRadius': borderRadius,
     };
   }
 
@@ -1008,7 +1002,7 @@ class CellTheme {
       cellHeight: (json['cellHeight'] as num?)?.toDouble() ?? 40.0,
       cellWidth: (json['cellWidth'] as num?)?.toDouble() ?? 40.0,
       shape: shape,
-      borderRadius: (json['borderRadius'] as num?)?.toDouble(),
+      borderRadius: (json['borderRadius'] as num?)!.toDouble(),
     );
   }
 }

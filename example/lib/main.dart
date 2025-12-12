@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:nepali_calendar_plus/nepali_calendar_plus.dart';
 
 // Import the new theme example screen
+import 'date_picker_example.dart';
 import 'new_theme_example.dart';
 
 // Main entry point of the application
@@ -71,6 +72,23 @@ class ExampleSelectionScreen extends StatelessWidget {
               ),
               icon: const Icon(Icons.auto_awesome),
               label: const Text('New Theme System Example'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DatePickerExample()),
+              ),
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Date Picker Example'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,

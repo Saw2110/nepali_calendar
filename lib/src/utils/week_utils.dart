@@ -18,22 +18,28 @@ class WeekUtils {
   /// Throws an [ArgumentError] if the day number is outside the valid range (0-6).
   static String formattedWeekDay(
     int day, [
-    Language? language,
-    TitleFormat? titleType,
+    CalendarLocale? language,
+    WeekdayFormat? titleType,
   ]) {
     if (day < 0 || day > 6) {
       throw ArgumentError('Day must be between 0 and 6.');
     }
 
     // Determine if the language is English.
-    final isEnglish = (language ?? Language.english) == Language.english;
+    final isEnglish =
+        (language ?? CalendarLocale.english) == CalendarLocale.english;
+
+    // Check if abbreviated format is requested
+    // Both 'abbreviated' and deprecated 'half' should return abbreviated names
+    final isAbbreviated = titleType == WeekdayFormat.abbreviated ||
+        titleType == WeekdayFormat.half;
 
     // Return the weekday name in the appropriate language and format.
     if (isEnglish) {
-      if (titleType == TitleFormat.half) return _englishHalfWeeks[day];
+      if (isAbbreviated) return _englishHalfWeeks[day];
       return _englishWeeks[day];
     } else {
-      if (titleType == TitleFormat.half) return _nepaliHalfWeeks[day];
+      if (isAbbreviated) return _nepaliHalfWeeks[day];
       return _nepaliWeeks[day];
     }
   }
@@ -45,13 +51,14 @@ class WeekUtils {
   ///   If not provided, defaults to English.
   ///
   /// Throws an [ArgumentError] if the day number is outside the valid range (0-6).
-  static String formattedShortWeekDay(int day, [Language? language]) {
+  static String formattedShortWeekDay(int day, [CalendarLocale? language]) {
     if (day < 0 || day > 6) {
       throw ArgumentError('Day must be between 0 and 6.');
     }
 
     // Determine if the language is English.
-    final isEnglish = (language ?? Language.english) == Language.english;
+    final isEnglish =
+        (language ?? CalendarLocale.english) == CalendarLocale.english;
 
     // Return the short weekday name in the appropriate language.
     if (isEnglish) {

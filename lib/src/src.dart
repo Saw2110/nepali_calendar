@@ -1,5 +1,6 @@
 export 'calendar_widget.dart';
 export 'controllers/controller.dart';
+export 'date_picker/date_picker.dart';
 export 'enum/language.dart';
 export 'enum/title_type.dart';
 export 'extensions/date_extensions.dart';
