@@ -80,9 +80,7 @@ class NewThemeExampleScreen extends StatelessWidget {
         // NEW: Using factory constructor for light theme
         // ignore: deprecated_member_use
         theme: CalendarTheme.light().copyWith(
-            displayEnglishDate: true,
-            locale: CalendarLocale.nepali,
-            backgroundColor: Colors.blue),
+            locale: CalendarLocale.nepali, backgroundColor: Colors.blue),
         onDayChanged: (date) => debugPrint('Light theme: $date'),
       ),
     );
@@ -102,7 +100,6 @@ class NewThemeExampleScreen extends StatelessWidget {
           // NEW: Using factory constructor for dark theme
           // ignore: deprecated_member_use
           theme: CalendarTheme.dark().copyWith(
-            displayEnglishDate: true,
             locale: CalendarLocale.english,
           ),
           onDayChanged: (date) => debugPrint('Dark theme: $date'),
@@ -119,9 +116,7 @@ class NewThemeExampleScreen extends StatelessWidget {
         controller: NepaliCalendarController(),
         // NEW: Creating theme from Material ThemeData
         // ignore: deprecated_member_use
-        theme: CalendarTheme.fromMaterialTheme(Theme.of(context)).copyWith(
-          displayEnglishDate: true,
-        ),
+        theme: CalendarTheme.fromMaterialTheme(Theme.of(context)).copyWith(),
         onDayChanged: (date) => debugPrint('Material theme: $date'),
       ),
     );
@@ -141,18 +136,12 @@ class NewThemeExampleScreen extends StatelessWidget {
           colorScheme: CalendarColorScheme(
             primary: Colors.deepPurple,
             onPrimary: Colors.white,
-            secondary: Colors.amber,
-            onSecondary: Colors.black,
             surface: Colors.white,
             onSurface: Colors.black87,
-            error: Colors.red,
-            onError: Colors.white,
             disabled: Colors.grey.shade400,
-            weekend: Colors.red.shade700,
-            holiday: Colors.pink,
             today: Colors.green,
-            selectedDate: Colors.deepPurple,
-            rangeSelection: Colors.deepPurple.shade100,
+            onToday: Colors.white,
+            weekend: Colors.red.shade700,
           ),
 
           // NEW: CalendarSpacing for layout control
@@ -345,7 +334,6 @@ class ThemeSerializationExample extends StatelessWidget {
     // Create a theme
     // ignore: deprecated_member_use
     final originalTheme = CalendarTheme.light().copyWith(
-      displayEnglishDate: true,
       locale: CalendarLocale.nepali,
     );
 
@@ -401,7 +389,6 @@ class BackwardCompatibilityExample extends StatelessWidget {
           height: 350,
           child: NepaliCalendar(
             controller: NepaliCalendarController(),
-            // NEW API: Recommended approach
             theme: CalendarTheme(
               cellTheme: const CellTheme(
                 showEnglishDate: true,

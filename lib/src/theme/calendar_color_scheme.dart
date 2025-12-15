@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 /// Color scheme for the calendar following Material Design principles.
 ///
 /// Provides semantic colors for all calendar states and elements.
-/// This class offers factory constructors for common themes and
-/// integration with Material Theme.
+/// This is the **Single Source of Truth** for all calendar colors.
+///
+/// All calendar components (NepaliCalendar, DatePicker, HorizontalCalendar)
+/// use this color scheme as the primary source for colors. Individual theme
+/// properties (like CellTheme colors) act as overrides when specified.
 ///
 /// Example usage:
 /// ```dart
@@ -21,51 +24,70 @@ import 'package:flutter/material.dart';
 /// final customScheme = CalendarColorScheme(
 ///   primary: Colors.purple,
 ///   onPrimary: Colors.white,
-///   // ... other colors
+///   surface: Colors.white,
+///   onSurface: Colors.black,
+///   disabled: Colors.grey,
 /// );
 /// ```
 class CalendarColorScheme {
   /// Primary color used for selected dates and main accents.
+  ///
+  /// Used for:
+  /// - Selected date background
+  /// - Active navigation elements
+  /// - Primary interactive elements
   final Color primary;
 
   /// Color for content on primary color backgrounds.
+  ///
+  /// Used for:
+  /// - Text on selected dates
+  /// - Icons on primary backgrounds
   final Color onPrimary;
 
-  /// Secondary color for less prominent elements.
-  final Color secondary;
-
-  /// Color for content on secondary color backgrounds.
-  final Color onSecondary;
-
   /// Surface color for calendar background.
+  ///
+  /// Used for:
+  /// - Calendar container background
+  /// - Cell backgrounds
+  /// - Header backgrounds
   final Color surface;
 
   /// Color for content on surface backgrounds.
+  ///
+  /// Used for:
+  /// - Default date text
+  /// - Header text
+  /// - Weekday labels
   final Color onSurface;
 
-  /// Error color for invalid states.
-  final Color error;
-
-  /// Color for content on error backgrounds.
-  final Color onError;
-
-  /// Color for disabled dates.
+  /// Color for disabled/inactive dates.
+  ///
+  /// Used for:
+  /// - Disabled date text
+  /// - Adjacent month dates
+  /// - Inactive navigation buttons
   final Color disabled;
 
-  /// Color for weekend dates (Saturday).
-  final Color weekend;
-
-  /// Color for holiday dates.
-  final Color holiday;
-
-  /// Background color for today's date.
+  /// Color for today's date highlight.
+  ///
+  /// Used for:
+  /// - Today's date background
+  /// - Today indicator
   final Color today;
 
-  /// Background color for selected date.
-  final Color selectedDate;
+  /// Color for text on today's date.
+  ///
+  /// Used for:
+  /// - Text displayed on today's date background
+  final Color onToday;
 
-  /// Background color for range selection.
-  final Color rangeSelection;
+  /// Color for weekend dates (Saturday/Sunday).
+  ///
+  /// Used for:
+  /// - Weekend date text
+  /// - Weekend weekday labels
+  final Color weekend;
 
   /// Creates a [CalendarColorScheme] with the specified colors.
   ///
@@ -73,18 +95,12 @@ class CalendarColorScheme {
   const CalendarColorScheme({
     required this.primary,
     required this.onPrimary,
-    required this.secondary,
-    required this.onSecondary,
     required this.surface,
     required this.onSurface,
-    required this.error,
-    required this.onError,
     required this.disabled,
-    required this.weekend,
-    required this.holiday,
     required this.today,
-    required this.selectedDate,
-    required this.rangeSelection,
+    required this.onToday,
+    required this.weekend,
   });
 
   /// Creates a pre-configured light theme color scheme.
@@ -94,18 +110,12 @@ class CalendarColorScheme {
     return const CalendarColorScheme(
       primary: Color(0xFF2196F3), // Blue
       onPrimary: Colors.white,
-      secondary: Color(0xFF03DAC6), // Teal
-      onSecondary: Colors.black,
       surface: Colors.white,
       onSurface: Colors.black,
-      error: Color(0xFFB00020), // Red
-      onError: Colors.white,
       disabled: Color(0xFF9E9E9E), // Grey
-      weekend: Color(0xFFF44336), // Red
-      holiday: Color(0xFFE91E63), // Pink
       today: Color(0xFF4CAF50), // Green
-      selectedDate: Color(0xFF2196F3), // Blue
-      rangeSelection: Color(0xFFBBDEFB), // Light Blue
+      onToday: Colors.white,
+      weekend: Color(0xFFF44336), // Red
     );
   }
 
@@ -116,18 +126,12 @@ class CalendarColorScheme {
     return const CalendarColorScheme(
       primary: Color(0xFF90CAF9), // Light Blue
       onPrimary: Colors.black,
-      secondary: Color(0xFF03DAC6), // Teal
-      onSecondary: Colors.black,
       surface: Color(0xFF121212), // Dark surface
       onSurface: Colors.white,
-      error: Color(0xFFCF6679), // Light Red
-      onError: Colors.black,
       disabled: Color(0xFF757575), // Grey
-      weekend: Color(0xFFEF5350), // Light Red
-      holiday: Color(0xFFF48FB1), // Light Pink
       today: Color(0xFF81C784), // Light Green
-      selectedDate: Color(0xFF90CAF9), // Light Blue
-      rangeSelection: Color(0xFF1E3A5F), // Dark Blue
+      onToday: Colors.black,
+      weekend: Color(0xFFEF5350), // Light Red
     );
   }
 
@@ -147,18 +151,12 @@ class CalendarColorScheme {
     return CalendarColorScheme(
       primary: colorScheme.primary,
       onPrimary: colorScheme.onPrimary,
-      secondary: colorScheme.secondary,
-      onSecondary: colorScheme.onSecondary,
       surface: colorScheme.surface,
       onSurface: colorScheme.onSurface,
-      error: colorScheme.error,
-      onError: colorScheme.onError,
       disabled: isDark ? const Color(0xFF757575) : const Color(0xFF9E9E9E),
-      weekend: isDark ? const Color(0xFFEF5350) : const Color(0xFFF44336),
-      holiday: isDark ? const Color(0xFFF48FB1) : const Color(0xFFE91E63),
       today: isDark ? const Color(0xFF81C784) : const Color(0xFF4CAF50),
-      selectedDate: colorScheme.primary,
-      rangeSelection: colorScheme.primary.withValues(alpha: 0.2),
+      onToday: isDark ? Colors.black : Colors.white,
+      weekend: isDark ? const Color(0xFFEF5350) : const Color(0xFFF44336),
     );
   }
 
@@ -174,34 +172,22 @@ class CalendarColorScheme {
   CalendarColorScheme copyWith({
     Color? primary,
     Color? onPrimary,
-    Color? secondary,
-    Color? onSecondary,
     Color? surface,
     Color? onSurface,
-    Color? error,
-    Color? onError,
     Color? disabled,
-    Color? weekend,
-    Color? holiday,
     Color? today,
-    Color? selectedDate,
-    Color? rangeSelection,
+    Color? onToday,
+    Color? weekend,
   }) {
     return CalendarColorScheme(
       primary: primary ?? this.primary,
       onPrimary: onPrimary ?? this.onPrimary,
-      secondary: secondary ?? this.secondary,
-      onSecondary: onSecondary ?? this.onSecondary,
       surface: surface ?? this.surface,
       onSurface: onSurface ?? this.onSurface,
-      error: error ?? this.error,
-      onError: onError ?? this.onError,
       disabled: disabled ?? this.disabled,
-      weekend: weekend ?? this.weekend,
-      holiday: holiday ?? this.holiday,
       today: today ?? this.today,
-      selectedDate: selectedDate ?? this.selectedDate,
-      rangeSelection: rangeSelection ?? this.rangeSelection,
+      onToday: onToday ?? this.onToday,
+      weekend: weekend ?? this.weekend,
     );
   }
 
@@ -211,18 +197,12 @@ class CalendarColorScheme {
     return other is CalendarColorScheme &&
         other.primary == primary &&
         other.onPrimary == onPrimary &&
-        other.secondary == secondary &&
-        other.onSecondary == onSecondary &&
         other.surface == surface &&
         other.onSurface == onSurface &&
-        other.error == error &&
-        other.onError == onError &&
         other.disabled == disabled &&
-        other.weekend == weekend &&
-        other.holiday == holiday &&
         other.today == today &&
-        other.selectedDate == selectedDate &&
-        other.rangeSelection == rangeSelection;
+        other.onToday == onToday &&
+        other.weekend == weekend;
   }
 
   @override
@@ -230,18 +210,12 @@ class CalendarColorScheme {
     return Object.hash(
       primary,
       onPrimary,
-      secondary,
-      onSecondary,
       surface,
       onSurface,
-      error,
-      onError,
       disabled,
-      weekend,
-      holiday,
       today,
-      selectedDate,
-      rangeSelection,
+      onToday,
+      weekend,
     );
   }
 
@@ -263,18 +237,12 @@ class CalendarColorScheme {
     return {
       'primary': _colorToHex(primary),
       'onPrimary': _colorToHex(onPrimary),
-      'secondary': _colorToHex(secondary),
-      'onSecondary': _colorToHex(onSecondary),
       'surface': _colorToHex(surface),
       'onSurface': _colorToHex(onSurface),
-      'error': _colorToHex(error),
-      'onError': _colorToHex(onError),
       'disabled': _colorToHex(disabled),
-      'weekend': _colorToHex(weekend),
-      'holiday': _colorToHex(holiday),
       'today': _colorToHex(today),
-      'selectedDate': _colorToHex(selectedDate),
-      'rangeSelection': _colorToHex(rangeSelection),
+      'onToday': _colorToHex(onToday),
+      'weekend': _colorToHex(weekend),
     };
   }
 
@@ -291,42 +259,24 @@ class CalendarColorScheme {
       onPrimary: json['onPrimary'] != null
           ? _hexToColor(json['onPrimary'] as String)
           : defaults.onPrimary,
-      secondary: json['secondary'] != null
-          ? _hexToColor(json['secondary'] as String)
-          : defaults.secondary,
-      onSecondary: json['onSecondary'] != null
-          ? _hexToColor(json['onSecondary'] as String)
-          : defaults.onSecondary,
       surface: json['surface'] != null
           ? _hexToColor(json['surface'] as String)
           : defaults.surface,
       onSurface: json['onSurface'] != null
           ? _hexToColor(json['onSurface'] as String)
           : defaults.onSurface,
-      error: json['error'] != null
-          ? _hexToColor(json['error'] as String)
-          : defaults.error,
-      onError: json['onError'] != null
-          ? _hexToColor(json['onError'] as String)
-          : defaults.onError,
       disabled: json['disabled'] != null
           ? _hexToColor(json['disabled'] as String)
           : defaults.disabled,
-      weekend: json['weekend'] != null
-          ? _hexToColor(json['weekend'] as String)
-          : defaults.weekend,
-      holiday: json['holiday'] != null
-          ? _hexToColor(json['holiday'] as String)
-          : defaults.holiday,
       today: json['today'] != null
           ? _hexToColor(json['today'] as String)
           : defaults.today,
-      selectedDate: json['selectedDate'] != null
-          ? _hexToColor(json['selectedDate'] as String)
-          : defaults.selectedDate,
-      rangeSelection: json['rangeSelection'] != null
-          ? _hexToColor(json['rangeSelection'] as String)
-          : defaults.rangeSelection,
+      onToday: json['onToday'] != null
+          ? _hexToColor(json['onToday'] as String)
+          : defaults.onToday,
+      weekend: json['weekend'] != null
+          ? _hexToColor(json['weekend'] as String)
+          : defaults.weekend,
     );
   }
 }

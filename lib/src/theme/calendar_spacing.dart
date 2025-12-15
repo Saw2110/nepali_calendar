@@ -15,16 +15,26 @@ import 'package:flutter/material.dart';
 /// );
 /// ```
 class CalendarSpacing {
-  /// Horizontal spacing between cells.
+  /// @Deprecated: This property is not implemented.
   ///
-  /// Controls the gap between adjacent date cells in a row.
-  /// Default is 2.0.
+  /// Horizontal spacing between cells.
+  /// Cell spacing is controlled by [CellTheme.cellMargin] instead.
+  /// This property will be removed in the next major version.
+  @Deprecated(
+    'This property is not implemented. Use CellTheme.cellMargin instead. '
+    'This will be removed in the next major version.',
+  )
   final double cellHorizontalSpacing;
 
-  /// Vertical spacing between cells.
+  /// @Deprecated: This property is not implemented.
   ///
-  /// Controls the gap between rows of date cells.
-  /// Default is 2.0.
+  /// Vertical spacing between cells.
+  /// Cell spacing is controlled by [CellTheme.cellMargin] instead.
+  /// This property will be removed in the next major version.
+  @Deprecated(
+    'This property is not implemented. Use CellTheme.cellMargin instead. '
+    'This will be removed in the next major version.',
+  )
   final double cellVerticalSpacing;
 
   /// Padding around the entire calendar.

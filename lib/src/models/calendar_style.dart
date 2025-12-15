@@ -16,7 +16,6 @@ typedef NepaliCalendarStyle = CalendarTheme;
 /// Example usage:
 /// ```dart
 /// final theme = CalendarTheme(
-///   displayEnglishDate: true,
 ///   cellTheme: CellTheme(
 ///     eventIndicatorColor: Colors.red,
 ///     selectionColor: Colors.blue,
@@ -114,8 +113,6 @@ class CalendarTheme {
   /// Supports both new and deprecated parameter names for backward compatibility.
   ///
   /// **Deprecated parameters** (will be removed in next major version):
-  /// - `displayEnglishDate` → Use `cellTheme.showEnglishDate` instead
-  /// - `displayCellBorder` → Use `cellTheme.showBorder` instead
   /// - `showEnglishDate` → Use `cellTheme.showEnglishDate` instead
   /// - `showBorder` → Use `cellTheme.showBorder` instead
   /// - `language` → Use `locale` instead
@@ -130,18 +127,12 @@ class CalendarTheme {
     this.colorScheme = const CalendarColorScheme(
       primary: Color(0xFF2196F3),
       onPrimary: Colors.white,
-      secondary: Color(0xFF03DAC6),
-      onSecondary: Colors.black,
       surface: Colors.white,
       onSurface: Colors.black,
-      error: Color(0xFFB00020),
-      onError: Colors.white,
       disabled: Color(0xFF9E9E9E),
-      weekend: Color(0xFFF44336),
-      holiday: Color(0xFFE91E63),
       today: Color(0xFF4CAF50),
-      selectedDate: Color(0xFF2196F3),
-      rangeSelection: Color(0xFFBBDEFB),
+      onToday: Colors.white,
+      weekend: Color(0xFFF44336),
     ),
     this.spacing = const CalendarSpacing(),
     this.borders = const CalendarBorders(),
@@ -208,18 +199,12 @@ class CalendarTheme {
     this.colorScheme = const CalendarColorScheme(
       primary: Color(0xFF2196F3),
       onPrimary: Colors.white,
-      secondary: Color(0xFF03DAC6),
-      onSecondary: Colors.black,
       surface: Colors.white,
       onSurface: Colors.black,
-      error: Color(0xFFB00020),
-      onError: Colors.white,
       disabled: Color(0xFF9E9E9E),
-      weekend: Color(0xFFF44336),
-      holiday: Color(0xFFE91E63),
       today: Color(0xFF4CAF50),
-      selectedDate: Color(0xFF2196F3),
-      rangeSelection: Color(0xFFBBDEFB),
+      onToday: Colors.white,
+      weekend: Color(0xFFF44336),
     ),
     this.spacing = const CalendarSpacing(),
     this.borders = const CalendarBorders(),
@@ -244,18 +229,12 @@ class CalendarTheme {
     CalendarColorScheme colorScheme = const CalendarColorScheme(
       primary: Color(0xFF2196F3),
       onPrimary: Colors.white,
-      secondary: Color(0xFF03DAC6),
-      onSecondary: Colors.black,
       surface: Colors.white,
       onSurface: Colors.black,
-      error: Color(0xFFB00020),
-      onError: Colors.white,
       disabled: Color(0xFF9E9E9E),
-      weekend: Color(0xFFF44336),
-      holiday: Color(0xFFE91E63),
       today: Color(0xFF4CAF50),
-      selectedDate: Color(0xFF2196F3),
-      rangeSelection: Color(0xFFBBDEFB),
+      onToday: Colors.white,
+      weekend: Color(0xFFF44336),
     ),
     CalendarSpacing spacing = const CalendarSpacing(),
     CalendarBorders borders = const CalendarBorders(),
@@ -295,9 +274,6 @@ class CalendarTheme {
   /// );
   /// ```
   ///
-  /// **Deprecated parameters** (will be removed in next major version):
-  /// - `displayEnglishDate` → Use `cellTheme: CellTheme(showEnglishDate: true)` instead
-  /// - `displayCellBorder` → Use `cellTheme: CellTheme(showBorder: true)` instead
   CalendarTheme copyWith({
     CalendarLocale? locale,
     CellTheme? cellTheme,
@@ -310,31 +286,10 @@ class CalendarTheme {
     CalendarBorders? borders,
     CalendarAnimations? animations,
     WeekdayTheme? weekdayTheme,
-    // Deprecated parameters - kept for backward compatibility
-    @Deprecated(
-      'Use cellTheme: CellTheme(showEnglishDate: true) instead. '
-      'This parameter will be removed in the next major version.',
-    )
-    bool? displayEnglishDate,
-    @Deprecated(
-      'Use cellTheme: CellTheme(showBorder: true) instead. '
-      'This parameter will be removed in the next major version.',
-    )
-    bool? displayCellBorder,
   }) {
-    // Handle deprecated parameters by merging with cellTheme
-    CellTheme resolvedCellTheme = cellTheme ?? this.cellTheme;
-    if (displayEnglishDate != null || displayCellBorder != null) {
-      resolvedCellTheme = resolvedCellTheme.copyWith(
-        showEnglishDate:
-            displayEnglishDate ?? resolvedCellTheme.showEnglishDate,
-        showBorder: displayCellBorder ?? resolvedCellTheme.showBorder,
-      );
-    }
-
     return CalendarTheme(
       locale: locale ?? this.locale,
-      cellTheme: resolvedCellTheme,
+      cellTheme: cellTheme ?? this.cellTheme,
       headerTheme: headerTheme ?? this.headerTheme,
       calendarPadding: calendarPadding ?? this.calendarPadding,
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -345,6 +300,55 @@ class CalendarTheme {
       animations: animations ?? this.animations,
       weekdayTheme: weekdayTheme ?? this.weekdayTheme,
     );
+  }
+
+  // ============================================================================
+  // Color Resolution Helpers
+  // ============================================================================
+  // These methods implement the Single Source of Truth pattern:
+  // Priority: Explicit CellTheme property > ColorScheme > Default fallback
+  // ============================================================================
+
+  /// Resolves the selection background color.
+  /// Priority: cellTheme.selectionColor > colorScheme.primary > default
+  Color get resolvedSelectionColor {
+    return cellTheme.selectionColor;
+  }
+
+  /// Resolves the selection text color.
+  /// Priority: cellTheme.selectedTextColor > colorScheme.onPrimary > default
+  Color get resolvedSelectionTextColor {
+    return cellTheme.selectedTextColor ?? colorScheme.onPrimary;
+  }
+
+  /// Resolves today's background color.
+  /// Priority: cellTheme.todayBackgroundColor > colorScheme.today > default
+  Color get resolvedTodayBackgroundColor {
+    return cellTheme.todayBackgroundColor;
+  }
+
+  /// Resolves today's text color.
+  /// Priority: cellTheme.todayTextColor > colorScheme.onToday > default
+  Color get resolvedTodayTextColor {
+    return cellTheme.todayTextColor ?? colorScheme.onToday;
+  }
+
+  /// Resolves weekend text color.
+  /// Priority: cellTheme.weekendTextColor > colorScheme.weekend > default
+  Color get resolvedWeekendTextColor {
+    return cellTheme.weekendTextColor;
+  }
+
+  /// Resolves disabled/adjacent month text color.
+  /// Priority: cellTheme.adjacentMonthTextColor > colorScheme.disabled > default
+  Color get resolvedDisabledTextColor {
+    return cellTheme.adjacentMonthTextColor;
+  }
+
+  /// Resolves default text color.
+  /// Priority: cellTheme.defaultTextStyle.color > colorScheme.onSurface > default
+  Color get resolvedDefaultTextColor {
+    return cellTheme.defaultTextStyle.color ?? colorScheme.onSurface;
   }
 
   /// Creates a fully configured light theme.
@@ -364,9 +368,16 @@ class CalendarTheme {
       colorScheme: colorScheme,
       cellTheme: CellTheme(
         todayBackgroundColor: colorScheme.today,
-        selectionColor: colorScheme.selectedDate,
+        todayTextColor: colorScheme.onToday,
+        selectionColor: colorScheme.primary,
+        selectedTextColor: colorScheme.onPrimary,
         weekendTextColor: colorScheme.weekend,
         englishDateColor: colorScheme.disabled,
+        defaultTextStyle: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: colorScheme.onSurface,
+        ),
       ),
       headerTheme: HeaderTheme(
         monthTextStyle: TextStyle(
@@ -412,7 +423,9 @@ class CalendarTheme {
       colorScheme: colorScheme,
       cellTheme: CellTheme(
         todayBackgroundColor: colorScheme.today,
-        selectionColor: colorScheme.selectedDate,
+        todayTextColor: colorScheme.onToday,
+        selectionColor: colorScheme.primary,
+        selectedTextColor: colorScheme.onPrimary,
         weekendTextColor: colorScheme.weekend,
         englishDateColor: colorScheme.disabled,
         defaultTextStyle: TextStyle(
@@ -467,7 +480,9 @@ class CalendarTheme {
       colorScheme: colorScheme,
       cellTheme: CellTheme(
         todayBackgroundColor: colorScheme.today,
-        selectionColor: colorScheme.selectedDate,
+        todayTextColor: colorScheme.onToday,
+        selectionColor: colorScheme.primary,
+        selectedTextColor: colorScheme.onPrimary,
         weekendTextColor: colorScheme.weekend,
         englishDateColor: colorScheme.disabled,
         defaultTextStyle: theme.textTheme.bodyMedium ?? const TextStyle(),
@@ -546,20 +561,9 @@ class CalendarTheme {
       );
     }
 
-    // Parse cellTheme first, then apply legacy displayEnglishDate/displayCellBorder if present
-    CellTheme cellTheme = json['cellTheme'] != null
+    final CellTheme cellTheme = json['cellTheme'] != null
         ? CellTheme.fromJson(json['cellTheme'] as Map<String, dynamic>)
         : const CellTheme();
-
-    // Support legacy JSON keys for backward compatibility
-    final legacyShowEnglishDate = json['displayEnglishDate'] as bool?;
-    final legacyShowBorder = json['displayCellBorder'] as bool?;
-    if (legacyShowEnglishDate != null || legacyShowBorder != null) {
-      cellTheme = cellTheme.copyWith(
-        showEnglishDate: legacyShowEnglishDate ?? cellTheme.showEnglishDate,
-        showBorder: legacyShowBorder ?? cellTheme.showBorder,
-      );
-    }
 
     return CalendarTheme(
       locale: locale,
@@ -589,792 +593,6 @@ class CalendarTheme {
       weekdayTheme: json['weekdayTheme'] != null
           ? WeekdayTheme.fromJson(json['weekdayTheme'] as Map<String, dynamic>)
           : const WeekdayTheme(),
-    );
-  }
-}
-
-/// @Deprecated: Use CellTheme instead
-@Deprecated(
-  'Use CellTheme instead. This will be removed in the next major version.',
-)
-typedef CellStyle = CellTheme;
-
-/// Comprehensive theme configuration for individual calendar cells.
-///
-/// This class provides extensive customization for calendar date cells, including:
-/// * Date text appearance with multiple states
-/// * Event indicators with customizable styles
-/// * Selection and hover effects
-/// * Today's date highlighting
-/// * Disabled and weekend date styling
-class CellTheme {
-  /// @Deprecated: Use defaultTextStyle instead
-  @Deprecated(
-    'Use defaultTextStyle instead. This will be removed in the next major version.',
-  )
-  TextStyle get dayStyle => defaultTextStyle;
-
-  /// @Deprecated: Use eventIndicatorColor instead
-  @Deprecated(
-    'Use eventIndicatorColor instead. This will be removed in the next major version.',
-  )
-  Color get dotColor => eventIndicatorColor;
-
-  /// @Deprecated: Use englishDateColor instead
-  @Deprecated(
-    'Use englishDateColor instead. This will be removed in the next major version.',
-  )
-  Color get baseLineDateColor => englishDateColor;
-
-  /// @Deprecated: Use todayBackgroundColor instead
-  @Deprecated(
-    'Use todayBackgroundColor instead. This will be removed in the next major version.',
-  )
-  Color get todayColor => todayBackgroundColor;
-
-  /// @Deprecated: Use selectionColor instead
-  @Deprecated(
-    'Use selectionColor instead. This will be removed in the next major version.',
-  )
-  Color get selectedColor => selectionColor;
-
-  /// @Deprecated: Use weekendTextColor instead
-  @Deprecated(
-    'Use weekendTextColor instead. This will be removed in the next major version.',
-  )
-  Color get weekDayColor => weekendTextColor;
-
-  /// @Deprecated: Use weekendTextColor instead
-  ///
-  /// This property was misnamed - it controls weekend date text color, not weekday labels.
-  @Deprecated(
-    'Use weekendTextColor instead. This will be removed in the next major version.',
-  )
-  Color get weekdayTextColor => weekendTextColor;
-
-  /// Whether to show border around each cell.
-  ///
-  /// When true, cells will have a border defined by [cellBorder].
-  final bool showBorder;
-
-  /// Whether to show English date in cells.
-  ///
-  /// When true, the corresponding English date is displayed in each cell.
-  final bool showEnglishDate;
-
-  /// Default text style for date numbers in each cell.
-  ///
-  /// This style is applied to all date numbers unless overridden by specific states.
-  final TextStyle defaultTextStyle;
-
-  /// Text style for today's date.
-  ///
-  /// Overrides the default style for the current date.
-  final TextStyle? todayTextStyle;
-
-  /// Text style for selected dates.
-  ///
-  /// Applied when a user selects a date.
-  final TextStyle? selectedTextStyle;
-
-  /// Text style for disabled dates.
-  ///
-  /// Applied to dates that are not selectable.
-  final TextStyle? disabledTextStyle;
-
-  /// Text style for weekend dates.
-  ///
-  /// Applied to Saturday and Sunday dates.
-  final TextStyle? weekendTextStyle;
-
-  /// Text style for dates with events.
-  ///
-  /// Applied to dates that have associated events.
-  final TextStyle? eventDateTextStyle;
-
-  /// Color for the event indicator that appears on dates with events.
-  ///
-  /// This indicator shows that the date has associated events.
-  final Color eventIndicatorColor;
-
-  /// Size of the event indicator dot.
-  ///
-  /// Controls the diameter of the event indicator. Default is 4.0.
-  final double eventIndicatorSize;
-
-  /// Position of the event indicator relative to the date.
-  ///
-  /// Can be bottom, top, or overlay. Default is bottom.
-  final AlignmentGeometry eventIndicatorAlignment;
-
-  /// Color for the English date text when displayed.
-  ///
-  /// This affects the small English date number shown below the Nepali date.
-  final Color englishDateColor;
-
-  /// Background color for highlighting today's date.
-  ///
-  /// This color is used to make the current date stand out.
-  final Color todayBackgroundColor;
-
-  /// Text color for today's date.
-  ///
-  /// Overrides the default text color for the current date.
-  final Color? todayTextColor;
-
-  /// Background color for the selected date.
-  ///
-  /// Applied when a user selects a date.
-  final Color selectionColor;
-
-  /// Text color for the selected date.
-  ///
-  /// Overrides the default text color for selected dates.
-  final Color? selectedTextColor;
-
-  /// Background color for hovered date.
-  ///
-  /// Applied when hovering over a date (desktop/web).
-  final Color? hoverColor;
-
-  /// Background color for disabled dates.
-  ///
-  /// Applied to dates that cannot be selected.
-  final Color? disabledBackgroundColor;
-
-  /// Text color for disabled dates.
-  ///
-  /// Applied to dates that cannot be selected.
-  final Color? disabledTextColor;
-
-  /// Background color for weekend dates.
-  ///
-  /// Applied to Saturday and Sunday.
-  final Color? weekendBackgroundColor;
-
-  /// Text color for weekend dates (Saturday).
-  ///
-  /// Applied to date numbers on weekend days.
-  final Color weekendTextColor;
-
-  /// Whether to show adjacent month days in empty cells.
-  ///
-  /// When true, previous and next month days are shown in light grey
-  /// to fill the calendar grid. These days are not tappable.
-  /// Default is true.
-  final bool showAdjacentMonthDays;
-
-  /// Text color for adjacent month days (previous/next month).
-  ///
-  /// Applied to dates from previous and next months shown in empty cells.
-  /// Only used when [showAdjacentMonthDays] is true.
-  final Color adjacentMonthTextColor;
-
-  /// Border configuration for cells.
-  ///
-  /// Defines the border style for date cells.
-  final Border? cellBorder;
-
-  /// Margin around each cell.
-  ///
-  /// Controls the external spacing of date cells.
-  final EdgeInsets cellMargin;
-
-  /// Height of each cell.
-  ///
-  /// Defines the fixed height for date cells. Default is 40.0.
-  final double cellHeight;
-
-  /// Width of each cell.
-  ///
-  /// Defines the fixed width for date cells. Default is 40.0.
-  final double cellWidth;
-
-  /// Shape of the cell for selection and decoration rendering.
-  ///
-  /// Determines how selection highlights and decorations are shaped.
-  /// Default is [CellShape.circle].
-  final CellShape shape;
-
-  /// Custom border radius for cells.
-  ///
-  /// Used when [shape] is [CellShape.roundedSquare] to define corner radius.
-  /// When null, a default radius of 8.0 is used for rounded squares.
-  final double borderRadius;
-
-  /// Creates a [CellTheme] instance with comprehensive styling options.
-  ///
-  /// All parameters are optional and have default values.
-  const CellTheme({
-    this.showBorder = false,
-    this.showEnglishDate = false,
-    this.showAdjacentMonthDays = true,
-    this.defaultTextStyle = const TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.w400,
-    ),
-    this.todayTextStyle,
-    this.selectedTextStyle,
-    this.disabledTextStyle,
-    this.weekendTextStyle,
-    this.eventDateTextStyle,
-    this.eventIndicatorColor = Colors.blue,
-    this.eventIndicatorSize = 4.0,
-    this.eventIndicatorAlignment = Alignment.bottomCenter,
-    this.englishDateColor = Colors.grey,
-    this.todayBackgroundColor = Colors.green,
-    this.todayTextColor,
-    this.selectionColor = Colors.blue,
-    this.selectedTextColor,
-    this.hoverColor,
-    this.disabledBackgroundColor,
-    this.disabledTextColor,
-    this.weekendBackgroundColor,
-    this.weekendTextColor = Colors.red,
-    this.adjacentMonthTextColor = const Color(0xFFBDBDBD),
-    this.cellBorder,
-    this.cellMargin = const EdgeInsets.all(2.0),
-    this.cellHeight = 40.0,
-    this.cellWidth = 40.0,
-    this.shape = CellShape.roundedSquare,
-    this.borderRadius = 8.0,
-  });
-
-  /// Creates a copy of this theme with the given fields replaced with new values.
-  ///
-  /// Example:
-  /// ```dart
-  /// final newCellTheme = currentCellTheme.copyWith(
-  ///   eventIndicatorColor: Colors.red,
-  ///   selectionColor: Colors.blue,
-  /// );
-  /// ```
-  CellTheme copyWith({
-    bool? showBorder,
-    bool? showEnglishDate,
-    bool? showAdjacentMonthDays,
-    TextStyle? defaultTextStyle,
-    TextStyle? todayTextStyle,
-    TextStyle? selectedTextStyle,
-    TextStyle? disabledTextStyle,
-    TextStyle? weekendTextStyle,
-    TextStyle? eventDateTextStyle,
-    Color? eventIndicatorColor,
-    double? eventIndicatorSize,
-    AlignmentGeometry? eventIndicatorAlignment,
-    Color? englishDateColor,
-    Color? todayBackgroundColor,
-    Color? todayTextColor,
-    Color? selectionColor,
-    Color? selectedTextColor,
-    Color? hoverColor,
-    Color? disabledBackgroundColor,
-    Color? disabledTextColor,
-    Color? weekendBackgroundColor,
-    Color? weekendTextColor,
-    Color? adjacentMonthTextColor,
-    Border? cellBorder,
-    EdgeInsets? cellMargin,
-    double? cellHeight,
-    double? cellWidth,
-    CellShape? shape,
-    double? borderRadius,
-  }) {
-    return CellTheme(
-      showBorder: showBorder ?? this.showBorder,
-      showEnglishDate: showEnglishDate ?? this.showEnglishDate,
-      showAdjacentMonthDays:
-          showAdjacentMonthDays ?? this.showAdjacentMonthDays,
-      defaultTextStyle: defaultTextStyle ?? this.defaultTextStyle,
-      todayTextStyle: todayTextStyle ?? this.todayTextStyle,
-      selectedTextStyle: selectedTextStyle ?? this.selectedTextStyle,
-      disabledTextStyle: disabledTextStyle ?? this.disabledTextStyle,
-      weekendTextStyle: weekendTextStyle ?? this.weekendTextStyle,
-      eventDateTextStyle: eventDateTextStyle ?? this.eventDateTextStyle,
-      eventIndicatorColor: eventIndicatorColor ?? this.eventIndicatorColor,
-      eventIndicatorSize: eventIndicatorSize ?? this.eventIndicatorSize,
-      eventIndicatorAlignment:
-          eventIndicatorAlignment ?? this.eventIndicatorAlignment,
-      englishDateColor: englishDateColor ?? this.englishDateColor,
-      todayBackgroundColor: todayBackgroundColor ?? this.todayBackgroundColor,
-      todayTextColor: todayTextColor ?? this.todayTextColor,
-      selectionColor: selectionColor ?? this.selectionColor,
-      selectedTextColor: selectedTextColor ?? this.selectedTextColor,
-      hoverColor: hoverColor ?? this.hoverColor,
-      disabledBackgroundColor:
-          disabledBackgroundColor ?? this.disabledBackgroundColor,
-      disabledTextColor: disabledTextColor ?? this.disabledTextColor,
-      weekendBackgroundColor:
-          weekendBackgroundColor ?? this.weekendBackgroundColor,
-      weekendTextColor: weekendTextColor ?? this.weekendTextColor,
-      adjacentMonthTextColor:
-          adjacentMonthTextColor ?? this.adjacentMonthTextColor,
-      cellBorder: cellBorder ?? this.cellBorder,
-      cellMargin: cellMargin ?? this.cellMargin,
-      cellHeight: cellHeight ?? this.cellHeight,
-      cellWidth: cellWidth ?? this.cellWidth,
-      shape: shape ?? this.shape,
-      borderRadius: borderRadius ?? this.borderRadius,
-    );
-  }
-
-  /// Converts a Color to a hex string.
-  static String _colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).padLeft(8, '0')}';
-  }
-
-  /// Parses a hex string to a Color.
-  static Color _hexToColor(String hex) {
-    if (hex.startsWith('#')) {
-      return Color(int.parse(hex.substring(1), radix: 16));
-    }
-    return Color(int.parse(hex, radix: 16));
-  }
-
-  /// Converts this cell theme to a JSON map.
-  Map<String, dynamic> toJson() {
-    return {
-      'showBorder': showBorder,
-      'showEnglishDate': showEnglishDate,
-      'eventIndicatorColor': _colorToHex(eventIndicatorColor),
-      'eventIndicatorSize': eventIndicatorSize,
-      'englishDateColor': _colorToHex(englishDateColor),
-      'todayBackgroundColor': _colorToHex(todayBackgroundColor),
-      'selectionColor': _colorToHex(selectionColor),
-      'weekendTextColor': _colorToHex(weekendTextColor),
-      'cellHeight': cellHeight,
-      'cellWidth': cellWidth,
-      'shape': shape.name,
-      if (todayTextColor != null)
-        'todayTextColor': _colorToHex(todayTextColor!),
-      if (selectedTextColor != null)
-        'selectedTextColor': _colorToHex(selectedTextColor!),
-      if (hoverColor != null) 'hoverColor': _colorToHex(hoverColor!),
-      if (disabledBackgroundColor != null)
-        'disabledBackgroundColor': _colorToHex(disabledBackgroundColor!),
-      if (disabledTextColor != null)
-        'disabledTextColor': _colorToHex(disabledTextColor!),
-      if (weekendBackgroundColor != null)
-        'weekendBackgroundColor': _colorToHex(weekendBackgroundColor!),
-      'borderRadius': borderRadius,
-    };
-  }
-
-  /// Creates a [CellTheme] from a JSON map.
-  factory CellTheme.fromJson(Map<String, dynamic> json) {
-    CellShape shape = CellShape.circle;
-    if (json['shape'] != null) {
-      final shapeStr = json['shape'] as String;
-      shape = CellShape.values.firstWhere(
-        (e) => e.name == shapeStr,
-        orElse: () => CellShape.circle,
-      );
-    }
-
-    return CellTheme(
-      showBorder: json['showBorder'] as bool? ?? false,
-      showEnglishDate: json['showEnglishDate'] as bool? ?? false,
-      eventIndicatorColor: json['eventIndicatorColor'] != null
-          ? _hexToColor(json['eventIndicatorColor'] as String)
-          : Colors.blue,
-      eventIndicatorSize:
-          (json['eventIndicatorSize'] as num?)?.toDouble() ?? 4.0,
-      englishDateColor: json['englishDateColor'] != null
-          ? _hexToColor(json['englishDateColor'] as String)
-          : Colors.grey,
-      todayBackgroundColor: json['todayBackgroundColor'] != null
-          ? _hexToColor(json['todayBackgroundColor'] as String)
-          : Colors.green,
-      todayTextColor: json['todayTextColor'] != null
-          ? _hexToColor(json['todayTextColor'] as String)
-          : null,
-      selectionColor: json['selectionColor'] != null
-          ? _hexToColor(json['selectionColor'] as String)
-          : Colors.blue,
-      selectedTextColor: json['selectedTextColor'] != null
-          ? _hexToColor(json['selectedTextColor'] as String)
-          : null,
-      hoverColor: json['hoverColor'] != null
-          ? _hexToColor(json['hoverColor'] as String)
-          : null,
-      disabledBackgroundColor: json['disabledBackgroundColor'] != null
-          ? _hexToColor(json['disabledBackgroundColor'] as String)
-          : null,
-      disabledTextColor: json['disabledTextColor'] != null
-          ? _hexToColor(json['disabledTextColor'] as String)
-          : null,
-      weekendBackgroundColor: json['weekendBackgroundColor'] != null
-          ? _hexToColor(json['weekendBackgroundColor'] as String)
-          : null,
-      weekendTextColor: json['weekendTextColor'] != null
-          ? _hexToColor(json['weekendTextColor'] as String)
-          // Support legacy 'weekdayTextColor' key for backward compatibility
-          : json['weekdayTextColor'] != null
-              ? _hexToColor(json['weekdayTextColor'] as String)
-              : Colors.red,
-      cellHeight: (json['cellHeight'] as num?)?.toDouble() ?? 40.0,
-      cellWidth: (json['cellWidth'] as num?)?.toDouble() ?? 40.0,
-      shape: shape,
-      borderRadius: (json['borderRadius'] as num?)!.toDouble(),
-    );
-  }
-}
-
-/// @Deprecated: Use HeaderTheme instead
-@Deprecated(
-  'Use HeaderTheme instead. This will be removed in the next major version.',
-)
-typedef HeaderStyle = HeaderTheme;
-
-/// Comprehensive theme configuration for calendar headers.
-///
-/// This class provides extensive customization for all header elements,
-/// including week names, month names, year display, and navigation controls.
-class HeaderTheme {
-  /// @Deprecated: Use weekdayTextStyle instead
-  @Deprecated(
-    'Use weekdayTextStyle instead. This will be removed in the next major version.',
-  )
-  TextStyle get weekHeaderStyle => weekdayTextStyle;
-
-  /// @Deprecated: Use weekdayFormat instead
-  @Deprecated(
-    'Use weekdayFormat instead. This will be removed in the next major version.',
-  )
-  WeekdayFormat get weekTitleType => weekdayFormat;
-
-  /// @Deprecated: Use monthTextStyle instead
-  @Deprecated(
-    'Use monthTextStyle instead. This will be removed in the next major version.',
-  )
-  TextStyle get monthHeaderStyle => monthTextStyle;
-
-  /// @Deprecated: Use yearTextStyle instead
-  @Deprecated(
-    'Use yearTextStyle instead. This will be removed in the next major version.',
-  )
-  TextStyle get yearHeaderStyle => yearTextStyle;
-
-  /// @Deprecated: Use WeekdayTheme.textStyle instead
-  ///
-  /// TextStyle for the weekday names in the calendar header.
-  /// This property is deprecated. Use [WeekdayTheme.textStyle] for weekday label styling.
-  @Deprecated(
-    'Use WeekdayTheme.textStyle instead. This will be removed in the next major version.',
-  )
-  final TextStyle weekdayTextStyle;
-
-  /// @Deprecated: Use WeekdayTheme.format instead
-  ///
-  /// Specifies the format for displaying weekday titles.
-  /// This property is deprecated. Use [WeekdayTheme.format] for weekday format.
-  @Deprecated(
-    'Use WeekdayTheme.format instead. This will be removed in the next major version.',
-  )
-  final WeekdayFormat weekdayFormat;
-
-  /// TextStyle for the month name displayed in the calendar header.
-  ///
-  /// Controls the appearance of the current month name (e.g., Baisakh, Jestha).
-  final TextStyle monthTextStyle;
-
-  /// TextStyle for the year displayed in the calendar header.
-  ///
-  /// Controls the appearance of the Nepali year number.
-  final TextStyle yearTextStyle;
-
-  /// Background color for the header section.
-  ///
-  /// Sets the background color of the entire header area.
-  final Color? headerBackgroundColor;
-
-  /// Height of the header section.
-  ///
-  /// Defines the fixed height for the header area. Default is 48.0.
-  final double headerHeight;
-
-  /// Padding for the header section.
-  ///
-  /// Controls the internal spacing of the header area.
-  final EdgeInsets headerPadding;
-
-  /// TextStyle for navigation buttons (previous/next month).
-  ///
-  /// Controls the appearance of navigation arrows or buttons.
-  final TextStyle? navigationButtonTextStyle;
-
-  /// Color for navigation icons.
-  ///
-  /// Sets the color of previous/next month navigation icons.
-  final Color? navigationIconColor;
-
-  /// Size of navigation icons.
-  ///
-  /// Controls the size of navigation arrow icons. Default is 24.0.
-  final double navigationIconSize;
-
-  /// Whether to show navigation buttons.
-  ///
-  /// Controls visibility of month navigation controls. Default is true.
-  final bool showNavigationButtons;
-
-  /// Alignment of the month/year text in the header.
-  ///
-  /// Controls the positioning of the month and year text.
-  final AlignmentGeometry headerTextAlignment;
-
-  /// Whether to show the year in the header.
-  ///
-  /// Controls visibility of the year display. Default is true.
-  final bool showYear;
-
-  /// Whether to show the month in the header.
-  ///
-  /// Controls visibility of the month display. Default is true.
-  final bool showMonth;
-
-  /// Separator between month and year text.
-  ///
-  /// The string used to separate month and year. Default is " ".
-  final String monthYearSeparator;
-
-  /// Border configuration for the header.
-  ///
-  /// Defines the border style for the header section.
-  final Border? headerBorder;
-
-  // Layout and transition properties
-
-  /// Layout style for the header.
-  ///
-  /// Controls the arrangement and spacing of header elements.
-  /// Default is [HeaderLayout.standard].
-  final HeaderLayout layout;
-
-  /// Custom widget for the leading position in the header.
-  ///
-  /// Typically used for a back button or menu icon.
-  /// When null, the default navigation button is shown.
-  final Widget? leading;
-
-  /// Custom widget for the trailing position in the header.
-  ///
-  /// Typically used for action buttons or icons.
-  /// When null, the default navigation button is shown.
-  final Widget? trailing;
-
-  /// Additional action widgets for the header.
-  ///
-  /// These widgets are displayed after the trailing widget.
-  final List<Widget>? actions;
-
-  /// Whether to enable fade transition for month changes.
-  ///
-  /// When true, month text fades in/out during transitions.
-  /// Default is true.
-  final bool enableFadeTransition;
-
-  /// Duration for header transitions.
-  ///
-  /// Controls how long the fade transition takes.
-  /// Default is 200 milliseconds.
-  final Duration transitionDuration;
-
-  /// Curve for header transitions.
-  ///
-  /// Controls the animation curve for fade transitions.
-  /// Default is [Curves.easeInOut].
-  final Curve transitionCurve;
-
-  /// Text style for subtitle (English date) in the header.
-  ///
-  /// Used when displaying the English date below the Nepali date in the header.
-  final TextStyle? subtitleTextStyle;
-
-  /// Creates a [HeaderTheme] instance with comprehensive styling options.
-  ///
-  /// All parameters are optional and have default values.
-  const HeaderTheme({
-    this.weekdayFormat = WeekdayFormat.abbreviated,
-    this.weekdayTextStyle = const TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.w500,
-      color: Colors.black87,
-    ),
-    this.monthTextStyle = const TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.w600,
-      color: Colors.black,
-    ),
-    this.yearTextStyle = const TextStyle(
-      fontSize: 18,
-      fontWeight: FontWeight.bold,
-      color: Colors.black,
-    ),
-    this.headerBackgroundColor,
-    this.headerHeight = 48.0,
-    this.headerPadding =
-        const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-    this.navigationButtonTextStyle,
-    this.navigationIconColor,
-    this.navigationIconSize = 24.0,
-    this.showNavigationButtons = true,
-    this.headerTextAlignment = Alignment.center,
-    this.showYear = true,
-    this.showMonth = true,
-    this.monthYearSeparator = " ",
-    this.headerBorder,
-    // Layout and transition properties
-    this.layout = HeaderLayout.standard,
-    this.leading,
-    this.trailing,
-    this.actions,
-    this.enableFadeTransition = true,
-    this.transitionDuration = const Duration(milliseconds: 200),
-    this.transitionCurve = Curves.easeInOut,
-    this.subtitleTextStyle,
-  });
-
-  /// Creates a copy of this theme with the given fields replaced with new values.
-  ///
-  /// Example:
-  /// ```dart
-  /// final newHeaderTheme = currentHeaderTheme.copyWith(
-  ///   monthTextStyle: TextStyle(fontSize: 20, color: Colors.purple),
-  /// );
-  /// ```
-  HeaderTheme copyWith({
-    TextStyle? weekdayTextStyle,
-    WeekdayFormat? weekdayFormat,
-    TextStyle? monthTextStyle,
-    TextStyle? yearTextStyle,
-    Color? headerBackgroundColor,
-    double? headerHeight,
-    EdgeInsets? headerPadding,
-    TextStyle? navigationButtonTextStyle,
-    Color? navigationIconColor,
-    double? navigationIconSize,
-    bool? showNavigationButtons,
-    AlignmentGeometry? headerTextAlignment,
-    bool? showYear,
-    bool? showMonth,
-    String? monthYearSeparator,
-    Border? headerBorder,
-    // Layout and transition properties
-    HeaderLayout? layout,
-    Widget? leading,
-    Widget? trailing,
-    List<Widget>? actions,
-    bool? enableFadeTransition,
-    Duration? transitionDuration,
-    Curve? transitionCurve,
-    TextStyle? subtitleTextStyle,
-  }) {
-    return HeaderTheme(
-      weekdayTextStyle: weekdayTextStyle ?? this.weekdayTextStyle,
-      weekdayFormat: weekdayFormat ?? this.weekdayFormat,
-      monthTextStyle: monthTextStyle ?? this.monthTextStyle,
-      yearTextStyle: yearTextStyle ?? this.yearTextStyle,
-      headerBackgroundColor:
-          headerBackgroundColor ?? this.headerBackgroundColor,
-      headerHeight: headerHeight ?? this.headerHeight,
-      headerPadding: headerPadding ?? this.headerPadding,
-      navigationButtonTextStyle:
-          navigationButtonTextStyle ?? this.navigationButtonTextStyle,
-      navigationIconColor: navigationIconColor ?? this.navigationIconColor,
-      navigationIconSize: navigationIconSize ?? this.navigationIconSize,
-      showNavigationButtons:
-          showNavigationButtons ?? this.showNavigationButtons,
-      headerTextAlignment: headerTextAlignment ?? this.headerTextAlignment,
-      showYear: showYear ?? this.showYear,
-      showMonth: showMonth ?? this.showMonth,
-      monthYearSeparator: monthYearSeparator ?? this.monthYearSeparator,
-      headerBorder: headerBorder ?? this.headerBorder,
-      // Layout and transition properties
-      layout: layout ?? this.layout,
-      leading: leading ?? this.leading,
-      trailing: trailing ?? this.trailing,
-      actions: actions ?? this.actions,
-      enableFadeTransition: enableFadeTransition ?? this.enableFadeTransition,
-      transitionDuration: transitionDuration ?? this.transitionDuration,
-      transitionCurve: transitionCurve ?? this.transitionCurve,
-      subtitleTextStyle: subtitleTextStyle ?? this.subtitleTextStyle,
-    );
-  }
-
-  /// Converts a Color to a hex string.
-  static String _colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).padLeft(8, '0')}';
-  }
-
-  /// Parses a hex string to a Color.
-  static Color _hexToColor(String hex) {
-    if (hex.startsWith('#')) {
-      return Color(int.parse(hex.substring(1), radix: 16));
-    }
-    return Color(int.parse(hex, radix: 16));
-  }
-
-  /// Converts this header theme to a JSON map.
-  Map<String, dynamic> toJson() {
-    return {
-      'weekdayFormat': weekdayFormat.name,
-      'headerHeight': headerHeight,
-      'navigationIconSize': navigationIconSize,
-      'showNavigationButtons': showNavigationButtons,
-      'showYear': showYear,
-      'showMonth': showMonth,
-      'monthYearSeparator': monthYearSeparator,
-      'layout': layout.name,
-      'enableFadeTransition': enableFadeTransition,
-      'transitionDuration': transitionDuration.inMilliseconds,
-      if (headerBackgroundColor != null)
-        'headerBackgroundColor': _colorToHex(headerBackgroundColor!),
-      if (navigationIconColor != null)
-        'navigationIconColor': _colorToHex(navigationIconColor!),
-    };
-  }
-
-  /// Creates a [HeaderTheme] from a JSON map.
-  factory HeaderTheme.fromJson(Map<String, dynamic> json) {
-    WeekdayFormat weekdayFormat = WeekdayFormat.abbreviated;
-    if (json['weekdayFormat'] != null) {
-      final formatStr = json['weekdayFormat'] as String;
-      weekdayFormat = WeekdayFormat.values.firstWhere(
-        (e) => e.name == formatStr,
-        orElse: () => WeekdayFormat.abbreviated,
-      );
-    }
-
-    HeaderLayout layout = HeaderLayout.standard;
-    if (json['layout'] != null) {
-      final layoutStr = json['layout'] as String;
-      layout = HeaderLayout.values.firstWhere(
-        (e) => e.name == layoutStr,
-        orElse: () => HeaderLayout.standard,
-      );
-    }
-
-    return HeaderTheme(
-      weekdayFormat: weekdayFormat,
-      headerHeight: (json['headerHeight'] as num?)?.toDouble() ?? 48.0,
-      navigationIconSize:
-          (json['navigationIconSize'] as num?)?.toDouble() ?? 24.0,
-      showNavigationButtons: json['showNavigationButtons'] as bool? ?? true,
-      showYear: json['showYear'] as bool? ?? true,
-      showMonth: json['showMonth'] as bool? ?? true,
-      monthYearSeparator: json['monthYearSeparator'] as String? ?? ' ',
-      layout: layout,
-      enableFadeTransition: json['enableFadeTransition'] as bool? ?? true,
-      transitionDuration: Duration(
-        milliseconds: json['transitionDuration'] as int? ?? 200,
-      ),
-      headerBackgroundColor: json['headerBackgroundColor'] != null
-          ? _hexToColor(json['headerBackgroundColor'] as String)
-          : null,
-      navigationIconColor: json['navigationIconColor'] != null
-          ? _hexToColor(json['navigationIconColor'] as String)
-          : null,
     );
   }
 }

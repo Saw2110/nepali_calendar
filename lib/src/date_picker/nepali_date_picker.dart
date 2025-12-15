@@ -198,18 +198,20 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
 
   void _goToPreviousMonth() {
     if (_dayPageController.page! > 0) {
+      final theme = widget.theme ?? const CalendarTheme.defaults();
       _dayPageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: theme.animations.monthTransitionDuration,
+        curve: theme.animations.monthTransitionCurve,
       );
     }
   }
 
   void _goToNextMonth() {
     if (_dayPageController.page! < _totalPages - 1) {
+      final theme = widget.theme ?? const CalendarTheme.defaults();
       _dayPageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: theme.animations.monthTransitionDuration,
+        curve: theme.animations.monthTransitionCurve,
       );
     }
   }
@@ -226,13 +228,18 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
         widget.theme ?? CalendarTheme.fromMaterialTheme(Theme.of(context));
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
+      duration: theme.animations.monthTransitionDuration,
       transitionBuilder: (child, animation) {
         return SlideTransition(
           position: Tween<Offset>(
             begin: const Offset(0.0, 0.1),
             end: Offset.zero,
-          ).animate(animation),
+          ).animate(
+            CurvedAnimation(
+              parent: animation,
+              curve: theme.animations.monthTransitionCurve,
+            ),
+          ),
           child: FadeTransition(opacity: animation, child: child),
         );
       },
@@ -566,6 +573,7 @@ class _DayView extends StatelessWidget {
     );
   }
 
+  /// Builds a day cell using ColorScheme as Single Source of Truth.
   Widget _buildDayCell(NepaliDateTime date) {
     final cellTheme = theme.cellTheme;
     final isNepali = theme.locale == CalendarLocale.nepali;
@@ -575,31 +583,37 @@ class _DayView extends StatelessWidget {
     final isSelectable = isDateSelectable(date);
     final isWeekendDay = weekend.isWeekend(date.weekday);
 
-    TextStyle textStyle = cellTheme.defaultTextStyle;
+    // Text style resolution using ColorScheme
+    TextStyle textStyle = cellTheme.defaultTextStyle.copyWith(
+      color: theme.resolvedDefaultTextColor,
+    );
+
     if (!isSelectable) {
       textStyle = cellTheme.disabledTextStyle ??
           textStyle.copyWith(
-            color: cellTheme.disabledTextColor ?? theme.colorScheme.disabled,
+            color:
+                cellTheme.disabledTextColor ?? theme.resolvedDisabledTextColor,
           );
     } else if (isSelected) {
       textStyle = cellTheme.selectedTextStyle ??
           textStyle.copyWith(
-            color: cellTheme.selectedTextColor ?? theme.colorScheme.onPrimary,
+            color: theme.resolvedSelectionTextColor,
           );
     } else if (isToday) {
       textStyle = cellTheme.todayTextStyle ??
           textStyle.copyWith(
-            color: cellTheme.todayTextColor ?? theme.colorScheme.onPrimary,
+            color: theme.resolvedTodayTextColor,
           );
     } else if (isWeekendDay) {
       textStyle = cellTheme.weekendTextStyle ??
-          textStyle.copyWith(color: cellTheme.weekendTextColor);
+          textStyle.copyWith(color: theme.resolvedWeekendTextColor);
     }
 
+    // Decoration using ColorScheme
     BoxDecoration? decoration;
     if (isSelected) {
       decoration = BoxDecoration(
-        color: cellTheme.selectionColor,
+        color: theme.resolvedSelectionColor,
         shape: cellTheme.shape == CellShape.circle
             ? BoxShape.circle
             : BoxShape.rectangle,
@@ -609,7 +623,7 @@ class _DayView extends StatelessWidget {
       );
     } else if (isToday) {
       decoration = BoxDecoration(
-        color: cellTheme.todayBackgroundColor,
+        color: theme.resolvedTodayBackgroundColor,
         shape: cellTheme.shape == CellShape.circle
             ? BoxShape.circle
             : BoxShape.rectangle,
@@ -754,14 +768,18 @@ class _MonthView extends StatelessWidget {
           isNepali ? CalendarLocale.nepali : CalendarLocale.english,
         );
 
-        TextStyle textStyle = cellTheme.defaultTextStyle.copyWith(fontSize: 14);
+        // Text style using resolved colors from ColorScheme
+        TextStyle textStyle = cellTheme.defaultTextStyle.copyWith(
+          fontSize: 14,
+          color: theme.resolvedDefaultTextColor,
+        );
         if (!isSelectable) {
           textStyle = textStyle.copyWith(
-            color: theme.colorScheme.disabled,
+            color: theme.resolvedDisabledTextColor,
           );
         } else if (isSelected) {
           textStyle = textStyle.copyWith(
-            color: theme.colorScheme.onPrimary,
+            color: theme.resolvedSelectionTextColor,
             fontWeight: FontWeight.w600,
           );
         } else if (isCurrentMonth) {
@@ -771,10 +789,11 @@ class _MonthView extends StatelessWidget {
           );
         }
 
+        // Decoration using resolved colors
         BoxDecoration? decoration;
         if (isSelected) {
           decoration = BoxDecoration(
-            color: cellTheme.selectionColor,
+            color: theme.resolvedSelectionColor,
             borderRadius: BorderRadius.circular(8),
           );
         } else if (isCurrentMonth) {
@@ -842,8 +861,8 @@ class _YearViewState extends State<_YearView> {
     if (scrollOffset > 0 && _scrollController.hasClients) {
       _scrollController.animateTo(
         scrollOffset,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: widget.theme.animations.monthTransitionDuration,
+        curve: widget.theme.animations.monthTransitionCurve,
       );
     }
   }
@@ -921,15 +940,18 @@ class _YearViewState extends State<_YearView> {
               ? NepaliNumberConverter.englishToNepali(year.toString())
               : year.toString();
 
-          TextStyle textStyle =
-              cellTheme.defaultTextStyle.copyWith(fontSize: 14);
+          // Text style using resolved colors from ColorScheme
+          TextStyle textStyle = cellTheme.defaultTextStyle.copyWith(
+            fontSize: 14,
+            color: widget.theme.resolvedDefaultTextColor,
+          );
           if (!isSelectable) {
             textStyle = textStyle.copyWith(
-              color: widget.theme.colorScheme.disabled,
+              color: widget.theme.resolvedDisabledTextColor,
             );
           } else if (isSelected) {
             textStyle = textStyle.copyWith(
-              color: widget.theme.colorScheme.onPrimary,
+              color: widget.theme.resolvedSelectionTextColor,
               fontWeight: FontWeight.w600,
             );
           } else if (isCurrentYear) {
@@ -939,10 +961,11 @@ class _YearViewState extends State<_YearView> {
             );
           }
 
+          // Decoration using resolved colors
           BoxDecoration? decoration;
           if (isSelected) {
             decoration = BoxDecoration(
-              color: cellTheme.selectionColor,
+              color: widget.theme.resolvedSelectionColor,
               borderRadius: BorderRadius.circular(8),
             );
           } else if (isCurrentYear) {

@@ -37,8 +37,11 @@ class WeekdayHeader extends StatelessWidget {
   }
 
   /// Builds a single weekday label.
+  ///
+  /// Uses ColorScheme for text color fallback.
   Widget _buildWeekdayLabel(int day) {
     final weekdayTheme = style.weekdayTheme;
+    final colorScheme = style.colorScheme;
 
     // Get the label text
     final String label = _getWeekdayLabel(day);
@@ -46,12 +49,25 @@ class WeekdayHeader extends StatelessWidget {
     // Determine if this is a weekend day (Saturday = 6)
     final bool isWeekend = day == 6;
 
-    // Get the appropriate text style
-    final TextStyle? textStyle =
-        isWeekend && weekdayTheme.weekendTextStyle != null
-            ? weekdayTheme.weekendTextStyle
-            : weekdayTheme.textStyle ??
-                const TextStyle(fontWeight: FontWeight.bold);
+    // Get the appropriate text style with ColorScheme fallback
+    TextStyle textStyle;
+    if (isWeekend && weekdayTheme.weekendTextStyle != null) {
+      textStyle = weekdayTheme.weekendTextStyle!;
+    } else if (isWeekend) {
+      // Weekend without explicit style: use colorScheme.weekend
+      textStyle = weekdayTheme.textStyle?.copyWith(
+            color: colorScheme.weekend,
+          ) ??
+          TextStyle(fontWeight: FontWeight.bold, color: colorScheme.weekend);
+    } else if (weekdayTheme.textStyle != null) {
+      textStyle = weekdayTheme.textStyle!;
+    } else {
+      // Default: use colorScheme.onSurface
+      textStyle = TextStyle(
+        fontWeight: FontWeight.bold,
+        color: colorScheme.onSurface,
+      );
+    }
 
     return Expanded(
       child: Text(

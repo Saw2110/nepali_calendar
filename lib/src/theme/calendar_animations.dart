@@ -28,23 +28,37 @@ class CalendarAnimations {
   /// Default is Curves.easeInOut.
   final Curve monthTransitionCurve;
 
-  /// Duration for selection animations.
+  /// @Deprecated: This property is not implemented.
   ///
-  /// Controls how long the animation takes when selecting a date.
-  /// Default is 200 milliseconds.
+  /// Duration for selection animations.
+  /// Selection animation is not currently implemented.
+  /// This property will be removed in the next major version.
+  @Deprecated(
+    'This property is not implemented. Selection animation is not supported. '
+    'This will be removed in the next major version.',
+  )
   final Duration selectionAnimationDuration;
 
-  /// Curve for selection animations.
+  /// @Deprecated: This property is not implemented.
   ///
-  /// Controls the easing curve for date selection animations.
-  /// Default is Curves.easeOut.
+  /// Curve for selection animations.
+  /// Selection animation is not currently implemented.
+  /// This property will be removed in the next major version.
+  @Deprecated(
+    'This property is not implemented. Selection animation is not supported. '
+    'This will be removed in the next major version.',
+  )
   final Curve selectionAnimationCurve;
 
-  /// Whether to animate cell state changes.
+  /// @Deprecated: This property is not implemented.
   ///
-  /// When true, cells animate when their state changes
-  /// (e.g., selected, hovered).
-  /// Default is true.
+  /// Whether to animate cell state changes.
+  /// Cell animation is not currently implemented.
+  /// This property will be removed in the next major version.
+  @Deprecated(
+    'This property is not implemented. Cell animation is not supported. '
+    'This will be removed in the next major version.',
+  )
   final bool enableCellAnimation;
 
   /// Whether to animate header changes.

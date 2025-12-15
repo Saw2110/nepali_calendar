@@ -33,10 +33,11 @@ class CalendarCell<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cellTheme = calendarStyle.cellTheme;
+    final colorScheme = calendarStyle.colorScheme;
 
     // Adjacent month days have special styling
     if (isAdjacentMonth) {
-      return _buildAdjacentMonthCell(cellTheme);
+      return _buildAdjacentMonthCell(cellTheme, colorScheme);
     }
 
     // Check various states for current month days
@@ -114,7 +115,11 @@ class CalendarCell<T> extends StatelessWidget {
 
   /// Builds a cell for adjacent month days (previous/next month).
   /// These are displayed with dim colors and are not tappable.
-  Widget _buildAdjacentMonthCell(CellTheme cellTheme) {
+  Widget _buildAdjacentMonthCell(
+    CellTheme cellTheme,
+    CalendarColorScheme colorScheme,
+  ) {
+    // Resolve adjacent month color: explicit > colorScheme.disabled > default
     final adjacentColor = cellTheme.adjacentMonthTextColor;
     // Skip border if grid is handling it (table-style borders)
     final showCellBorder = cellTheme.showBorder && !skipBorder;
@@ -157,6 +162,11 @@ class CalendarCell<T> extends StatelessWidget {
   }
 
   /// Gets the decoration for the cell based on state.
+  ///
+  /// Color resolution priority:
+  /// 1. Explicit CellTheme property (if set)
+  /// 2. ColorScheme semantic color
+  /// 3. Default fallback
   BoxDecoration _getCellDecoration({
     required bool isToday,
     required bool isSelected,
@@ -164,13 +174,14 @@ class CalendarCell<T> extends StatelessWidget {
   }) {
     final cellTheme = calendarStyle.cellTheme;
 
-    // Determine background color
+    // Determine background color (ColorScheme is used via resolved colors)
     Color backgroundColor = Colors.transparent;
 
     if (isToday) {
-      backgroundColor = cellTheme.todayBackgroundColor;
+      backgroundColor = calendarStyle.resolvedTodayBackgroundColor;
     } else if (isSelected) {
-      backgroundColor = cellTheme.selectionColor.withValues(alpha: 0.2);
+      backgroundColor =
+          calendarStyle.resolvedSelectionColor.withValues(alpha: 0.2);
     } else if (isWeekend && cellTheme.weekendBackgroundColor != null) {
       backgroundColor = cellTheme.weekendBackgroundColor!;
     }
@@ -200,6 +211,12 @@ class CalendarCell<T> extends StatelessWidget {
   }
 
   /// Gets the text style for the cell based on state.
+  ///
+  /// Color resolution priority:
+  /// 1. Explicit TextStyle (if set)
+  /// 2. Explicit color property (if set)
+  /// 3. ColorScheme semantic color
+  /// 4. Default fallback
   TextStyle _getTextStyle({
     required bool isToday,
     required bool isSelected,
@@ -207,24 +224,25 @@ class CalendarCell<T> extends StatelessWidget {
     required bool hasEvent,
   }) {
     final cellTheme = calendarStyle.cellTheme;
+    final colorScheme = calendarStyle.colorScheme;
 
-    // Today
+    // Today: explicit style > explicit color > colorScheme.onToday > white
     if (isToday) {
       return cellTheme.todayTextStyle ??
           cellTheme.defaultTextStyle.copyWith(
-            color: cellTheme.todayTextColor ?? Colors.white,
+            color: cellTheme.todayTextColor ?? colorScheme.onToday,
           );
     }
 
-    // Selected
+    // Selected: explicit style > explicit color > colorScheme.onPrimary > primary
     if (isSelected) {
       return cellTheme.selectedTextStyle ??
           cellTheme.defaultTextStyle.copyWith(
-            color: cellTheme.selectedTextColor ?? cellTheme.selectionColor,
+            color: cellTheme.selectedTextColor ?? colorScheme.onPrimary,
           );
     }
 
-    // Weekend
+    // Weekend: explicit style > explicit color > colorScheme.weekend > red
     if (isWeekend) {
       return cellTheme.weekendTextStyle ??
           cellTheme.defaultTextStyle.copyWith(
@@ -237,8 +255,10 @@ class CalendarCell<T> extends StatelessWidget {
       return cellTheme.eventDateTextStyle!;
     }
 
-    // Default
-    return cellTheme.defaultTextStyle;
+    // Default: explicit style > colorScheme.onSurface > black
+    final defaultColor =
+        cellTheme.defaultTextStyle.color ?? colorScheme.onSurface;
+    return cellTheme.defaultTextStyle.copyWith(color: defaultColor);
   }
 
   /// Gets the event indicator color.

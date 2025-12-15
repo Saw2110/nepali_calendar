@@ -1,7 +1,6 @@
 // Import required Flutter material package
 import 'package:flutter/material.dart';
 
-// Import custom source file
 import '../src.dart';
 
 // Widget to display the calendar header with month/year and navigation buttons
@@ -77,11 +76,14 @@ class _CalendarHeaderState extends State<CalendarHeader>
   Widget build(BuildContext context) {
     final headerTheme = widget.calendarStyle.headerTheme;
 
+    // Use explicit background (null means transparent)
+    final backgroundColor = headerTheme.headerBackgroundColor;
+
     return Container(
       height: _getHeaderHeight(headerTheme.layout),
       padding: headerTheme.headerPadding,
       decoration: BoxDecoration(
-        color: headerTheme.headerBackgroundColor,
+        color: backgroundColor,
         border: headerTheme.headerBorder,
       ),
       child: Row(
@@ -115,6 +117,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
   }
 
   /// Builds the leading widget.
+  ///
+  /// Uses ColorScheme for icon color fallback.
   Widget _buildLeading(HeaderTheme headerTheme) {
     if (headerTheme.leading != null) {
       return headerTheme.leading!;
@@ -124,10 +128,14 @@ class _CalendarHeaderState extends State<CalendarHeader>
       return const SizedBox.shrink();
     }
 
+    // Use explicit color > colorScheme.onSurface > default
+    final iconColor = headerTheme.navigationIconColor ??
+        widget.calendarStyle.colorScheme.onSurface;
+
     return IconButton(
       icon: Icon(
         Icons.chevron_left,
-        color: headerTheme.navigationIconColor,
+        color: iconColor,
         size: headerTheme.navigationIconSize,
       ),
       onPressed: () {
@@ -216,11 +224,15 @@ class _CalendarHeaderState extends State<CalendarHeader>
     if (headerTheme.trailing != null) {
       trailingWidgets.add(headerTheme.trailing!);
     } else if (headerTheme.showNavigationButtons) {
+      // Use explicit color > colorScheme.onSurface > default
+      final iconColor = headerTheme.navigationIconColor ??
+          widget.calendarStyle.colorScheme.onSurface;
+
       trailingWidgets.add(
         IconButton(
           icon: Icon(
             Icons.chevron_right,
-            color: headerTheme.navigationIconColor,
+            color: iconColor,
             size: headerTheme.navigationIconSize,
           ),
           onPressed: () {
