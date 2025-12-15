@@ -84,6 +84,27 @@ class _DatePickerExampleState extends State<DatePickerExample> {
                 icon: const Icon(Icons.weekend),
                 label: const Text('Sat-Sun Weekend'),
               ),
+              const SizedBox(height: 12),
+
+              // Info text about year/month picker
+              const Card(
+                color: Color(0xFFF5F5F5),
+                child: Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Tip: Tap on the month/year header to quickly navigate to any month or year!',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
 
               // Inline date picker

@@ -309,8 +309,9 @@ class NewThemeExampleScreen extends StatelessWidget {
               ),
               borders: CalendarBorders(
                 calendarBorder: Border.all(width: 5.0, color: Colors.red),
-                showHorizontalDividers: true,
-                showVerticalDividers: true,
+                calendarBorderRadius: BorderRadius.all(
+                  Radius.circular(40.0),
+                ),
               ),
               weekdayTheme: WeekdayTheme(format: WeekdayFormat.abbreviated),
               // cellTheme: CellTheme(

@@ -8,8 +8,15 @@ class CalendarCell<T> extends StatelessWidget {
   final NepaliDateTime date;
   final NepaliDateTime selectedDate;
   final CalendarEvent<T>? event;
-  final OnDateSelected onDaySelected;
+  final OnDateSelected? onDaySelected;
   final CalendarTheme calendarStyle;
+
+  /// Whether this cell represents a day from an adjacent month (previous/next).
+  /// Adjacent month days are displayed with dim colors and are not tappable.
+  final bool isAdjacentMonth;
+
+  /// Whether to skip applying cell border (used when grid handles borders).
+  final bool skipBorder;
 
   const CalendarCell({
     super.key,
@@ -19,13 +26,20 @@ class CalendarCell<T> extends StatelessWidget {
     required this.event,
     required this.onDaySelected,
     required this.calendarStyle,
+    this.isAdjacentMonth = false,
+    this.skipBorder = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final cellTheme = calendarStyle.cellTheme;
 
-    // Check various states
+    // Adjacent month days have special styling
+    if (isAdjacentMonth) {
+      return _buildAdjacentMonthCell(cellTheme);
+    }
+
+    // Check various states for current month days
     final isToday = CalendarUtils.isToday(date.toDateTime());
     final isSelected = _isSelectedDate(date);
     final isHoliday = event?.isHoliday ?? false;
@@ -33,8 +47,9 @@ class CalendarCell<T> extends StatelessWidget {
     final hasEvent = event != null;
 
     return GestureDetector(
-      onTap: () => onDaySelected(date),
+      onTap: onDaySelected != null ? () => onDaySelected!(date) : null,
       child: Container(
+        margin: cellTheme.cellMargin,
         decoration: _getCellDecoration(
           isToday: isToday,
           isSelected: isSelected,
@@ -61,13 +76,15 @@ class CalendarCell<T> extends StatelessWidget {
             // English date display
             if (cellTheme.showEnglishDate)
               Positioned(
-                right: 2,
-                bottom: 2,
+                right: 5,
+                bottom: 4,
                 child: Text(
                   "${date.toDateTime().day}",
                   style: TextStyle(
                     fontSize: 10,
-                    color: cellTheme.englishDateColor,
+                    color: isToday
+                        ? Colors.white.withValues(alpha: 0.7)
+                        : cellTheme.englishDateColor,
                   ),
                 ),
               ),
@@ -75,7 +92,7 @@ class CalendarCell<T> extends StatelessWidget {
             // Event indicator
             if (hasEvent)
               Positioned(
-                bottom: 2,
+                bottom: 4,
                 child: Container(
                   width: cellTheme.eventIndicatorSize,
                   height: cellTheme.eventIndicatorSize,
@@ -91,6 +108,50 @@ class CalendarCell<T> extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Builds a cell for adjacent month days (previous/next month).
+  /// These are displayed with dim colors and are not tappable.
+  Widget _buildAdjacentMonthCell(CellTheme cellTheme) {
+    final adjacentColor = cellTheme.adjacentMonthTextColor;
+    // Skip border if grid is handling it (table-style borders)
+    final showCellBorder = cellTheme.showBorder && !skipBorder;
+
+    return Container(
+      margin: cellTheme.cellMargin,
+      decoration: BoxDecoration(
+        border: showCellBorder ? cellTheme.cellBorder : null,
+        borderRadius: _getBorderRadius(),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Main date text (dim color)
+          Center(
+            child: Text(
+              calendarStyle.locale == CalendarLocale.english
+                  ? "$day"
+                  : NepaliNumberConverter.englishToNepali(day.toString()),
+              style: cellTheme.defaultTextStyle.copyWith(color: adjacentColor),
+            ),
+          ),
+
+          // English date display (dim color)
+          if (cellTheme.showEnglishDate)
+            Positioned(
+              right: 5,
+              bottom: 4,
+              child: Text(
+                "${date.toDateTime().day}",
+                style: TextStyle(
+                  fontSize: 10,
+                  color: adjacentColor.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -114,9 +175,12 @@ class CalendarCell<T> extends StatelessWidget {
       backgroundColor = cellTheme.weekendBackgroundColor!;
     }
 
+    // Skip border if grid is handling it (table-style borders)
+    final showCellBorder = cellTheme.showBorder && !skipBorder;
+
     return BoxDecoration(
       color: backgroundColor,
-      border: cellTheme.showBorder ? cellTheme.cellBorder : null,
+      border: showCellBorder ? cellTheme.cellBorder : null,
       borderRadius: _getBorderRadius(),
     );
   }
@@ -129,7 +193,7 @@ class CalendarCell<T> extends StatelessWidget {
       case CellShape.circle:
         return BorderRadius.circular(100);
       case CellShape.roundedSquare:
-        return BorderRadius.circular(cellTheme.borderRadius ?? 8.0);
+        return BorderRadius.circular(cellTheme.borderRadius);
       case CellShape.square:
         return BorderRadius.zero;
     }

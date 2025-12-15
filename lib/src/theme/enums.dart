@@ -1,8 +1,22 @@
 /// Enums for the calendar theme system.
 ///
 /// This library provides enums for configuring calendar cell shapes,
-/// header layouts, week start days, and weekend configurations.
+/// header layouts, week start days, weekend configurations, and date picker modes.
 library;
+
+/// View modes for the Nepali date picker.
+///
+/// Controls which view is displayed in the date picker.
+enum NepaliDatePickerMode {
+  /// Day selection view - shows calendar grid for a month.
+  day,
+
+  /// Month selection view - shows 12 months grid for a year.
+  month,
+
+  /// Year selection view - shows grid of years.
+  year,
+}
 
 /// Shape options for calendar cells.
 ///
@@ -135,12 +149,20 @@ extension WeekStartExtension on WeekStart {
 
   /// Returns the offset needed to calculate the first day position in a month grid.
   ///
-  /// Given a weekday (1=Sunday, 2=Monday, ..., 7=Saturday from NepaliDateTime),
-  /// returns the column position (0-6) in the calendar grid.
+  /// Given a weekday from NepaliDateTime.weekday (which is DateTime.weekday + 1):
+  /// - 2=Monday, 3=Tuesday, 4=Wednesday, 5=Thursday, 6=Friday, 7=Saturday, 8=Sunday
+  /// Returns the column position (0-6) in the calendar grid.
   int getGridOffset(int weekday) {
-    // NepaliDateTime.weekday: 1=Sunday, 2=Monday, ..., 7=Saturday
+    // NepaliDateTime.weekday = DateTime.weekday + 1
+    // DateTime: 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 7=Sun
+    // NepaliDateTime: 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat, 8=Sun
     // Convert to 0-based: 0=Sunday, 1=Monday, ..., 6=Saturday
-    final dayIndex = weekday == 7 ? 6 : weekday - 1;
+    int dayIndex;
+    if (weekday == 8 || weekday == 1) {
+      dayIndex = 0; // Sunday
+    } else {
+      dayIndex = weekday - 1; // 2-7 maps to 1-6 (Mon-Sat)
+    }
     // Calculate offset based on week start
     return (dayIndex - index + 7) % 7;
   }

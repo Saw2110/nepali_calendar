@@ -159,8 +159,19 @@ class HomeScreen extends StatelessWidget {
                   },
                   // Customize calendar appearance (using deprecated params for backward compatibility)
                   theme: CalendarTheme(
-                    showEnglishDate: true,
-                    showBorder: false,
+                    // showEnglishDate: true,
+                    // showBorder: false,
+                    borders: CalendarBorders(
+                      calendarBorderRadius: BorderRadius.circular(10.0),
+                      calendarBorder: Border.all(color: Colors.blue),
+                    ),
+                    cellTheme: CellTheme(
+                      showEnglishDate: true,
+                      showBorder: true,
+                      cellMargin: EdgeInsets.all(0.0),
+                      shape: CellShape.square,
+                      cellBorder: Border.all(color: Colors.grey.shade200),
+                    ),
                   ),
                 ),
               ),

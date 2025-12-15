@@ -757,15 +757,23 @@ class CellTheme {
   /// Applied to date numbers on weekend days.
   final Color weekendTextColor;
 
+  /// Whether to show adjacent month days in empty cells.
+  ///
+  /// When true, previous and next month days are shown in light grey
+  /// to fill the calendar grid. These days are not tappable.
+  /// Default is true.
+  final bool showAdjacentMonthDays;
+
+  /// Text color for adjacent month days (previous/next month).
+  ///
+  /// Applied to dates from previous and next months shown in empty cells.
+  /// Only used when [showAdjacentMonthDays] is true.
+  final Color adjacentMonthTextColor;
+
   /// Border configuration for cells.
   ///
   /// Defines the border style for date cells.
   final Border? cellBorder;
-
-  /// Padding inside each cell.
-  ///
-  /// Controls the internal spacing of date cells.
-  final EdgeInsets cellPadding;
 
   /// Margin around each cell.
   ///
@@ -800,6 +808,7 @@ class CellTheme {
   const CellTheme({
     this.showBorder = false,
     this.showEnglishDate = false,
+    this.showAdjacentMonthDays = true,
     this.defaultTextStyle = const TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w400,
@@ -822,8 +831,8 @@ class CellTheme {
     this.disabledTextColor,
     this.weekendBackgroundColor,
     this.weekendTextColor = Colors.red,
+    this.adjacentMonthTextColor = const Color(0xFFBDBDBD),
     this.cellBorder,
-    this.cellPadding = const EdgeInsets.all(4.0),
     this.cellMargin = const EdgeInsets.all(2.0),
     this.cellHeight = 40.0,
     this.cellWidth = 40.0,
@@ -843,6 +852,7 @@ class CellTheme {
   CellTheme copyWith({
     bool? showBorder,
     bool? showEnglishDate,
+    bool? showAdjacentMonthDays,
     TextStyle? defaultTextStyle,
     TextStyle? todayTextStyle,
     TextStyle? selectedTextStyle,
@@ -862,8 +872,8 @@ class CellTheme {
     Color? disabledTextColor,
     Color? weekendBackgroundColor,
     Color? weekendTextColor,
+    Color? adjacentMonthTextColor,
     Border? cellBorder,
-    EdgeInsets? cellPadding,
     EdgeInsets? cellMargin,
     double? cellHeight,
     double? cellWidth,
@@ -873,6 +883,8 @@ class CellTheme {
     return CellTheme(
       showBorder: showBorder ?? this.showBorder,
       showEnglishDate: showEnglishDate ?? this.showEnglishDate,
+      showAdjacentMonthDays:
+          showAdjacentMonthDays ?? this.showAdjacentMonthDays,
       defaultTextStyle: defaultTextStyle ?? this.defaultTextStyle,
       todayTextStyle: todayTextStyle ?? this.todayTextStyle,
       selectedTextStyle: selectedTextStyle ?? this.selectedTextStyle,
@@ -895,8 +907,9 @@ class CellTheme {
       weekendBackgroundColor:
           weekendBackgroundColor ?? this.weekendBackgroundColor,
       weekendTextColor: weekendTextColor ?? this.weekendTextColor,
+      adjacentMonthTextColor:
+          adjacentMonthTextColor ?? this.adjacentMonthTextColor,
       cellBorder: cellBorder ?? this.cellBorder,
-      cellPadding: cellPadding ?? this.cellPadding,
       cellMargin: cellMargin ?? this.cellMargin,
       cellHeight: cellHeight ?? this.cellHeight,
       cellWidth: cellWidth ?? this.cellWidth,

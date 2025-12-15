@@ -84,7 +84,7 @@ class NepaliCalendarController extends ChangeNotifier {
 
   /// Jumps to a specific month.
   void jumpToMonth(int year, int month, {bool animate = true}) {
-    _focusedDate = NepaliDateTime(year: year, month: month, day: 1);
+    _focusedDate = NepaliDateTime(year: year, month: month);
 
     final pageIndex =
         ((year - CalendarUtils.calenderyearStart) * 12) + month - 1;
