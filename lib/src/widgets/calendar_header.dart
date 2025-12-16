@@ -23,66 +23,70 @@ class CalendarHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        // Left navigation button
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
-          onPressed: () {
-            // Check if controller is attached before navigating
-            if (pageController.hasClients) {
-              pageController.previousPage(
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.easeInOut,
-              );
-            }
-          },
-        ),
-        // Center section containing month and year
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Month display
-              Flexible(
-                child: Text(
-                  MonthUtils.formattedMonth(
-                    selectedDate.month,
-                    calendarStyle.language,
-                  ),
-                  style: calendarStyle.headersStyle.monthHeaderStyle,
-                ),
-              ),
-              // Year display with language-specific formatting
-              Flexible(
-                child: Text(
-                  calendarStyle.language == Language.english
-                      ? "${selectedDate.year}"
-                      : NepaliNumberConverter.englishToNepali(
-                          selectedDate.year.toString(),
-                        ),
-                  style: calendarStyle.headersStyle.yearHeaderStyle,
-                ),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Left navigation button
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: () {
+              // Check if controller is attached before navigating
+              if (pageController.hasClients) {
+                pageController.previousPage(
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeInOut,
+                );
+              }
+            },
           ),
-        ),
-        // Right navigation button
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
-          onPressed: () {
-            // Check if controller is attached before navigating
-            if (pageController.hasClients) {
-              pageController.nextPage(
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.easeInOut,
-              );
-            }
-          },
-        ),
-      ],
+          // Center section containing month and year
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              spacing: 5.0,
+              children: [
+                // Month display
+                Flexible(
+                  child: Text(
+                    MonthUtils.formattedMonth(
+                      selectedDate.month,
+                      calendarStyle.language,
+                    ),
+                    style: calendarStyle.headersStyle.monthHeaderStyle,
+                  ),
+                ),
+                // Year display with language-specific formatting
+                Flexible(
+                  child: Text(
+                    calendarStyle.language == Language.english
+                        ? "${selectedDate.year}"
+                        : NepaliNumberConverter.englishToNepali(
+                            selectedDate.year.toString(),
+                          ),
+                    style: calendarStyle.headersStyle.yearHeaderStyle,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Right navigation button
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            onPressed: () {
+              // Check if controller is attached before navigating
+              if (pageController.hasClients) {
+                pageController.nextPage(
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeInOut,
+                );
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 }

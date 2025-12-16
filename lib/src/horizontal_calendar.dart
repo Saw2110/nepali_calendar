@@ -134,17 +134,19 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
 
 // Method to get the cell background color based on today, selected state, and weekday
   Color _getCellColor(bool isToday, bool isSelected, int weekday) {
-    if (isToday && weekday != 7) {
+    final isWeekend = _isWeekend(weekday);
+
+    if (isToday && !isWeekend) {
       return widget.calendarStyle.cellsStyle.todayColor;
     }
-    if (isToday && weekday == 7) {
+    if (isToday && isWeekend) {
       return widget.calendarStyle.cellsStyle.weekDayColor;
     }
-    if (isSelected && weekday != 7) {
+    if (isSelected && !isWeekend) {
       return widget.calendarStyle.cellsStyle.selectedColor
           .withValues(alpha: 0.2);
     }
-    if (isSelected && weekday == 7) {
+    if (isSelected && isWeekend) {
       return widget.calendarStyle.cellsStyle.weekDayColor
           .withValues(alpha: 0.2);
     }
@@ -154,15 +156,32 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
 
 // Method to get the cell text color based on today, selected state, and weekday
   Color _getCellTextColor(bool isToday, bool isSelected, int weekday) {
+    final isWeekend = _isWeekend(weekday);
+
     if (isToday) return Colors.white; // Today always white text
-    if (isSelected && weekday != 7) {
+    if (isSelected && !isWeekend) {
       return widget.calendarStyle.cellsStyle.selectedColor;
     }
-    if (isSelected && weekday == 7) {
+    if (isSelected && isWeekend) {
       return widget.calendarStyle.cellsStyle.weekDayColor;
     }
-    if (weekday == 7) return widget.calendarStyle.cellsStyle.weekDayColor;
+    if (isWeekend) return widget.calendarStyle.cellsStyle.weekDayColor;
     return Colors.black; // Default text color
+  }
+
+  // Method to check if a weekday is a weekend based on the weekend type
+  bool _isWeekend(int weekday) {
+    // weekday: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
+    switch (widget.calendarStyle.weekendType) {
+      case WeekendType.saturdayAndSunday:
+        return weekday == 6 || weekday == 7;
+      case WeekendType.fridayAndSaturday:
+        return weekday == 5 || weekday == 6;
+      case WeekendType.saturday:
+        return weekday == 6;
+      case WeekendType.sunday:
+        return weekday == 7;
+    }
   }
 }
 

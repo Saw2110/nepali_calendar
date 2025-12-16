@@ -9,6 +9,7 @@ class CalendarCell<T> extends StatelessWidget {
   final CalendarEvent<T>? event;
   final OnDateSelected onDaySelected;
   final NepaliCalendarStyle calendarStyle;
+  final bool isDimmed;
 
   const CalendarCell({
     super.key,
@@ -18,6 +19,7 @@ class CalendarCell<T> extends StatelessWidget {
     required this.event,
     required this.onDaySelected,
     required this.calendarStyle,
+    this.isDimmed = false,
   });
 
   @override
@@ -96,6 +98,8 @@ class CalendarCell<T> extends StatelessWidget {
 
   // Method to get the cell background color based on today and selected state
   Color _getCellColor(bool isToday, bool isSelected) {
+    // Dimmed cells should never have background highlighting
+    if (isDimmed) return Colors.transparent;
     if (isToday && isSelected) return calendarStyle.cellsStyle.todayColor;
     if (isSelected) {
       return calendarStyle.cellsStyle.selectedColor.withValues(
@@ -108,19 +112,43 @@ class CalendarCell<T> extends StatelessWidget {
 
   // Method to get the cell text color based on today, selected, and weekday
   Color _getCellTextColor(bool isToday, bool isSelected, int weekday) {
+    if (isDimmed) {
+      // Dimmed cells: show dimmed weekend color for weekends, grey for regular days
+      if (_isWeekend(weekday)) {
+        return calendarStyle.cellsStyle.weekDayColor.withValues(alpha: 0.4);
+      }
+      return Colors.grey.withValues(alpha: 0.4);
+    }
     if (isToday && isSelected) return Colors.white;
     // if (isSelected) return Colors.white; // Commented out for now
     if (isToday) return Colors.white;
-    if (weekday == 7) return calendarStyle.cellsStyle.weekDayColor;
+    if (_isWeekend(weekday)) return calendarStyle.cellsStyle.weekDayColor;
     return Colors.black;
   }
 
   // Method to get the event indicator color based on holiday, today, and weekday
   Color _getEventColor(bool isHoliday, bool isToday, int weekday) {
-    if (weekday == 7) return calendarStyle.cellsStyle.weekDayColor;
+    // Dimmed cells should have dimmed event indicators
+    if (isDimmed) return Colors.grey.withValues(alpha: 0.4);
+    if (_isWeekend(weekday)) return calendarStyle.cellsStyle.weekDayColor;
     if (isToday) return Colors.white;
     if (isHoliday) return calendarStyle.cellsStyle.weekDayColor;
     return calendarStyle.cellsStyle.dotColor;
+  }
+
+  // Method to check if a weekday is a weekend based on the weekend type
+  bool _isWeekend(int weekday) {
+    // weekday: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
+    switch (calendarStyle.weekendType) {
+      case WeekendType.saturdayAndSunday:
+        return weekday == 6 || weekday == 7;
+      case WeekendType.fridayAndSaturday:
+        return weekday == 5 || weekday == 6;
+      case WeekendType.saturday:
+        return weekday == 6;
+      case WeekendType.sunday:
+        return weekday == 7;
+    }
   }
 
   // Method to check if the current date is the selected date
