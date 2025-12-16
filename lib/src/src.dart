@@ -1,6 +1,7 @@
 export 'calendar_widget.dart';
 export 'enum/language.dart';
 export 'enum/title_type.dart';
+export 'enum/week_config.dart';
 export 'extensions/date_extensions.dart';
 export 'horizontal_calendar.dart';
 export 'models/calendar_style.dart';

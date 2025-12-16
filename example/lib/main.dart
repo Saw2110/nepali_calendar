@@ -41,6 +41,8 @@ class HomeScreen extends StatelessWidget {
               initialDate: NepaliDateTime.now(),
               calendarStyle: NepaliCalendarStyle(
                 language: Language.nepali,
+                // You can also configure weekend for horizontal calendar
+                weekendType: WeekendType.saturday,
               ),
               onDateSelected: (date) {
                 debugPrint("sad Date $date");
@@ -75,6 +77,12 @@ class HomeScreen extends StatelessWidget {
                 calendarStyle: const NepaliCalendarStyle(
                   showEnglishDate: true,
                   showBorder: false,
+                  // Configure weekend days (default: WeekendType.saturday)
+                  // Options: saturdayAndSunday, fridayAndSaturday, saturday, sunday
+                  weekendType: WeekendType.saturdayAndSunday,
+                  // Configure week start day (default: WeekStartType.sunday)
+                  // Options: sunday, monday
+                  weekStartType: WeekStartType.monday,
                 ),
               ),
             ),
