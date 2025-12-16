@@ -15,28 +15,6 @@ import 'package:flutter/material.dart';
 /// );
 /// ```
 class CalendarSpacing {
-  /// @Deprecated: This property is not implemented.
-  ///
-  /// Horizontal spacing between cells.
-  /// Cell spacing is controlled by [CellTheme.cellMargin] instead.
-  /// This property will be removed in the next major version.
-  @Deprecated(
-    'This property is not implemented. Use CellTheme.cellMargin instead. '
-    'This will be removed in the next major version.',
-  )
-  final double cellHorizontalSpacing;
-
-  /// @Deprecated: This property is not implemented.
-  ///
-  /// Vertical spacing between cells.
-  /// Cell spacing is controlled by [CellTheme.cellMargin] instead.
-  /// This property will be removed in the next major version.
-  @Deprecated(
-    'This property is not implemented. Use CellTheme.cellMargin instead. '
-    'This will be removed in the next major version.',
-  )
-  final double cellVerticalSpacing;
-
   /// Padding around the entire calendar.
   ///
   /// Defines the padding around the calendar widget.
@@ -61,8 +39,6 @@ class CalendarSpacing {
   ///
   /// All parameters have sensible default values.
   const CalendarSpacing({
-    this.cellHorizontalSpacing = 2.0,
-    this.cellVerticalSpacing = 2.0,
     this.calendarPadding = const EdgeInsets.all(8.0),
     this.headerToWeekdaysSpacing = 8.0,
     this.weekdaysToCellsSpacing = 8.0,
@@ -78,16 +54,11 @@ class CalendarSpacing {
   /// );
   /// ```
   CalendarSpacing copyWith({
-    double? cellHorizontalSpacing,
-    double? cellVerticalSpacing,
     EdgeInsets? calendarPadding,
     double? headerToWeekdaysSpacing,
     double? weekdaysToCellsSpacing,
   }) {
     return CalendarSpacing(
-      cellHorizontalSpacing:
-          cellHorizontalSpacing ?? this.cellHorizontalSpacing,
-      cellVerticalSpacing: cellVerticalSpacing ?? this.cellVerticalSpacing,
       calendarPadding: calendarPadding ?? this.calendarPadding,
       headerToWeekdaysSpacing:
           headerToWeekdaysSpacing ?? this.headerToWeekdaysSpacing,
@@ -100,8 +71,6 @@ class CalendarSpacing {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is CalendarSpacing &&
-        other.cellHorizontalSpacing == cellHorizontalSpacing &&
-        other.cellVerticalSpacing == cellVerticalSpacing &&
         other.calendarPadding == calendarPadding &&
         other.headerToWeekdaysSpacing == headerToWeekdaysSpacing &&
         other.weekdaysToCellsSpacing == weekdaysToCellsSpacing;
@@ -110,8 +79,6 @@ class CalendarSpacing {
   @override
   int get hashCode {
     return Object.hash(
-      cellHorizontalSpacing,
-      cellVerticalSpacing,
       calendarPadding,
       headerToWeekdaysSpacing,
       weekdaysToCellsSpacing,
@@ -121,8 +88,6 @@ class CalendarSpacing {
   /// Converts this spacing configuration to a JSON map.
   Map<String, dynamic> toJson() {
     return {
-      'cellHorizontalSpacing': cellHorizontalSpacing,
-      'cellVerticalSpacing': cellVerticalSpacing,
       'calendarPadding': {
         'left': calendarPadding.left,
         'top': calendarPadding.top,
@@ -148,10 +113,6 @@ class CalendarSpacing {
     }
 
     return CalendarSpacing(
-      cellHorizontalSpacing:
-          (json['cellHorizontalSpacing'] as num?)?.toDouble() ?? 2.0,
-      cellVerticalSpacing:
-          (json['cellVerticalSpacing'] as num?)?.toDouble() ?? 2.0,
       calendarPadding: padding,
       headerToWeekdaysSpacing:
           (json['headerToWeekdaysSpacing'] as num?)?.toDouble() ?? 8.0,

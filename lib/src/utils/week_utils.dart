@@ -44,30 +44,6 @@ class WeekUtils {
     }
   }
 
-  /// Returns the formatted short weekday name for the given day number.
-  ///
-  /// - [day]: The day number (0 for Sunday/आइतबार, 6 for Saturday/शनिबार).
-  /// - [language]: The language in which the short weekday name should be returned.
-  ///   If not provided, defaults to English.
-  ///
-  /// Throws an [ArgumentError] if the day number is outside the valid range (0-6).
-  static String formattedShortWeekDay(int day, [CalendarLocale? language]) {
-    if (day < 0 || day > 6) {
-      throw ArgumentError('Day must be between 0 and 6.');
-    }
-
-    // Determine if the language is English.
-    final isEnglish =
-        (language ?? CalendarLocale.english) == CalendarLocale.english;
-
-    // Return the short weekday name in the appropriate language.
-    if (isEnglish) {
-      return _englishWeeksShort[day];
-    } else {
-      return _nepaliWeeksShort[day];
-    }
-  }
-
   /// List of full Nepali weekday names.
   static final List<String> _nepaliWeeks = [
     "आइतबार",
@@ -90,17 +66,6 @@ class WeekUtils {
     "शनि",
   ];
 
-  /// List of short Nepali weekday names (single or double characters).
-  static final List<String> _nepaliWeeksShort = [
-    "आ",
-    "सो",
-    "मं",
-    "बु",
-    "बि",
-    "शु",
-    "श",
-  ];
-
   /// List of full English weekday names.
   static final List<String> _englishWeeks = [
     "Sunday",
@@ -121,16 +86,5 @@ class WeekUtils {
     "Thu",
     "Fri",
     "Sat",
-  ];
-
-  /// List of short English weekday names (single character).
-  static final List<String> _englishWeeksShort = [
-    "S",
-    "M",
-    "T",
-    "W",
-    "T",
-    "F",
-    "S",
   ];
 }

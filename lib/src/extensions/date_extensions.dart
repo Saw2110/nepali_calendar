@@ -22,7 +22,8 @@ extension DateTimeExtension on DateTime {
     // Throw if date is before the minimum supported date
     if (isBefore(minSupportedDate)) {
       throw ArgumentError(
-          'Date must be on or after April 13, 1913 (BS 1970/1/1)');
+        'Date must be on or after April 13, 1913 (BS 1970/1/1)',
+      );
     }
 
     // Convert the current DateTime to UTC and add Nepal's time zone offset.
@@ -76,7 +77,8 @@ extension DateTimeExtension on DateTime {
       // If we went below the minimum supported year, throw an error
       if (remainingDays > 0) {
         throw ArgumentError(
-            'Date conversion not supported for dates before the minimum supported year');
+          'Date conversion not supported for dates before the minimum supported year',
+        );
       }
     } else {
       // Original forward calculation for years 1970 and after

@@ -270,7 +270,7 @@ class HeaderTheme {
 
   /// Converts a Color to a hex string.
   static String _colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).padLeft(8, '0')}';
+    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0')}';
   }
 
   /// Parses a hex string to a Color.

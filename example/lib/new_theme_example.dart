@@ -125,7 +125,7 @@ class NewThemeExampleScreen extends StatelessWidget {
   /// Example 4: Custom theme with all new properties
   Widget _buildCustomThemeCalendar() {
     return SizedBox(
-      height: 400,
+      height: 450,
       child: NepaliCalendar(
         controller: NepaliCalendarController(),
         theme: CalendarTheme(
@@ -146,8 +146,8 @@ class NewThemeExampleScreen extends StatelessWidget {
 
           // NEW: CalendarSpacing for layout control
           spacing: const CalendarSpacing(
-            cellHorizontalSpacing: 4.0,
-            cellVerticalSpacing: 4.0,
+            // cellHorizontalSpacing: 4.0,
+            // cellVerticalSpacing: 4.0,
             calendarPadding: EdgeInsets.all(12.0),
             headerToWeekdaysSpacing: 12.0,
             weekdaysToCellsSpacing: 8.0,

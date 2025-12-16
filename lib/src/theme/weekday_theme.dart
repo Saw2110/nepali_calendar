@@ -201,7 +201,7 @@ class WeekdayTheme {
       if (customLabels != null) 'customLabels': customLabels,
       if (backgroundColor != null)
         'backgroundColor':
-            '#${backgroundColor!.value.toRadixString(16).padLeft(8, '0')}',
+            '#${backgroundColor!.toARGB32().toRadixString(16).padLeft(8, '0')}',
     };
   }
 

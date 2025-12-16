@@ -4,24 +4,25 @@ import '../src.dart';
 ///
 /// This class provides methods and data for:
 /// * Formatting month names in Nepali or English.
-/// * Accessing predefined month names in Nepali, English, and abbreviated English formats.
+/// * Accessing predefined month names in Nepali and English formats.
 class MonthUtils {
   /// Returns the formatted month name for the given month number.
   ///
-  /// - [month]: The month number (1 for January/Baisakh, 12 for December/Chaitra).
-  /// - [language]: The language in which the month name should be returned.
+  /// - [month]: The month number (1 for Baisakh, 12 for Chaitra).
+  /// - [locale]: The locale in which the month name should be returned.
   ///   If not provided, defaults to English.
   ///
   /// Throws an [ArgumentError] if the month number is outside the valid range (1-12).
-  static String formattedMonth(int month, [Language? language]) {
+  static String formattedMonth(int month, [CalendarLocale? locale]) {
     if (month < 1 || month > 12) {
       throw ArgumentError('Month must be between 1 and 12.');
     }
 
-    // Determine if the language is English.
-    final isEnglish = (language ?? Language.english) == Language.english;
+    // Determine if the locale is English.
+    final isEnglish =
+        (locale ?? CalendarLocale.english) == CalendarLocale.english;
 
-    // Return the month name in the appropriate language.
+    // Return the month name in the appropriate locale.
     if (isEnglish) {
       return _nepaliENMonths[month - 1];
     } else {
@@ -59,37 +60,5 @@ class MonthUtils {
     "Magh",
     "Falgun",
     "Chaitra",
-  ];
-
-  /// List of full English month names.
-  static final List<String> englishMonths = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-
-  /// List of abbreviated English month names.
-  static final List<String> englishMonthsShort = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
   ];
 }
