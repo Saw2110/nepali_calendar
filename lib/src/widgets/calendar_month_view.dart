@@ -32,20 +32,23 @@ class CalendarMonthView<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Display header row showing weekday names
-        WeekdayHeader(style: calendarStyle),
-        // Display grid of days for the month
-        CalendarGrid<T>(
-          year: year,
-          month: month,
-          selectedDate: selectedDate,
-          eventList: eventList,
-          onDaySelected: onDaySelected,
-          calendarStyle: calendarStyle,
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        children: [
+          // Display header row showing weekday names
+          WeekdayHeader(style: calendarStyle),
+          // Display grid of days for the month
+          CalendarGrid<T>(
+            year: year,
+            month: month,
+            selectedDate: selectedDate,
+            eventList: eventList,
+            onDaySelected: onDaySelected,
+            calendarStyle: calendarStyle,
+          ),
+        ],
+      ),
     );
   }
 }
