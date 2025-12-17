@@ -15,12 +15,44 @@ class NepaliCalendar<T> extends StatefulWidget {
   // Add controller parameter
   final NepaliCalendarController? controller;
 
+  /// Custom builder for calendar components.
   ///
+  /// Provides a centralized way to customize header, cells, weekdays, and events.
+  /// This is the recommended way to customize calendar appearance.
+  ///
+  /// Example:
+  /// ```dart
+  /// NepaliCalendar(
+  ///   calendarBuilder: NepaliCalendarBuilder(
+  ///     headerBuilder: (date, controller) => MyHeader(date),
+  ///     cellBuilder: (data) => MyCell(data),
+  ///     eventBuilder: (context, index, date, event) => MyEvent(event),
+  ///   ),
+  /// )
+  /// ```
+  final NepaliCalendarBuilder<T>? calendarBuilder;
+
+  /// Custom header builder for the calendar.
+  ///
+  /// **Deprecated:** Use [calendarBuilder] with [NepaliCalendarBuilder.headerBuilder] instead.
+  ///
+  /// This will be removed in a future version.
+  @Deprecated(
+    'Use calendarBuilder.headerBuilder instead. This will be removed in a future version.',
+  )
   final Widget? Function(
     NepaliDateTime nepaliDateTime,
     PageController pageController,
   )? headerBuilder;
 
+  /// Custom event builder for individual event items.
+  ///
+  /// **Deprecated:** Use [calendarBuilder] with [NepaliCalendarBuilder.eventBuilder] instead.
+  ///
+  /// This will be removed in a future version.
+  @Deprecated(
+    'Use calendarBuilder.eventBuilder instead. This will be removed in a future version.',
+  )
   final Widget? Function(
     BuildContext context,
     int index,
@@ -36,9 +68,10 @@ class NepaliCalendar<T> extends StatefulWidget {
     this.calendarStyle = const NepaliCalendarStyle(),
     this.onMonthChanged,
     this.onDayChanged,
-    this.eventBuilder,
+    this.calendarBuilder,
+    @Deprecated('Use calendarBuilder.eventBuilder instead') this.eventBuilder,
     this.controller,
-    this.headerBuilder,
+    @Deprecated('Use calendarBuilder.headerBuilder instead') this.headerBuilder,
   }) : assert(
           eventList == null || checkIsHoliday != null,
           'checkIsHoliday must be provided when eventList is not null',
@@ -117,8 +150,12 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
               ValueListenableBuilder<NepaliDateTime>(
                 valueListenable: _selectedDateNotifier,
                 builder: (context, selectedDate, _) {
-                  return widget.headerBuilder
+                  // Priority: calendarBuilder.headerBuilder > deprecated headerBuilder > default
+                  final customHeader = widget.calendarBuilder?.headerBuilder
                           ?.call(selectedDate, _pageController) ??
+                      widget.headerBuilder?.call(selectedDate, _pageController);
+
+                  return customHeader ??
                       CalendarHeader(
                         selectedDate: selectedDate,
                         pageController: _pageController,
@@ -205,6 +242,10 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                                 selectedDate: selectedDate,
                                 eventList: widget.eventList,
                                 calendarStyle: calendarStyle,
+                                cellBuilder:
+                                    widget.calendarBuilder?.cellBuilder,
+                                weekdayBuilder:
+                                    widget.calendarBuilder?.weekdayBuilder,
                                 onDaySelected: (date) {
                                   _updateCurrentDate(
                                     date.year,
@@ -252,13 +293,17 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                   ),
                   eventList: widget.eventList,
                   selectedDate: selectedDate,
-                  itemBuilder: (context, index, event) =>
-                      widget.eventBuilder?.call(
-                    context,
-                    index,
-                    selectedDate,
-                    event,
-                  ),
+                  itemBuilder: (context, index, event) {
+                    // Priority: calendarBuilder.eventBuilder > deprecated eventBuilder > null
+                    return widget.calendarBuilder?.eventBuilder
+                            ?.call(context, index, selectedDate, event) ??
+                        widget.eventBuilder?.call(
+                          context,
+                          index,
+                          selectedDate,
+                          event,
+                        );
+                  },
                 ),
               );
             },

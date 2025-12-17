@@ -9,6 +9,7 @@ class CalendarGrid<T> extends StatelessWidget {
   final List<CalendarEvent<T>>? eventList;
   final OnDateSelected onDaySelected;
   final NepaliCalendarStyle calendarStyle;
+  final Widget Function(CalendarCellData<T>)? cellBuilder;
 
   const CalendarGrid({
     super.key,
@@ -18,6 +19,7 @@ class CalendarGrid<T> extends StatelessWidget {
     required this.eventList,
     required this.onDaySelected,
     required this.calendarStyle,
+    this.cellBuilder,
   });
 
   @override
@@ -40,25 +42,17 @@ class CalendarGrid<T> extends StatelessWidget {
         crossAxisCount: 7, // 7 columns for 7 days in a week
       ),
       itemCount: 42, // Always show 6 rows
-      itemBuilder: (context, index) => gridItems[index],
+      itemBuilder: (context, index) {
+        // Wrap each cell with table-style borders (right + bottom)
+        if (calendarStyle.effectiveConfig.showBorder) {
+          return _wrapWithTableBorder(gridItems[index]);
+        }
+        return gridItems[index];
+      },
     );
 
-    // Wrap with container to add top and left borders for table-style border
-    return calendarStyle.effectiveConfig.showBorder
-        ? DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: Colors.grey.withValues(alpha: 0.3),
-                ),
-                left: BorderSide(
-                  color: Colors.grey.withValues(alpha: 0.3),
-                ),
-              ),
-            ),
-            child: gridView,
-          )
-        : gridView;
+    // Don't add top/left border here - CalendarMonthView will handle it
+    return gridView;
   }
 
   // Method to build the complete calendar grid with 6 rows
@@ -85,6 +79,7 @@ class CalendarGrid<T> extends StatelessWidget {
             onDaySelected: onDaySelected,
             calendarStyle: calendarStyle,
             isDimmed: true,
+            cellBuilder: cellBuilder,
           ),
         );
       }
@@ -103,6 +98,7 @@ class CalendarGrid<T> extends StatelessWidget {
           event: event,
           onDaySelected: onDaySelected,
           calendarStyle: calendarStyle,
+          cellBuilder: cellBuilder,
         ),
       );
     }
@@ -126,6 +122,7 @@ class CalendarGrid<T> extends StatelessWidget {
             onDaySelected: onDaySelected,
             calendarStyle: calendarStyle,
             isDimmed: true,
+            cellBuilder: cellBuilder,
           ),
         );
       }
@@ -169,5 +166,24 @@ class CalendarGrid<T> extends StatelessWidget {
         // Week starts on Monday, so Monday=0, Tuesday=1, ..., Sunday=6
         return dayIndex == 0 ? 6 : dayIndex - 1;
     }
+  }
+
+  /// Wraps a cell with table-style borders (right and bottom only).
+  /// This creates a clean grid pattern when combined with the container's
+  /// top and left borders.
+  Widget _wrapWithTableBorder(Widget child) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: Colors.grey.withValues(alpha: 0.3),
+          ),
+          bottom: BorderSide(
+            color: Colors.grey.withValues(alpha: 0.3),
+          ),
+        ),
+      ),
+      child: child,
+    );
   }
 }

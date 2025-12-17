@@ -8,7 +8,14 @@ import '../src.dart';
 class WeekdayHeader extends StatelessWidget {
   // Style configuration for the calendar
   final NepaliCalendarStyle style;
-  const WeekdayHeader({super.key, required this.style});
+  // Optional custom weekday builder
+  final Widget Function(WeekdayData)? weekdayBuilder;
+
+  const WeekdayHeader({
+    super.key,
+    required this.style,
+    this.weekdayBuilder,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,19 +32,24 @@ class WeekdayHeader extends StatelessWidget {
       itemCount: 7,
       itemBuilder: (context, index) {
         final day = weekdays[index];
-        return DecoratedBox(
-          decoration: style.effectiveConfig.showBorder
-              ? BoxDecoration(
-                  border: Border(
-                    right: BorderSide(
-                      color: Colors.grey.withValues(alpha: 0.3),
-                    ),
-                  ),
-                )
-              : BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-          child: Column(
+        final isWeekend = _isWeekend(day);
+
+        Widget cell;
+
+        // If custom weekdayBuilder is provided, use it
+        if (weekdayBuilder != null) {
+          final weekdayData = WeekdayData(
+            weekday: day,
+            language: style.effectiveConfig.language,
+            isWeekend: isWeekend,
+            format: style.effectiveConfig.weekTitleType,
+            style: style,
+          );
+          cell = weekdayBuilder!(weekdayData);
+        } else {
+          // Default weekday header implementation
+          // Note: Borders are handled by grid wrapper, not individual cells
+          cell = Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Nepali weekday name
@@ -53,7 +65,7 @@ class WeekdayHeader extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  color: _isWeekend(day)
+                  color: isWeekend
                       ? style.cellsStyle.weekDayColor
                       : Colors.black87,
                 ),
@@ -71,33 +83,25 @@ class WeekdayHeader extends StatelessWidget {
                 maxLines: 1,
                 style: TextStyle(
                   fontSize: 10,
-                  color: _isWeekend(day)
+                  color: isWeekend
                       ? style.cellsStyle.weekDayColor.withValues(alpha: 0.7)
                       : Colors.black54,
                 ),
               ),
             ],
-          ),
-        );
+          );
+        }
+
+        // Wrap with table-style borders if enabled
+        if (style.effectiveConfig.showBorder) {
+          return _wrapWithTableBorder(cell);
+        }
+        return cell;
       },
     );
 
-    // Wrap with container to add top and left borders for table-style border
-    return style.effectiveConfig.showBorder
-        ? DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: Colors.grey.withValues(alpha: 0.3),
-                ),
-                left: BorderSide(
-                  color: Colors.grey.withValues(alpha: 0.3),
-                ),
-              ),
-            ),
-            child: headerGrid,
-          )
-        : headerGrid;
+    // Don't add top/left border here - CalendarMonthView will handle it
+    return headerGrid;
   }
 
   // Get the order of weekdays based on week start type
@@ -110,6 +114,23 @@ class WeekdayHeader extends StatelessWidget {
         // Monday (1) to Sunday (0)
         return [1, 2, 3, 4, 5, 6, 0];
     }
+  }
+
+  /// Wraps a weekday cell with table-style borders (right and bottom only).
+  Widget _wrapWithTableBorder(Widget child) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: Colors.grey.withValues(alpha: 0.3),
+          ),
+          bottom: BorderSide(
+            color: Colors.grey.withValues(alpha: 0.3),
+          ),
+        ),
+      ),
+      child: child,
+    );
   }
 
   // Method to check if a weekday is a weekend based on the weekend type
