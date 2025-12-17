@@ -20,7 +20,6 @@ class CalendarUtils {
         date.day == today.day;
   }
 
-   
   /// Calculates the difference in days between two Nepali dates.
   ///
   /// - [date]: The first Nepali date.
@@ -92,11 +91,11 @@ class CalendarUtils {
   ///
   /// This map contains the total number of days in each Nepali year and the
   /// number of days in each month for that year.
-    static final Map<int, List<int>> nepaliYears = {
-      calenderyearStart: [366, 31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
-      1970: [365, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
-      1971: [365, 31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
-      1972: [366, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+  static final Map<int, List<int>> nepaliYears = {
+    calenderyearStart: [366, 31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    1970: [365, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    1971: [365, 31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
+    1972: [366, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
     1973: [365, 30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
     1974: [365, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
     1975: [365, 31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
