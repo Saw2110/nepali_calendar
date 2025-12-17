@@ -66,13 +66,14 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
   Widget _buildMonthTitle() {
     final month = MonthUtils.formattedMonth(
       _selectedDate.month,
-      widget.calendarStyle.language,
+      widget.calendarStyle.effectiveConfig.language,
     );
-    final year = widget.calendarStyle.language == Language.english
-        ? "${_selectedDate.year}"
-        : NepaliNumberConverter.englishToNepali(
-            _selectedDate.year.toString(),
-          );
+    final year =
+        widget.calendarStyle.effectiveConfig.language == Language.english
+            ? "${_selectedDate.year}"
+            : NepaliNumberConverter.englishToNepali(
+                _selectedDate.year.toString(),
+              );
 
     ///
     return Text(
@@ -172,7 +173,7 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
   // Method to check if a weekday is a weekend based on the weekend type
   bool _isWeekend(int weekday) {
     // weekday: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
-    switch (widget.calendarStyle.weekendType) {
+    switch (widget.calendarStyle.effectiveConfig.weekendType) {
       case WeekendType.saturdayAndSunday:
         return weekday == 6 || weekday == 7;
       case WeekendType.fridayAndSaturday:
@@ -221,8 +222,8 @@ class CalendarItem extends StatelessWidget {
             Text(
               WeekUtils.formattedWeekDay(
                 adjustedWeekday,
-                style.language,
-                style.headersStyle.weekTitleType,
+                style.effectiveConfig.language,
+                style.effectiveConfig.weekTitleType,
               ),
               style: style.headersStyle.weekHeaderStyle.copyWith(
                 color: textColor,
@@ -232,7 +233,7 @@ class CalendarItem extends StatelessWidget {
             ),
             // Display the day of the month
             Text(
-              style.language == Language.english
+              style.effectiveConfig.language == Language.english
                   ? "${date.day}"
                   : NepaliNumberConverter.englishToNepali(date.day.toString()),
               style: style.cellsStyle.dayStyle.copyWith(
