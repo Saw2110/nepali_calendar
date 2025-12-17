@@ -63,10 +63,16 @@ class HomeScreen extends StatelessWidget {
                 eventList: _sortedList(),
                 // Define function to check if an event is a holiday
                 checkIsHoliday: (event) => event.isHoliday,
-                // Custom builder for event list items
-                eventBuilder: (context, index, _, event) {
-                  return EventWidget(event: event);
-                },
+                // NEW: Use NepaliCalendarBuilder for custom components
+                calendarBuilder: NepaliCalendarBuilder<Events>(
+                  // Custom event builder
+                  eventBuilder: (context, index, date, event) {
+                    return EventWidget(event: event);
+                  },
+                  // cellBuilder: customCellExample,
+                  // weekdayBuilder: customWeekDayExample,
+                  // headerBuilder: customHeaderExample,
+                ),
                 // Callback when selected day changes
                 onDayChanged: (nepaliDateTime) {
                   debugPrint("ON DAY CHANGE => $nepaliDateTime");
@@ -78,6 +84,8 @@ class HomeScreen extends StatelessWidget {
                 // Customize calendar appearance
                 calendarStyle: const NepaliCalendarStyle(
                   // Recommended: Use CalendarConfig for better organization
+                  headersStyle: HeaderStyle(),
+                  cellsStyle: CellStyle(),
                   config: CalendarConfig(
                     showEnglishDate: true,
                     showBorder: true,

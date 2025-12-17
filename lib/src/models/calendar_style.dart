@@ -73,28 +73,6 @@ class NepaliCalendarStyle {
   /// Controls the appearance of week names, month names, and year display.
   final HeaderStyle headersStyle;
 
-  /// Specifies which days are considered weekend days.
-  ///
-  /// This determines which days will be highlighted with the weekend color.
-  /// Default is [WeekendType.saturday].
-  ///
-  /// **Deprecated:** Use [config] with [CalendarConfig.weekendType] instead.
-  @Deprecated(
-    'Use config.weekendType instead. This will be removed in a future version.',
-  )
-  final WeekendType weekendType;
-
-  /// Specifies which day the week starts on.
-  ///
-  /// This determines the order of days in the calendar header and grid.
-  /// Default is [WeekStartType.sunday].
-  ///
-  /// **Deprecated:** Use [config] with [CalendarConfig.weekStartType] instead.
-  @Deprecated(
-    'Use config.weekStartType instead. This will be removed in a future version.',
-  )
-  final WeekStartType weekStartType;
-
   /// Creates a [NepaliCalendarStyle] instance with customizable styling options.
   ///
   /// All parameters are optional and have default values.
@@ -116,10 +94,6 @@ class NepaliCalendarStyle {
     @Deprecated('Use config.language instead') this.language = Language.nepali,
     this.cellsStyle = const CellStyle(),
     this.headersStyle = const HeaderStyle(),
-    @Deprecated('Use config.weekendType instead')
-    this.weekendType = WeekendType.saturday,
-    @Deprecated('Use config.weekStartType instead')
-    this.weekStartType = WeekStartType.sunday,
   });
 
   /// Gets the effective calendar configuration.
@@ -131,8 +105,6 @@ class NepaliCalendarStyle {
           showEnglishDate: showEnglishDate,
           showBorder: showBorder,
           language: language,
-          weekendType: weekendType,
-          weekStartType: weekStartType,
           weekTitleType: headersStyle.weekTitleType,
         );
   }
@@ -163,8 +135,6 @@ class NepaliCalendarStyle {
       language: language ?? this.language,
       cellsStyle: cellsStyle ?? this.cellsStyle,
       headersStyle: headersStyle ?? this.headersStyle,
-      weekendType: weekendType ?? this.weekendType,
-      weekStartType: weekStartType ?? this.weekStartType,
     );
   }
 }
