@@ -10,6 +10,7 @@ class CalendarCell<T> extends StatelessWidget {
   final OnDateSelected onDaySelected;
   final NepaliCalendarStyle calendarStyle;
   final bool isDimmed;
+  final Widget Function(CalendarCellData<T>)? cellBuilder;
 
   const CalendarCell({
     super.key,
@@ -20,6 +21,7 @@ class CalendarCell<T> extends StatelessWidget {
     required this.onDaySelected,
     required this.calendarStyle,
     this.isDimmed = false,
+    this.cellBuilder,
   });
 
   @override
@@ -30,28 +32,37 @@ class CalendarCell<T> extends StatelessWidget {
     final isSelected = _isSelectedDate(date);
     // Check if the current date is a holiday
     final isHoliday = event?.isHoliday ?? false;
+    // Check if the current date is a weekend
+    final isWeekend = _isWeekend(date.weekday);
 
+    // If custom cellBuilder is provided, use it
+    if (cellBuilder != null) {
+      final cellData = CalendarCellData<T>(
+        date: date,
+        day: day,
+        isToday: isToday,
+        isSelected: isSelected,
+        isDimmed: isDimmed,
+        isWeekend: isWeekend,
+        event: event,
+        onTap: () => onDaySelected(date),
+        style: calendarStyle,
+      );
+      return cellBuilder!(cellData);
+    }
+
+    // Default cell implementation
+    // Note: Borders are handled by the grid container, not individual cells
     return GestureDetector(
       onTap: () => onDaySelected(date),
       child: DecoratedBox(
         decoration: BoxDecoration(
           // Set the background color of the cell based on today and selected state
           color: _getCellColor(isToday, isSelected),
-          // Add a border if the calendar style specifies to show borders
-          // Using table-style borders: only right and bottom to avoid overlap
-          border: calendarStyle.effectiveConfig.showBorder
-              ? Border(
-                  right: BorderSide(
-                    color: Colors.grey.withValues(alpha: 0.3),
-                  ),
-                  bottom: BorderSide(
-                    color: Colors.grey.withValues(alpha: 0.3),
-                  ),
-                )
-              : null,
-          borderRadius: BorderRadius.circular(
-            calendarStyle.effectiveConfig.showBorder ? 0 : 8,
-          ),
+          // Rounded corners only when borders are disabled
+          borderRadius: calendarStyle.effectiveConfig.showBorder
+              ? null
+              : BorderRadius.circular(8),
         ),
         child: Stack(
           alignment: Alignment.bottomCenter,
