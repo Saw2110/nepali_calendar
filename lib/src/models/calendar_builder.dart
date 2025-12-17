@@ -21,7 +21,7 @@ import '../src.dart';
 ///   // ... other properties
 /// )
 /// ```
-class NepaliCalendarBuilder<T> {
+class CalendarBuilder<T> {
   /// Custom header builder for the calendar.
   ///
   /// Provides the selected date and page controller for navigation.
@@ -117,11 +117,11 @@ class NepaliCalendarBuilder<T> {
     CalendarEvent<T> event,
   )? eventBuilder;
 
-  /// Creates a [NepaliCalendarBuilder] instance with customizable builder functions.
+  /// Creates a [CalendarBuilder] instance with customizable builder functions.
   ///
   /// All parameters are optional. If a builder is not provided, the default
   /// implementation will be used.
-  const NepaliCalendarBuilder({
+  const CalendarBuilder({
     this.headerBuilder,
     this.cellBuilder,
     this.weekdayBuilder,
@@ -129,14 +129,14 @@ class NepaliCalendarBuilder<T> {
   });
 
   /// Creates a copy of this builder with the given fields replaced with new values.
-  NepaliCalendarBuilder<T> copyWith({
+  CalendarBuilder<T> copyWith({
     Widget? Function(NepaliDateTime, PageController)? headerBuilder,
     Widget Function(CalendarCellData<T>)? cellBuilder,
     Widget Function(WeekdayData)? weekdayBuilder,
     Widget? Function(BuildContext, int, NepaliDateTime, CalendarEvent<T>)?
         eventBuilder,
   }) {
-    return NepaliCalendarBuilder<T>(
+    return CalendarBuilder<T>(
       headerBuilder: headerBuilder ?? this.headerBuilder,
       cellBuilder: cellBuilder ?? this.cellBuilder,
       weekdayBuilder: weekdayBuilder ?? this.weekdayBuilder,
