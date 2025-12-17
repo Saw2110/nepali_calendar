@@ -21,11 +21,40 @@ class MainApp extends StatelessWidget {
   }
 }
 
-final calendarController = NepaliCalendarController();
-
 /// Example screen demonstrating the usage of NepaliCalendar widget
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final NepaliCalendarController _calendarController;
+
+  @override
+  void initState() {
+    super.initState();
+    _calendarController = NepaliCalendarController();
+  }
+
+  @override
+  void dispose() {
+    _calendarController.dispose();
+    super.dispose();
+  }
+
+  void _jumpToToday() {
+    _calendarController.jumpToToday();
+  }
+
+  void _previousMonth() {
+    _calendarController.previousMonth();
+  }
+
+  void _nextMonth() {
+    _calendarController.nextMonth();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,8 +64,37 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         // Implementation of NepaliCalendar with various customization options
         child: Column(
+          spacing: 20.0,
           children: [
             ///
+            SizedBox(height: 1.0),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _jumpToToday,
+                    icon: const Icon(Icons.today),
+                    label: const Text('Today'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _previousMonth,
+                    icon: const Icon(Icons.chevron_left),
+                    label: const Text('Prev'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _nextMonth,
+                    icon: const Icon(Icons.chevron_right),
+                    label: const Text('Next'),
+                  ),
+                ],
+              ),
+            ),
+
+            ///
+            ///
+
             HorizontalNepaliCalendar(
               initialDate: NepaliDateTime.now(),
               calendarStyle: NepaliCalendarStyle(
@@ -50,21 +108,19 @@ class HomeScreen extends StatelessWidget {
                 debugPrint("sad Date $date");
               },
             ),
-
-            ///
-            SizedBox(height: 50.0),
+            SizedBox(height: 1.0),
 
             ///
             Expanded(
               child: NepaliCalendar(
-                controller: calendarController,
+                controller: _calendarController,
 
                 // Pass the sorted list of events
                 eventList: _sortedList(),
                 // Define function to check if an event is a holiday
                 checkIsHoliday: (event) => event.isHoliday,
                 // NEW: Use NepaliCalendarBuilder for custom components
-                calendarBuilder: NepaliCalendarBuilder<Events>(
+                calendarBuilder: CalendarBuilder<Events>(
                   // Custom event builder
                   eventBuilder: (context, index, date, event) {
                     return EventWidget(event: event);

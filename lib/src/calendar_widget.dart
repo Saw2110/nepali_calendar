@@ -30,11 +30,11 @@ class NepaliCalendar<T> extends StatefulWidget {
   ///   ),
   /// )
   /// ```
-  final NepaliCalendarBuilder<T>? calendarBuilder;
+  final CalendarBuilder<T>? calendarBuilder;
 
   /// Custom header builder for the calendar.
   ///
-  /// **Deprecated:** Use [calendarBuilder] with [NepaliCalendarBuilder.headerBuilder] instead.
+  /// **Deprecated:** Use [calendarBuilder] with [CalendarBuilder.headerBuilder] instead.
   ///
   /// This will be removed in a future version.
   @Deprecated(
@@ -47,7 +47,7 @@ class NepaliCalendar<T> extends StatefulWidget {
 
   /// Custom event builder for individual event items.
   ///
-  /// **Deprecated:** Use [calendarBuilder] with [NepaliCalendarBuilder.eventBuilder] instead.
+  /// **Deprecated:** Use [calendarBuilder] with [CalendarBuilder.eventBuilder] instead.
   ///
   /// This will be removed in a future version.
   @Deprecated(
@@ -97,18 +97,54 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
     _initializePageController();
     _currentPageIndexNotifier = ValueNotifier(_currentPageIndex);
 
-    // Attach controller if provided
-    widget.controller?._attach(this);
+    // Initialize controller if provided
+    widget.controller?.init(
+      selectedDateCallback: _handleDateChanged,
+      initialDate: _currentDate,
+    );
+  }
+
+  @override
+  void didUpdateWidget(NepaliCalendar<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Handle controller changes
+    if (widget.controller != oldWidget.controller) {
+      widget.controller?.init(
+        selectedDateCallback: _handleDateChanged,
+        initialDate: _selectedDateNotifier.value,
+      );
+    }
   }
 
   @override
   void dispose() {
-    // Detach controller when widget is disposed
-    widget.controller?._detach();
     _pageController.dispose();
     _selectedDateNotifier.dispose();
     _currentPageIndexNotifier.dispose();
     super.dispose();
+  }
+
+  // Handle date changes from controller
+  void _handleDateChanged(
+    NepaliDateTime date, {
+    required bool runCallback,
+    required bool animate,
+  }) {
+    final pageIndex =
+        ((date.year - CalendarUtils.calenderyearStart) * 12) + date.month - 1;
+
+    if (animate) {
+      _pageController.animateToPage(
+        pageIndex,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _pageController.jumpToPage(pageIndex);
+    }
+
+    _updateCurrentDate(date.year, date.month, date.day, runCallback);
   }
 
   // Initialize page controller with correct initial page
@@ -121,16 +157,26 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
   }
 
   // Update current date and trigger appropriate callbacks
-  void _updateCurrentDate(int year, int month, int day) {
+  void _updateCurrentDate(
+    int year,
+    int month,
+    int day, [
+    bool runCallback = true,
+  ]) {
     final previousDate = _selectedDateNotifier.value;
     final newDate = NepaliDateTime(year: year, month: month, day: day);
     _selectedDateNotifier.value = newDate;
 
+    // Update controller's internal state
+    widget.controller?.selectedDate = newDate;
+
     // Call appropriate callback based on what changed
-    if (previousDate.month != month || previousDate.year != year) {
-      widget.onMonthChanged?.call(newDate);
-    } else {
-      widget.onDayChanged?.call(newDate);
+    if (runCallback) {
+      if (previousDate.month != month || previousDate.year != year) {
+        widget.onMonthChanged?.call(newDate);
+      } else {
+        widget.onDayChanged?.call(newDate);
+      }
     }
   }
 
@@ -289,7 +335,7 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                 },
                 child: EventList<T>(
                   key: ValueKey(
-                    '${selectedDate.year}-${selectedDate.month}-${selectedDate.day}',
+                    '${selectedDate.year}-${selectedDate.month}',
                   ),
                   eventList: widget.eventList,
                   selectedDate: selectedDate,
@@ -312,43 +358,4 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
       ],
     );
   }
-}
-
-class NepaliCalendarController {
-  _NepaliCalendarState? _calendarState;
-
-  // Attach state to controller
-  void _attach(_NepaliCalendarState state) {
-    _calendarState = state;
-  }
-
-  // Detach state from controller
-  void _detach() {
-    _calendarState = null;
-  }
-
-  // Jump to specific date
-  void jumpToDate(NepaliDateTime date) {
-    if (_calendarState == null) return;
-
-    final pageIndex =
-        ((date.year - CalendarUtils.calenderyearStart) * 12) + date.month - 1;
-
-    _calendarState!._pageController.animateToPage(
-      pageIndex,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeInOut,
-    );
-    _calendarState!._updateCurrentDate(date.year, date.month, date.day);
-  }
-
-  // Jump to today's date
-  void jumpToToday() {
-    final today = NepaliDateTime.now();
-    jumpToDate(today);
-  }
-
-  // Get currently selected date
-  NepaliDateTime? get selectedDate =>
-      _calendarState?._selectedDateNotifier.value;
 }
