@@ -135,19 +135,6 @@ class WeekdayHeader extends StatelessWidget {
 
   // Method to check if a weekday is a weekend based on the weekend type
   bool _isWeekend(int dayIndex) {
-    // dayIndex: 0=Sunday, 1=Monday, ..., 6=Saturday
-    // Convert to NepaliDateTime weekday format: 1=Monday, ..., 6=Saturday, 7=Sunday
-    final weekday = dayIndex == 0 ? 7 : dayIndex;
-
-    switch (style.effectiveConfig.weekendType) {
-      case WeekendType.saturdayAndSunday:
-        return weekday == 6 || weekday == 7;
-      case WeekendType.fridayAndSaturday:
-        return weekday == 5 || weekday == 6;
-      case WeekendType.saturday:
-        return weekday == 6;
-      case WeekendType.sunday:
-        return weekday == 7;
-    }
+    return WeekUtils.isWeekend(dayIndex, style.effectiveConfig.weekendType);
   }
 }

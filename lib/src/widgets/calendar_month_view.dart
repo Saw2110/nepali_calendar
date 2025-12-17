@@ -66,11 +66,9 @@ class CalendarMonthView<T> extends StatelessWidget {
               border: Border(
                 top: BorderSide(
                   color: Colors.grey.withValues(alpha: 0.3),
-                  width: 1,
                 ),
                 left: BorderSide(
                   color: Colors.grey.withValues(alpha: 0.3),
-                  width: 1,
                 ),
               ),
             ),
