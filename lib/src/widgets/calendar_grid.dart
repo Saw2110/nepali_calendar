@@ -154,17 +154,14 @@ class CalendarGrid<T> extends StatelessWidget {
 
   // Method to normalize the weekday to a 0-based index based on week start type
   int _normalizeWeekday(int weekday) {
-    // weekday: 1=Monday, 2=Tuesday, ..., 7=Sunday (from NepaliDateTime)
-    // Convert to 0-based: 0=Sunday, 1=Monday, ..., 6=Saturday
-    final dayIndex = weekday == 7 ? 0 : weekday;
-
+    // weekday is already in 0-based format: 0=Sunday, 1=Monday, ..., 6=Saturday
     switch (calendarStyle.effectiveConfig.weekStartType) {
       case WeekStartType.sunday:
         // Week starts on Sunday, so Sunday=0, Monday=1, etc.
-        return dayIndex;
+        return weekday;
       case WeekStartType.monday:
         // Week starts on Monday, so Monday=0, Tuesday=1, ..., Sunday=6
-        return dayIndex == 0 ? 6 : dayIndex - 1;
+        return weekday == 0 ? 6 : weekday - 1;
     }
   }
 

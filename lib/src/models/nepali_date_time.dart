@@ -120,7 +120,10 @@ class NepaliDateTime implements Comparable<NepaliDateTime> {
   int get weekday => _weekDay();
   int _weekDay() {
     final date = toDateTime();
-    return date.weekday + 1;
+    // Dart's DateTime.weekday: 1=Monday, 2=Tuesday, ..., 7=Sunday
+    // Calendar format: 0=Sunday, 1=Monday, ..., 6=Saturday
+    // Convert: Sunday (7) -> 0, Monday (1) -> 1, ..., Saturday (6) -> 6
+    return date.weekday % 7;
   }
 
   NepaliDateTime add(Duration duration) {
