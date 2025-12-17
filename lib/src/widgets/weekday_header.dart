@@ -14,35 +14,95 @@ class WeekdayHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     // Get weekday indices based on week start configuration
     final List<int> weekdays = _getWeekdayOrder();
-    return Row(
-      children: weekdays
-          .map(
-            (day) => Expanded(
-              child: Text(
-                // Format weekday name based on language and title type
+
+    final headerGrid = GridView.builder(
+      shrinkWrap: true,
+      padding: EdgeInsets.zero,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 7, // 7 columns for 7 days in a week
+      ),
+      itemCount: 7,
+      itemBuilder: (context, index) {
+        final day = weekdays[index];
+        return DecoratedBox(
+          decoration: style.effectiveConfig.showBorder
+              ? BoxDecoration(
+                  border: Border(
+                    right: BorderSide(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                    ),
+                  ),
+                )
+              : BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Nepali weekday name
+              Text(
                 WeekUtils.formattedWeekDay(
                   day,
-                  style.language,
-                  style.headersStyle.weekTitleType,
+                  Language.nepali,
+                  style.effectiveConfig.weekTitleType,
                 ),
                 textAlign: TextAlign.center,
-                // Apply weekend color to weekend day names
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
+                  fontSize: 12,
                   color: _isWeekend(day)
                       ? style.cellsStyle.weekDayColor
                       : Colors.black87,
                 ),
               ),
-            ),
-          )
-          .toList(),
+              const SizedBox(height: 2),
+              // English weekday name
+              Text(
+                WeekUtils.formattedWeekDay(
+                  day,
+                  Language.english,
+                  style.effectiveConfig.weekTitleType,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: _isWeekend(day)
+                      ? style.cellsStyle.weekDayColor.withValues(alpha: 0.7)
+                      : Colors.black54,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
+
+    // Wrap with container to add top and left borders for table-style border
+    return style.effectiveConfig.showBorder
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                ),
+                left: BorderSide(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+            child: headerGrid,
+          )
+        : headerGrid;
   }
 
   // Get the order of weekdays based on week start type
   List<int> _getWeekdayOrder() {
-    switch (style.weekStartType) {
+    switch (style.effectiveConfig.weekStartType) {
       case WeekStartType.sunday:
         // Sunday (0) to Saturday (6)
         return [0, 1, 2, 3, 4, 5, 6];
@@ -58,7 +118,7 @@ class WeekdayHeader extends StatelessWidget {
     // Convert to NepaliDateTime weekday format: 1=Monday, ..., 6=Saturday, 7=Sunday
     final weekday = dayIndex == 0 ? 7 : dayIndex;
 
-    switch (style.weekendType) {
+    switch (style.effectiveConfig.weekendType) {
       case WeekendType.saturdayAndSunday:
         return weekday == 6 || weekday == 7;
       case WeekendType.fridayAndSaturday:

@@ -52,15 +52,17 @@ class NepaliCalendar<T> extends StatefulWidget {
 class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
   late PageController _pageController;
   late NepaliDateTime _currentDate;
-  late NepaliDateTime _selectedDate;
+  late ValueNotifier<NepaliDateTime> _selectedDateNotifier;
+  late ValueNotifier<int> _currentPageIndexNotifier;
   late int _currentPageIndex;
 
   @override
   void initState() {
     super.initState();
     _currentDate = widget.initialDate ?? NepaliDateTime.now();
-    _selectedDate = _currentDate;
+    _selectedDateNotifier = ValueNotifier(_currentDate);
     _initializePageController();
+    _currentPageIndexNotifier = ValueNotifier(_currentPageIndex);
 
     // Attach controller if provided
     widget.controller?._attach(this);
@@ -71,6 +73,8 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
     // Detach controller when widget is disposed
     widget.controller?._detach();
     _pageController.dispose();
+    _selectedDateNotifier.dispose();
+    _currentPageIndexNotifier.dispose();
     super.dispose();
   }
 
@@ -85,104 +89,182 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
 
   // Update current date and trigger appropriate callbacks
   void _updateCurrentDate(int year, int month, int day) {
-    final previousDate = _selectedDate;
-    _selectedDate = NepaliDateTime(year: year, month: month, day: day);
+    final previousDate = _selectedDateNotifier.value;
+    final newDate = NepaliDateTime(year: year, month: month, day: day);
+    _selectedDateNotifier.value = newDate;
+
     // Call appropriate callback based on what changed
-    if (previousDate.month != month) {
-      _onMonthChanged(month);
-      return;
+    if (previousDate.month != month || previousDate.year != year) {
+      widget.onMonthChanged?.call(newDate);
+    } else {
+      widget.onDayChanged?.call(newDate);
     }
-
-    _onDayChanged(month, day);
-  }
-
-  // Handle month change
-  void _onMonthChanged(int month) {
-    setState(() {
-      widget.onMonthChanged?.call(_selectedDate);
-    });
-  }
-
-  // Handle day change
-  void _onDayChanged(int month, int day) {
-    setState(() {
-      widget.onDayChanged?.call(_selectedDate);
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     final calendarStyle = widget.calendarStyle;
-    // Build scrollable calendar pages
-    return PageView.builder(
-      controller: _pageController,
-      itemCount: CalendarUtils.nepaliYears.length * 12,
-      onPageChanged: (index) {
-        // Calculate year and month from page index
-        final int year = CalendarUtils.calenderyearStart + (index ~/ 12);
-        final int month = (index % 12) + 1;
 
-        // Call month changed callback
-        widget.onMonthChanged?.call(
-          NepaliDateTime(
-            year: year,
-            month: month,
-            day: _currentDate.day,
-          ),
-        );
-        _updateCurrentDate(year, month, _currentDate.day);
-      },
-      itemBuilder: (context, index) {
-        // Calculate year and month for current page
-        final year = CalendarUtils.calenderyearStart + (index ~/ 12);
-        final month = (index % 12) + 1;
-
-        return Column(
-          children: [
-            // Calendar card containing header and month view
-            Card(
-              elevation: 0,
-              child: Column(
-                children: [
-                  // Calendar header with navigation
-                  widget.headerBuilder?.call(_selectedDate, _pageController) ??
+    return Column(
+      children: [
+        // Calendar card containing header and month view (outside PageView)
+        Card(
+          elevation: 0,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Calendar header with navigation (updates via ValueNotifier)
+              ValueListenableBuilder<NepaliDateTime>(
+                valueListenable: _selectedDateNotifier,
+                builder: (context, selectedDate, _) {
+                  return widget.headerBuilder
+                          ?.call(selectedDate, _pageController) ??
                       CalendarHeader(
-                        selectedDate: _selectedDate,
+                        selectedDate: selectedDate,
                         pageController: _pageController,
                         calendarStyle: calendarStyle,
-                      ),
+                      );
+                },
+              ),
 
-                  // Month view showing days grid
-                  CalendarMonthView<T>(
-                    year: year,
-                    month: month,
-                    selectedDate: _selectedDate,
-                    eventList: widget.eventList,
-                    calendarStyle: calendarStyle,
-                    onDaySelected: (date) {
-                      _updateCurrentDate(date.year, date.month, date.day);
-                    },
+              // Only calendar grid in PageView (swipeable months)
+              // Use LayoutBuilder to get available width and calculate height
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  // Calculate height based on width for square cells
+                  // 7 columns + 1 header row + 6 data rows + padding
+                  final cellWidth = constraints.maxWidth / 7;
+                  final gridHeight = (cellWidth * 7) + 16; // 6 rows + padding
+
+                  return SizedBox(
+                    height: gridHeight,
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: CalendarUtils.nepaliYears.length * 12,
+                      // Add physics for smoother scrolling
+                      physics: const BouncingScrollPhysics(),
+                      onPageChanged: (index) {
+                        // Calculate year and month from page index
+                        final int year =
+                            CalendarUtils.calenderyearStart + (index ~/ 12);
+                        final int month = (index % 12) + 1;
+
+                        // Update page index notifier
+                        _currentPageIndexNotifier.value = index;
+
+                        // Update current date and trigger callback
+                        _updateCurrentDate(
+                          year,
+                          month,
+                          _selectedDateNotifier.value.day,
+                        );
+                      },
+                      itemBuilder: (context, index) {
+                        // Calculate year and month for current page
+                        final year =
+                            CalendarUtils.calenderyearStart + (index ~/ 12);
+                        final month = (index % 12) + 1;
+
+                        return AnimatedBuilder(
+                          animation: _pageController,
+                          builder: (context, child) {
+                            // Calculate page offset for smooth transitions
+                            double scale = 1.0;
+                            double opacity = 1.0;
+
+                            if (_pageController.position.haveDimensions) {
+                              final double page =
+                                  _pageController.page ?? index.toDouble();
+                              final double offset = (page - index).abs();
+
+                              // Smooth scale transition: 1.0 -> 0.85 (less dramatic)
+                              // Using a curve for smoother interpolation
+                              scale = 1.0 - (offset * 0.15).clamp(0.0, 0.15);
+
+                              // Smooth opacity transition: 1.0 -> 0.5
+                              // Faster fade to avoid "stuck" feeling
+                              opacity = 1.0 - (offset * 0.5).clamp(0.0, 0.5);
+                            }
+
+                            return Center(
+                              child: Transform.scale(
+                                scale: scale,
+                                child: Opacity(
+                                  opacity: opacity,
+                                  child: child,
+                                ),
+                              ),
+                            );
+                          },
+                          child: ValueListenableBuilder<NepaliDateTime>(
+                            valueListenable: _selectedDateNotifier,
+                            builder: (context, selectedDate, _) {
+                              return CalendarMonthView<T>(
+                                year: year,
+                                month: month,
+                                selectedDate: selectedDate,
+                                eventList: widget.eventList,
+                                calendarStyle: calendarStyle,
+                                onDaySelected: (date) {
+                                  _updateCurrentDate(
+                                    date.year,
+                                    date.month,
+                                    date.day,
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+
+        // Event list for selected date (outside PageView with animation)
+        Expanded(
+          child: ValueListenableBuilder<NepaliDateTime>(
+            valueListenable: _selectedDateNotifier,
+            builder: (context, selectedDate, _) {
+              return AnimatedSwitcher(
+                duration: const Duration(seconds: 1),
+                switchInCurve: Curves.easeInOut,
+                switchOutCurve: Curves.easeInOut,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.05),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child: EventList<T>(
+                  key: ValueKey(
+                    '${selectedDate.year}-${selectedDate.month}-${selectedDate.day}',
                   ),
-                ],
-              ),
-            ),
-            // Event list for selected date
-            Flexible(
-              child: EventList<T>(
-                eventList: widget.eventList,
-                selectedDate: _selectedDate,
-                itemBuilder: (context, index, event) =>
-                    widget.eventBuilder?.call(
-                  context,
-                  index,
-                  _selectedDate,
-                  event,
+                  eventList: widget.eventList,
+                  selectedDate: selectedDate,
+                  itemBuilder: (context, index, event) =>
+                      widget.eventBuilder?.call(
+                    context,
+                    index,
+                    selectedDate,
+                    event,
+                  ),
                 ),
-              ),
-            ),
-          ],
-        );
-      },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -209,7 +291,7 @@ class NepaliCalendarController {
 
     _calendarState!._pageController.animateToPage(
       pageIndex,
-      duration: Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOut,
     );
     _calendarState!._updateCurrentDate(date.year, date.month, date.day);
@@ -222,5 +304,6 @@ class NepaliCalendarController {
   }
 
   // Get currently selected date
-  NepaliDateTime? get selectedDate => _calendarState?._selectedDate;
+  NepaliDateTime? get selectedDate =>
+      _calendarState?._selectedDateNotifier.value;
 }

@@ -35,6 +35,7 @@ class CalendarMonthView<T> extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
+        spacing: calendarStyle.effectiveConfig.showBorder ? 0 : 10,
         children: [
           // Display header row showing weekday names
           WeekdayHeader(style: calendarStyle),

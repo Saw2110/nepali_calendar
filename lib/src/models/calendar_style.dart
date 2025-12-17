@@ -5,14 +5,18 @@ import '../src.dart';
 /// A class that handles all the styling configuration for the Nepali Calendar.
 ///
 /// This class allows you to customize various aspects of the calendar, including:
-/// * Whether to show English dates
+/// * Calendar configuration (via [config] or deprecated individual properties)
 /// * Cell styles (colors, text styles for dates)
 /// * Header styles (text styles for week, month, and year headers)
 ///
 /// Example usage:
 /// ```dart
 /// final calendarStyle = NepaliCalendarStyle(
-///   showEnglishDate: true,
+///   config: CalendarConfig(
+///     showEnglishDate: true,
+///     language: Language.nepali,
+///     weekendType: WeekendType.saturdayAndSunday,
+///   ),
 ///   cellsStyle: CellStyle(
 ///     dotColor: Colors.red,
 ///     selectedColor: Colors.blue,
@@ -20,21 +24,42 @@ import '../src.dart';
 /// );
 /// ```
 class NepaliCalendarStyle {
+  /// Calendar configuration settings.
+  ///
+  /// This is the recommended way to configure calendar behavior.
+  /// If not provided, configuration will be built from deprecated individual properties.
+  final CalendarConfig? config;
+
   /// Controls whether to display the corresponding English date below Nepali dates.
   ///
   /// When set to `true`, each cell will show both Nepali and English dates.
   /// Default is `false`.
+  ///
+  /// **Deprecated:** Use [config] with [CalendarConfig.showEnglishDate] instead.
+  @Deprecated(
+    'Use config.showEnglishDate instead. This will be removed in a future version.',
+  )
   final bool showEnglishDate;
 
   /// Controls whether to display a border around each day cell.
   ///
   /// When set to `true`, each cell will have a border.
   /// Default is `false`.
+  ///
+  /// **Deprecated:** Use [config] with [CalendarConfig.showBorder] instead.
+  @Deprecated(
+    'Use config.showBorder instead. This will be removed in a future version.',
+  )
   final bool showBorder;
 
   /// Specifies the language to be used for displaying calendar content.
   ///
   /// This determines whether the calendar uses Nepali or English text.
+  ///
+  /// **Deprecated:** Use [config] with [CalendarConfig.language] instead.
+  @Deprecated(
+    'Use config.language instead. This will be removed in a future version.',
+  )
   final Language language;
 
   /// Styling configuration for calendar cells, including dates and selection indicators.
@@ -52,37 +77,77 @@ class NepaliCalendarStyle {
   ///
   /// This determines which days will be highlighted with the weekend color.
   /// Default is [WeekendType.saturday].
+  ///
+  /// **Deprecated:** Use [config] with [CalendarConfig.weekendType] instead.
+  @Deprecated(
+    'Use config.weekendType instead. This will be removed in a future version.',
+  )
   final WeekendType weekendType;
 
   /// Specifies which day the week starts on.
   ///
   /// This determines the order of days in the calendar header and grid.
   /// Default is [WeekStartType.sunday].
+  ///
+  /// **Deprecated:** Use [config] with [CalendarConfig.weekStartType] instead.
+  @Deprecated(
+    'Use config.weekStartType instead. This will be removed in a future version.',
+  )
   final WeekStartType weekStartType;
 
   /// Creates a [NepaliCalendarStyle] instance with customizable styling options.
   ///
   /// All parameters are optional and have default values.
+  ///
+  /// **Recommended:** Use [config] parameter for better organization:
+  /// ```dart
+  /// NepaliCalendarStyle(
+  ///   config: CalendarConfig(
+  ///     showEnglishDate: true,
+  ///     language: Language.nepali,
+  ///   ),
+  /// )
+  /// ```
   const NepaliCalendarStyle({
+    this.config,
+    @Deprecated('Use config.showEnglishDate instead')
     this.showEnglishDate = false,
-    this.showBorder = false,
-    this.language = Language.nepali,
+    @Deprecated('Use config.showBorder instead') this.showBorder = false,
+    @Deprecated('Use config.language instead') this.language = Language.nepali,
     this.cellsStyle = const CellStyle(),
     this.headersStyle = const HeaderStyle(),
+    @Deprecated('Use config.weekendType instead')
     this.weekendType = WeekendType.saturday,
+    @Deprecated('Use config.weekStartType instead')
     this.weekStartType = WeekStartType.sunday,
   });
+
+  /// Gets the effective calendar configuration.
+  ///
+  /// Returns [config] if provided, otherwise creates a config from deprecated properties.
+  CalendarConfig get effectiveConfig {
+    return config ??
+        CalendarConfig(
+          showEnglishDate: showEnglishDate,
+          showBorder: showBorder,
+          language: language,
+          weekendType: weekendType,
+          weekStartType: weekStartType,
+          weekTitleType: headersStyle.weekTitleType,
+        );
+  }
 
   /// Creates a copy of this style with the given fields replaced with new values.
   ///
   /// Example:
   /// ```dart
   /// final newStyle = currentStyle.copyWith(
-  ///   showEnglishDate: true,
+  ///   config: CalendarConfig(showEnglishDate: true),
   ///   cellsStyle: CellStyle(...),
   /// );
   /// ```
   NepaliCalendarStyle copyWith({
+    CalendarConfig? config,
     bool? showEnglishDate,
     bool? showBorder,
     Language? language,
@@ -92,6 +157,7 @@ class NepaliCalendarStyle {
     WeekStartType? weekStartType,
   }) {
     return NepaliCalendarStyle(
+      config: config ?? this.config,
       showEnglishDate: showEnglishDate ?? this.showEnglishDate,
       showBorder: showBorder ?? this.showBorder,
       language: language ?? this.language,
@@ -198,6 +264,11 @@ class HeaderStyle {
   /// Specifies the format for displaying weekday titles (e.g., "Sunday" or "Sun").
   ///
   /// Determines whether to show the full weekday name or an abbreviated version.
+  ///
+  /// **Deprecated:** Use [config] with [CalendarConfig.weekTitleType] instead.
+  @Deprecated(
+    'Use config.weekTitleType instead. This will be removed in a future version.',
+  )
   final TitleFormat weekTitleType;
 
   /// TextStyle for the month name displayed in the calendar header.
@@ -214,6 +285,7 @@ class HeaderStyle {
   ///
   /// All parameters are optional and have default values.
   const HeaderStyle({
+    @Deprecated('Use config.weekTitleType instead')
     this.weekTitleType = TitleFormat.half,
     this.weekHeaderStyle = const TextStyle(
       fontSize: 14,
