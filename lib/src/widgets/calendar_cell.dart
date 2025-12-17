@@ -93,6 +93,7 @@ class CalendarCell<T> extends StatelessWidget {
                         isToday,
                         isSelected,
                         date.weekday,
+                        isBaseLine: true,
                       ),
                     ),
                   ),
@@ -129,7 +130,12 @@ class CalendarCell<T> extends StatelessWidget {
   }
 
   // Method to get the cell text color based on today, selected, and weekday
-  Color _getCellTextColor(bool isToday, bool isSelected, int weekday) {
+  Color _getCellTextColor(
+    bool isToday,
+    bool isSelected,
+    int weekday, {
+    bool isBaseLine = false,
+  }) {
     if (isDimmed) {
       // Dimmed cells: show dimmed weekend color for weekends, grey for regular days
       if (_isWeekend(weekday)) {
@@ -141,7 +147,9 @@ class CalendarCell<T> extends StatelessWidget {
     // if (isSelected) return Colors.white; // Commented out for now
     if (isToday) return Colors.white;
     if (_isWeekend(weekday)) return calendarStyle.cellsStyle.weekDayColor;
-    return Colors.black;
+    return isBaseLine
+        ? calendarStyle.cellsStyle.baseLineDateColor
+        : Colors.black;
   }
 
   // Method to get the event indicator color based on holiday, today, and weekday
