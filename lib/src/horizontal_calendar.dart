@@ -121,9 +121,10 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
   void _handleDateSelection(NepaliDateTime selectedDate) {
     setState(() {
       _selectedDate = selectedDate;
-      widget.onDateSelected(selectedDate);
       _startDate = _selectedDate.subtract(Duration(days: 2));
     });
+
+    widget.onDateSelected(selectedDate);
   }
 
   /// Method to check if two dates are the same (without considering time)

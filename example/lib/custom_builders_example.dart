@@ -9,9 +9,9 @@ Widget customCellExample(CalendarCellData<Events> data) {
       margin: const EdgeInsets.all(4.0),
       decoration: BoxDecoration(
         color: data.isToday
-            ? Colors.blue.withOpacity(0.2)
+            ? Colors.blue.withValues(alpha: 0.2)
             : data.isSelected
-                ? Colors.blue.withOpacity(0.1)
+                ? Colors.blue.withValues(alpha: 0.1)
                 : data.isDimmed
                     ? Colors.grey.shade300
                     : Colors.white,
@@ -24,7 +24,7 @@ Widget customCellExample(CalendarCellData<Events> data) {
             : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 4,
             offset: const Offset(0, 2),
@@ -68,7 +68,7 @@ Widget customWeekDayExample(WeekdayData data) {
       borderRadius: BorderRadius.circular(12.0),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.1),
+          color: Colors.black.withValues(alpha: 0.1),
           spreadRadius: 1,
           blurRadius: 4,
           offset: const Offset(0, 2),
@@ -102,8 +102,9 @@ Widget customWeekDayExample(WeekdayData data) {
             ),
             style: TextStyle(
               fontSize: 10.0,
-              color:
-                  data.isWeekend ? Colors.red.withOpacity(0.7) : Colors.black54,
+              color: data.isWeekend
+                  ? Colors.red.withValues(alpha: 0.7)
+                  : Colors.black54,
             ),
           ),
         ],
@@ -121,7 +122,7 @@ Widget? customHeaderExample(date, controller) {
       borderRadius: BorderRadius.circular(16.0),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.1),
+          color: Colors.black.withValues(alpha: 0.1),
           spreadRadius: 2,
           blurRadius: 6,
           offset: const Offset(0, 3),
