@@ -56,6 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
     _calendarController.nextMonth();
   }
 
+  void _jumpToBaishakMonth() {
+    _calendarController.jumpToDate(NepaliDateTime(year: 2080, month: 01));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,6 +91,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed: _nextMonth,
                     icon: const Icon(Icons.chevron_right),
                     label: const Text('Next'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _jumpToBaishakMonth,
+                    icon: const Icon(Icons.chevron_right),
+                    label: const Text('Baishak 2080'),
                   ),
                 ],
               ),
@@ -151,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     weekendType: WeekendType.saturdayAndSunday,
                     // Configure week start day (default: WeekStartType.sunday)
                     // Options: sunday, monday
-                    weekStartType: WeekStartType.monday,
+                   weekStartType: WeekStartType.monday,
                     // Configure weekday title format (default: TitleFormat.half)
                     // Options: full, half, short
                     weekTitleType: TitleFormat.half,

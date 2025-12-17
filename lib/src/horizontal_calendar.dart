@@ -173,17 +173,10 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
 
   // Method to check if a weekday is a weekend based on the weekend type
   bool _isWeekend(int weekday) {
-    // weekday: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
-    switch (widget.calendarStyle.effectiveConfig.weekendType) {
-      case WeekendType.saturdayAndSunday:
-        return weekday == 6 || weekday == 7;
-      case WeekendType.fridayAndSaturday:
-        return weekday == 5 || weekday == 6;
-      case WeekendType.saturday:
-        return weekday == 6;
-      case WeekendType.sunday:
-        return weekday == 7;
-    }
+    return WeekUtils.isWeekend(
+      weekday,
+      widget.calendarStyle.effectiveConfig.weekendType,
+    );
   }
 }
 
@@ -207,9 +200,6 @@ class CalendarItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final double width = MediaQuery.sizeOf(context).width;
 
-    // Adjust the weekday value to match the expected range (0-6)
-    final adjustedWeekday = (date.weekday - 1) % 7;
-
     return InkWell(
       onTap: onDatePressed,
       child: Container(
@@ -222,7 +212,7 @@ class CalendarItem extends StatelessWidget {
             // Display the weekday name
             Text(
               WeekUtils.formattedWeekDay(
-                adjustedWeekday,
+                date.weekday,
                 style.effectiveConfig.language,
                 style.effectiveConfig.weekTitleType,
               ),
