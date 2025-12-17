@@ -35,8 +35,8 @@ class CalendarHeader extends StatelessWidget {
               // Check if controller is attached before navigating
               if (pageController.hasClients) {
                 pageController.previousPage(
-                  duration: const Duration(milliseconds: 500),
-                  curve: Curves.easeInOut,
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeInOutCubic,
                 );
               }
             },
@@ -53,7 +53,7 @@ class CalendarHeader extends StatelessWidget {
                   child: Text(
                     MonthUtils.formattedMonth(
                       selectedDate.month,
-                      calendarStyle.language,
+                      calendarStyle.effectiveConfig.language,
                     ),
                     style: calendarStyle.headersStyle.monthHeaderStyle,
                   ),
@@ -61,7 +61,7 @@ class CalendarHeader extends StatelessWidget {
                 // Year display with language-specific formatting
                 Flexible(
                   child: Text(
-                    calendarStyle.language == Language.english
+                    calendarStyle.effectiveConfig.language == Language.english
                         ? "${selectedDate.year}"
                         : NepaliNumberConverter.englishToNepali(
                             selectedDate.year.toString(),
@@ -79,8 +79,8 @@ class CalendarHeader extends StatelessWidget {
               // Check if controller is attached before navigating
               if (pageController.hasClients) {
                 pageController.nextPage(
-                  duration: const Duration(milliseconds: 500),
-                  curve: Curves.easeInOut,
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeInOutCubic,
                 );
               }
             },

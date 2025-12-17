@@ -40,9 +40,11 @@ class HomeScreen extends StatelessWidget {
             HorizontalNepaliCalendar(
               initialDate: NepaliDateTime.now(),
               calendarStyle: NepaliCalendarStyle(
-                language: Language.nepali,
-                // You can also configure weekend for horizontal calendar
-                weekendType: WeekendType.saturday,
+                // Recommended: Use CalendarConfig for better organization
+                config: CalendarConfig(
+                  language: Language.nepali,
+                  weekendType: WeekendType.saturday,
+                ),
               ),
               onDateSelected: (date) {
                 debugPrint("sad Date $date");
@@ -75,14 +77,21 @@ class HomeScreen extends StatelessWidget {
                 },
                 // Customize calendar appearance
                 calendarStyle: const NepaliCalendarStyle(
-                  showEnglishDate: true,
-                  showBorder: false,
-                  // Configure weekend days (default: WeekendType.saturday)
-                  // Options: saturdayAndSunday, fridayAndSaturday, saturday, sunday
-                  weekendType: WeekendType.saturdayAndSunday,
-                  // Configure week start day (default: WeekStartType.sunday)
-                  // Options: sunday, monday
-                  weekStartType: WeekStartType.monday,
+                  // Recommended: Use CalendarConfig for better organization
+                  config: CalendarConfig(
+                    showEnglishDate: true,
+                    showBorder: true,
+                    language: Language.english,
+                    // Configure weekend days (default: WeekendType.saturday)
+                    // Options: saturdayAndSunday, fridayAndSaturday, saturday, sunday
+                    weekendType: WeekendType.saturdayAndSunday,
+                    // Configure week start day (default: WeekStartType.sunday)
+                    // Options: sunday, monday
+                    weekStartType: WeekStartType.monday,
+                    // Configure weekday title format (default: TitleFormat.half)
+                    // Options: full, half, short
+                    weekTitleType: TitleFormat.half,
+                  ),
                 ),
               ),
             ),
@@ -112,37 +121,107 @@ class EventWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(5.0),
-      padding: const EdgeInsets.all(10.0),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       decoration: BoxDecoration(
-        // Different background colors for holidays and regular events
-        color: event.isHoliday ? Colors.red.shade100 : Colors.blue.shade100,
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            event.date.toString(),
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          Text(
-            event.isHoliday ? "Holiday" : "Not Holiday",
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          Text(
-            event.additionalInfo!.title,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          Text(
-            event.additionalInfo!.description,
-            style: Theme.of(context).textTheme.bodyMedium,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12.0),
+        child: Row(
+          children: [
+            // Colored accent bar on the left
+            Container(
+              width: 4,
+              height: 100,
+              color: event.isHoliday ? Colors.red : Colors.blue,
+            ),
+
+            // Main content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header row with date and badge
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _formatDate(event.date),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (event.isHoliday)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8.0,
+                              vertical: 4.0,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(4.0),
+                            ),
+                            child: Text(
+                              'Holiday',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.red.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Event title
+                    Text(
+                      event.additionalInfo!.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    // Event description
+                    Text(
+                      event.additionalInfo!.description,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                        height: 1.4,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  String _formatDate(NepaliDateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }
 
@@ -166,54 +245,108 @@ class Events {
 /// Each event includes date, holiday status, and additional information
 final List<CalendarEvent<Events>> eventList = [
   CalendarEvent(
-    date: NepaliDateTime(year: 2081, month: 10, day: 1),
-    isHoliday: true,
-    additionalInfo: Events(
-      title: "Dashain Festival",
-      description: "The biggest Hindu festival in Nepal.",
-      additionalInfo: "Public holiday",
-      eventType: "holiday",
-    ),
-  ),
-  CalendarEvent(
-    date: NepaliDateTime(year: 2081, month: 10, day: 18),
+    date: NepaliDateTime(year: 2082, month: 8, day: 17),
     isHoliday: false,
     additionalInfo: Events(
-      title: "Tihar Festival",
-      description: "The festival of lights.",
-      additionalInfo: "Public holiday",
-      eventType: "holiday",
-    ),
-  ),
-  CalendarEvent(
-    date: NepaliDateTime(year: 2081, month: 9, day: 11),
-    isHoliday: true,
-    additionalInfo: Events(
-      title: "Constitution Day",
-      description: "Celebration of Nepal's constitution.",
-      additionalInfo: "Public holiday",
-      eventType: "holiday",
-    ),
-  ),
-  CalendarEvent(
-    date: NepaliDateTime(year: 2081, month: 10, day: 10),
-    isHoliday: true,
-    additionalInfo: Events(
-      title: "Team Meeting",
-      description: "Monthly team meeting to discuss progress.",
-      additionalInfo: "Office event",
+      title: "अन्तर्राष्ट्रिय अपाङ्ग दिवस",
+      description:
+          "International Day of Persons with Disabilities (only for specially-abled employees).",
+      additionalInfo: "Special capacity employees only",
       eventType: "notHoliday",
     ),
   ),
   CalendarEvent(
-    date: NepaliDateTime(year: 2081, month: 9, day: 25),
+    date: NepaliDateTime(year: 2082, month: 8, day: 18),
     isHoliday: false,
     additionalInfo: Events(
-      title: "Project Deadline",
-      description: "Deadline for submitting the project report.",
-      additionalInfo: "Work-related",
+      title: "उँधौली पर्व / य:मरि पुन्हि / ज्यापु दिवस",
+      description:
+          "Udhauli festival, Yomari Punhi, Jyapu Day, Purnima fast, Dhanya Purnima.",
+      additionalInfo: "Cultural & religious events",
       eventType: "notHoliday",
     ),
   ),
-  // You can add more events following the same pattern
+  CalendarEvent(
+    date: NepaliDateTime(year: 2082, month: 9, day: 10),
+    isHoliday: true,
+    additionalInfo: Events(
+      title: "क्रिसमस डे",
+      description: "Christmas Day celebration.",
+      additionalInfo: "Public holiday",
+      eventType: "holiday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2082, month: 9, day: 15),
+    isHoliday: true,
+    additionalInfo: Events(
+      title: "तमु ल्होसार / लेखनाथ जयन्ती",
+      description:
+          "Tamu Lhosar, Poet Shiromani Lekhnath Jayanti, Putrada Ekadashi fast.",
+      additionalInfo: "Public holiday",
+      eventType: "holiday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2082, month: 9, day: 19),
+    isHoliday: false,
+    additionalInfo: Events(
+      title: "श्री स्वस्थानी व्रत कथा प्रारम्भ",
+      description:
+          "Start of Shree Swasthani Brata Katha, Magh Snan, Purnima fast.",
+      additionalInfo: "Religious observance",
+      eventType: "notHoliday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2082, month: 9, day: 27),
+    isHoliday: false,
+    additionalInfo: Events(
+      title: "पृथ्वी जयन्ती / राष्ट्रिय एकता दिवस",
+      description: "Prithvi Jayanti, National Unity Day, Gorakhkali Puja.",
+      additionalInfo: "National & religious observance",
+      eventType: "notHoliday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2082, month: 10, day: 1),
+    isHoliday: true,
+    additionalInfo: Events(
+      title: "माघे संक्रान्ति",
+      description: "Maghe Sankranti, Ghyu-Chaku Khane Din, Uttarayan begins.",
+      additionalInfo: "Public holiday",
+      eventType: "holiday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2082, month: 10, day: 5),
+    isHoliday: true,
+    additionalInfo: Events(
+      title: "सोनाम ल्होसार",
+      description: "Sonam Lhosar and Shri Ballabh Jayanti.",
+      additionalInfo: "Public holiday",
+      eventType: "holiday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2082, month: 10, day: 9),
+    isHoliday: false,
+    additionalInfo: Events(
+      title: "वसन्तपञ्चमी / सरस्वती पूजा",
+      description:
+          "Basant Panchami and Saraswati Puja (holiday for educational institutions only).",
+      additionalInfo: "Educational institutions holiday",
+      eventType: "notHoliday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2082, month: 10, day: 16),
+    isHoliday: false,
+    additionalInfo: Events(
+      title: "शहीद दिवस",
+      description: "Martyrs' Day and Pradosh fast.",
+      additionalInfo: "National observance",
+      eventType: "notHoliday",
+    ),
+  ),
 ];

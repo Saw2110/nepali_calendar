@@ -32,7 +32,7 @@ class CalendarGrid<T> extends StatelessWidget {
     // Build the grid items with 6 rows (42 cells)
     final gridItems = _buildCalendarGrid(weekdayOfFirstDay, daysCountInMonth);
 
-    return GridView.builder(
+    final gridView = GridView.builder(
       shrinkWrap: true,
       padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
@@ -42,6 +42,23 @@ class CalendarGrid<T> extends StatelessWidget {
       itemCount: 42, // Always show 6 rows
       itemBuilder: (context, index) => gridItems[index],
     );
+
+    // Wrap with container to add top and left borders for table-style border
+    return calendarStyle.effectiveConfig.showBorder
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                ),
+                left: BorderSide(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+            child: gridView,
+          )
+        : gridView;
   }
 
   // Method to build the complete calendar grid with 6 rows
@@ -144,7 +161,7 @@ class CalendarGrid<T> extends StatelessWidget {
     // Convert to 0-based: 0=Sunday, 1=Monday, ..., 6=Saturday
     final dayIndex = weekday == 7 ? 0 : weekday;
 
-    switch (calendarStyle.weekStartType) {
+    switch (calendarStyle.effectiveConfig.weekStartType) {
       case WeekStartType.sunday:
         // Week starts on Sunday, so Sunday=0, Monday=1, etc.
         return dayIndex;
