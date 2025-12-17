@@ -126,4 +126,30 @@ class WeekUtils {
     "F",
     "S",
   ];
+
+  /// Checks if the given weekday is a weekend based on the weekend type.
+  ///
+  /// - [weekday]: The weekday number (0=Sunday, 1=Monday, ..., 6=Saturday).
+  /// - [weekendType]: The type of weekend configuration.
+  ///
+  /// Returns `true` if the weekday is a weekend; otherwise, `false`.
+  ///
+  /// Throws an [ArgumentError] if the weekday number is outside the valid range (0-6).
+  static bool isWeekend(int weekday, WeekendType weekendType) {
+    if (weekday < 0 || weekday > 6) {
+      throw ArgumentError('Weekday must be between 0 and 6.');
+    }
+
+    // weekday: 0=Sunday, 1=Monday, 2=Tuesday, ..., 6=Saturday
+    switch (weekendType) {
+      case WeekendType.saturdayAndSunday:
+        return weekday == 0 || weekday == 6;
+      case WeekendType.fridayAndSaturday:
+        return weekday == 5 || weekday == 6;
+      case WeekendType.saturday:
+        return weekday == 6;
+      case WeekendType.sunday:
+        return weekday == 0;
+    }
+  }
 }

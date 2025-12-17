@@ -160,17 +160,10 @@ class CalendarCell<T> extends StatelessWidget {
 
   // Method to check if a weekday is a weekend based on the weekend type
   bool _isWeekend(int weekday) {
-    // weekday: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
-    switch (calendarStyle.effectiveConfig.weekendType) {
-      case WeekendType.saturdayAndSunday:
-        return weekday == 6 || weekday == 7;
-      case WeekendType.fridayAndSaturday:
-        return weekday == 5 || weekday == 6;
-      case WeekendType.saturday:
-        return weekday == 6;
-      case WeekendType.sunday:
-        return weekday == 7;
-    }
+    return WeekUtils.isWeekend(
+      weekday,
+      calendarStyle.effectiveConfig.weekendType,
+    );
   }
 
   // Method to check if the current date is the selected date
