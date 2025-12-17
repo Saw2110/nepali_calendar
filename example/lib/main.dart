@@ -160,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     weekendType: WeekendType.saturdayAndSunday,
                     // Configure week start day (default: WeekStartType.sunday)
                     // Options: sunday, monday
-                   weekStartType: WeekStartType.monday,
+                    weekStartType: WeekStartType.monday,
                     // Configure weekday title format (default: TitleFormat.half)
                     // Options: full, half, short
                     weekTitleType: TitleFormat.half,
