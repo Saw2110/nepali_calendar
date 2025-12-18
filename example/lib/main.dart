@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 // Import the Nepali Calendar package
 import 'package:nepali_calendar_plus/nepali_calendar_plus.dart';
 
+import 'date_picker_example.dart';
+
 // Main entry point of the application
 void main() {
   runApp(const MainApp());
@@ -14,9 +16,111 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HomeScreen(),
+      home: const ExampleSelector(),
+      routes: {
+        '/calendar': (context) => const HomeScreen(),
+        '/datepicker': (context) => const NepaliDatePickerExample(),
+      },
+    );
+  }
+}
+
+/// Example selector screen
+class ExampleSelector extends StatelessWidget {
+  const ExampleSelector({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nepali Calendar Examples'),
+        backgroundColor: const Color(0xFF6366F1),
+        foregroundColor: Colors.white,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildExampleCard(
+            context,
+            title: 'Calendar Widget',
+            description: 'Full calendar with events and navigation',
+            icon: Icons.calendar_month,
+            route: '/calendar',
+          ),
+          const SizedBox(height: 16),
+          _buildExampleCard(
+            context,
+            title: 'Date Picker',
+            description: 'Modal date picker with day/month/year selection',
+            icon: Icons.date_range,
+            route: '/datepicker',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExampleCard(
+    BuildContext context, {
+    required String title,
+    required String description,
+    required IconData icon,
+    required String route,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, route),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: const Color(0xFF6366F1),
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
