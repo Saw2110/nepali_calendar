@@ -1,3 +1,5 @@
+import '../src.dart';
+
 /// Utility class for converting numbers between Nepali and English formats.
 ///
 /// This class provides methods for:
@@ -96,5 +98,20 @@ class NepaliNumberConverter {
         .split('')
         .map((char) => _englishToNepali[char] ?? char)
         .join();
+  }
+
+  /// Formats a number string based on the specified language.
+  ///
+  /// - [number]: The number string to format.
+  /// - [language]: The target language (defaults to English).
+  /// Returns the formatted number string.
+  static String formattedNumber(
+    String number, {
+    Language language = Language.english,
+  }) {
+    if (language == Language.english) {
+      return number;
+    }
+    return englishToNepali(number);
   }
 }

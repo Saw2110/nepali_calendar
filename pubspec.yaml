@@ -1,6 +1,6 @@
 name: nepali_calendar_plus
 description: "A feature-rich flutter package for implementing a Nepali calendar system in your applications." 
-version: 0.0.6
+version: 0.0.7
 homepage: https://github.com/Saw2110/nepali_calendar.git
 
 plugin: 
