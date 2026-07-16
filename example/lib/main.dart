@@ -6,8 +6,22 @@ void main() {
   runApp(const MainApp());
 }
 
-class MainApp extends StatelessWidget {
+class MainApp extends StatefulWidget {
   const MainApp({super.key});
+
+  @override
+  State<MainApp> createState() => _MainAppState();
+}
+
+class _MainAppState extends State<MainApp> {
+  ThemeMode _themeMode = ThemeMode.light;
+
+  void _toggleTheme() {
+    setState(() {
+      _themeMode =
+          _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,17 +29,41 @@ class MainApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Nepali Calendar Plus Examples',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const ExamplesTabScreen(),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      builder: (context, child) {
+        return SafeArea(
+          top: false,
+          child: child!,
+        );
+      },
+      themeMode: _themeMode,
+      home: ExamplesTabScreen(
+        onToggleTheme: _toggleTheme,
+        isDark: _themeMode == ThemeMode.dark,
+      ),
     );
   }
 }
 
 /// Main screen with tabs for different examples
 class ExamplesTabScreen extends StatefulWidget {
-  const ExamplesTabScreen({super.key});
+  const ExamplesTabScreen({
+    super.key,
+    required this.onToggleTheme,
+    required this.isDark,
+  });
+
+  final VoidCallback onToggleTheme;
+  final bool isDark;
 
   @override
   State<ExamplesTabScreen> createState() => _ExamplesTabScreenState();
@@ -44,33 +82,147 @@ class _ExamplesTabScreenState extends State<ExamplesTabScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Nepali Calendar Plus Examples'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.language),
-              onPressed: _toggleLanguage,
-              tooltip: 'Toggle Language',
+    // One NepaliCalendarTheme above every example. `fromContext` reads the
+    // ambient Material ColorScheme, so flipping the app between light and dark
+    // restyles every calendar below with no other changes.
+    return NepaliCalendarTheme(
+      data: NepaliCalendarThemeData.fromContext(context),
+      child: DefaultTabController(
+        length: 4,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Nepali Calendar Plus'),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  widget.isDark ? Icons.light_mode : Icons.dark_mode,
+                ),
+                onPressed: widget.onToggleTheme,
+                tooltip: 'Toggle Light/Dark',
+              ),
+              IconButton(
+                icon: const Icon(Icons.language),
+                onPressed: _toggleLanguage,
+                tooltip: 'Toggle Language',
+              ),
+            ],
+            bottom: const TabBar(
+              isScrollable: true,
+              tabs: [
+                Tab(icon: Icon(Icons.calendar_month), text: 'Basic'),
+                Tab(icon: Icon(Icons.grid_view), text: 'Year'),
+                Tab(icon: Icon(Icons.date_range), text: 'Date Picker'),
+                Tab(icon: Icon(Icons.brush), text: 'Custom Builders'),
+              ],
             ),
-          ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.calendar_month), text: 'Basic'),
-              Tab(icon: Icon(Icons.date_range), text: 'Date Picker'),
-              Tab(icon: Icon(Icons.brush), text: 'Custom Builders'),
+          ),
+          body: TabBarView(
+            children: [
+              BasicCalendarExample(language: currentLanguage),
+              YearCalendarExample(language: currentLanguage),
+              DatePickerExample(language: currentLanguage),
+              CustomBuildersExample(language: currentLanguage),
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            BasicCalendarExample(language: currentLanguage),
-            DatePickerExample(language: currentLanguage),
-            CustomBuildersExample(language: currentLanguage),
-          ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// YEAR CALENDAR EXAMPLE
+// ============================================================================
+
+/// Demonstrates [NepaliYearCalendar]: a whole year on one screen.
+class YearCalendarExample extends StatefulWidget {
+  const YearCalendarExample({super.key, required this.language});
+
+  final Language language;
+
+  @override
+  State<YearCalendarExample> createState() => _YearCalendarExampleState();
+}
+
+class _YearCalendarExampleState extends State<YearCalendarExample> {
+  NepaliDateTime? _selected;
+
+  /// The year to open on.
+  ///
+  /// Deliberately the year the sample events fall in rather than the current
+  /// one, so the event and holiday indicators are actually visible. Today's
+  /// highlight is demonstrated on the Basic tab.
+  int get _demoYear =>
+      eventList.map((event) => event.date.year).reduce((a, b) => a > b ? a : b);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: NepaliYearCalendar<Events>(
+            year: _demoYear,
+            initialDate: _selected,
+            eventList: eventList,
+            calendarStyle: NepaliCalendarStyle(
+              // Config only: no appearance is set here, so the ambient
+              // NepaliCalendarTheme still supplies the colours.
+              config: CalendarConfig(language: widget.language),
+            ),
+            // Two per row on a phone, more when there is room.
+            monthsPerRow: MediaQuery.sizeOf(context).width > 900 ? 4 : 2,
+            onDaySelected: (date) => setState(() => _selected = date),
+          ),
         ),
+        if (_selected != null) _buildSelectionBar(context, _selected!),
+      ],
+    );
+  }
+
+  Widget _buildSelectionBar(BuildContext context, NepaliDateTime date) {
+    final events = CalendarEventIndex.fromList(eventList).eventsOn(date);
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${MonthUtils.formattedMonth(date.month, widget.language)} '
+            '${date.day}, ${date.year}',
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 4),
+          if (events.isEmpty)
+            Text('No events', style: theme.textTheme.bodySmall)
+          else
+            // A date can hold several events; show them all.
+            ...events.map(
+              (event) => Row(
+                children: [
+                  Icon(
+                    Icons.circle,
+                    size: 8,
+                    color: event.isHoliday
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      '${event.additionalInfo?.title ?? ''}'
+                      '${event.isHoliday ? ' (holiday)' : ''}',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -181,7 +333,6 @@ class _BasicCalendarExampleState extends State<BasicCalendarExample> {
               child: NepaliCalendar(
                 controller: _calendarController,
                 eventList: _sortedList(),
-                checkIsHoliday: (event) => event.isHoliday,
                 calendarBuilder: CalendarBuilder<Events>(
                   eventBuilder: (context, index, date, event) {
                     return EventWidget(event: event);
@@ -405,7 +556,6 @@ class CustomBuildersExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return NepaliCalendar<Events>(
       eventList: eventList,
-      checkIsHoliday: (event) => event.isHoliday,
       calendarBuilder: CalendarBuilder<Events>(
         // Custom cell builder
         cellBuilder: (data) => _customCellBuilder(data, language),
@@ -472,10 +622,14 @@ class CustomBuildersExample extends StatelessWidget {
                             : Colors.black,
               ),
             ),
-            if (data.event != null)
+            // `data.events` holds every event on the date, and `data.isHoliday`
+            // is true if any of them is one. The older `data.event` exposed
+            // only the first, so a date with an ordinary event listed ahead of
+            // a holiday did not read as a holiday.
+            if (data.hasEvents)
               Icon(
                 Icons.star,
-                color: data.event!.isHoliday ? Colors.red : Colors.blue,
+                color: data.isHoliday ? Colors.red : Colors.blue,
                 size: 12.0,
               ),
           ],
