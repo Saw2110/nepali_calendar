@@ -1,5 +1,132 @@
 # CHANGELOG
 
+## 0.0.8
+
+A correctness release. Every change below fixes behaviour that was broken in
+0.0.7 or earlier. There are no new features and no API removals — upgrading
+should be a drop-in, with the exceptions called out under **Action required**.
+
+Each fix ships with regression tests; the package now has a test suite where it
+previously had none.
+
+### Fixed — dates were wrong in Nepal
+
+`DateTime.toNepaliDateTime()` added an extra day whenever the *device's*
+timezone was exactly UTC+5:45 and the date fell after 1986. In other words it
+was wrong for users in Nepal, and only for users in Nepal — the same code gave
+a different answer abroad.
+
+```dart
+// 0.0.7, on a device in Nepal
+DateTime(2024, 4, 13).toNepaliDateTime(); // BS 2081-01-02  ✗
+// 0.0.8, on any device
+DateTime(2024, 4, 13).toNepaliDateTime(); // BS 2081-01-01  ✓ (Nepali New Year)
+```
+
+Because `NepaliDateTime.now()` goes through this path, today's-date
+highlighting was wrong in every widget, and the date picker opened on the wrong
+day. Conversion is now timezone-independent, round-trips exactly across the
+supported range (BS 1970–2100), and is immune to daylight-saving transitions.
+
+**Action required:** if you compensated for this with your own `-1` day
+adjustment, remove it.
+
+### Fixed — the horizontal calendar ignored taps on phones
+
+`HorizontalNepaliCalendar` pinned itself to 8% of the viewport height. With
+`showMonth: true` (the default) the date strip was pushed outside that fixed
+box, and Flutter does not hit-test children painted outside their parent's
+bounds — so `onDateSelected` never fired. It looked completely normal.
+
+Affected every common phone (iPhone SE, iPhone 14, Pixel 7) in the default
+configuration. Tablets were unaffected, as was `showMonth: false`.
+
+The widget now sizes to its content and scales with the user's text size.
+
+**Action required:** none, but note the widget is now slightly taller than the
+old fixed 8%, and it no longer clips its own content.
+
+### Fixed — the date picker could not select the 30th or 31st
+
+The day grid needed six rows but was given room for five. A `GridView` only
+builds what its viewport covers, and scrolling was disabled, so the last row
+was never built: the final days of the month did not exist and could not be
+tapped. No error was raised — the month simply ended early.
+
+### Fixed — the date picker overflowed
+
+Two independent causes:
+
+* the header `Row` was rigid, and English month names are wider than their
+  Nepali equivalents ("Baisakh 2081" vs "बैशाख २०८१"), so **in English the
+  picker overflowed at every screen size**, desktop included;
+* the picker was pinned to 420×480 regardless of the screen, so it overflowed
+  any phone narrower than 420 logical pixels.
+
+It now adapts to the space available, and long labels shrink rather than
+overflow.
+
+### Fixed — the date picker's year grid offered unusable years
+
+The year list ran `displayYear - 15 .. displayYear + 14` with no clamping to
+the range the calendar has data for. Near either end it offered years that
+threw a null-check error when picked. The window is now clamped, and slides
+rather than truncating, so a full set of years is always offered.
+
+### Fixed — the calendar overflowed on tablet, desktop and web
+
+`NepaliCalendar` sized its grid as `viewportWidth + 16`, making the calendar as
+tall as the window was wide. It overflowed on anything wider than a phone (280
+pixels over at 800×600). Cells now cap their height and grow sideways on wide
+viewports, and shrink to fit short ones such as a phone in landscape.
+
+### Fixed — `NepaliDateTime` had no value equality
+
+Two instances of the same date compared unequal, and the class could not be
+used as a `Map` key or in a `Set`.
+
+```dart
+NepaliDateTime(year: 2081, month: 1, day: 1) ==
+    NepaliDateTime(year: 2081, month: 1, day: 1); // was false, now true
+```
+
+**Action required:** if you relied on identity comparison, use
+`identical(a, b)`.
+
+### Fixed — `isToday` disagreed with `now()`
+
+`CalendarUtils.isToday` resolved against the device's local date while
+`NepaliDateTime.now()` used Nepal time, so the two disagreed for part of each
+day outside Nepal. Both now use Nepal Standard Time. Users in Nepal are
+unaffected.
+
+### Added
+
+- `NepaliDateTime.isSameDayAs(other)` — compare dates ignoring the time.
+- `NepaliDateTime.dateOnly` — the date with its time stripped, for use as a
+  stable map key.
+- `NepaliDateTime.nepalTimeZoneOffset` — Nepal's fixed UTC+5:45 offset.
+- Out-of-range dates now throw a descriptive `ArgumentError` instead of
+  tripping an internal assertion or a null check.
+
+### Deprecated
+
+- `HorizontalNepaliCalendar.textColor` and
+  `HorizontalNepaliCalendar.selectedColor` — these have **never had any
+  effect**; they were accepted by the constructor and never read. They are
+  deprecated rather than wired up, because making a long-dead parameter
+  suddenly apply would visibly restyle apps that pass it. Use
+  `calendarStyle.cellsStyle` instead. To be removed in 1.0.0.
+
+### Changed
+
+- The `plugin:` block has been removed from `pubspec.yaml`. It declared
+  Android/iOS platform support on a package with no platform code, which
+  suppressed web and desktop on pub.dev. The package now correctly lists all
+  platforms. No code change is required.
+
+---
+
 ## 0.0.7
 
 ### New Features
