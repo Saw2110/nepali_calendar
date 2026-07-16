@@ -36,6 +36,82 @@ A feature-rich Flutter package for implementing Nepali (Bikram Sambat) calendar 
 - ✅ Extensive styling options
 - ✅ Today's date highlighting
 - ✅ Previous/next month day display
+- ✅ Full-year view — twelve months on one screen
+- ✅ Theming with light/dark mode, following your app's `ColorScheme`
+- ✅ Multiple events per date
+
+## Theming and dark mode
+
+Wrap any calendar in a `NepaliCalendarTheme`:
+
+```dart
+NepaliCalendarTheme(
+  data: NepaliCalendarThemeData.fromContext(context),
+  child: NepaliCalendar(),
+)
+```
+
+`fromContext` derives the palette and typography from your app's Material
+`ColorScheme` and `TextTheme`, so the calendar follows your light/dark mode
+automatically. You can also use `NepaliCalendarThemeData.light()`, `.dark()`,
+or `.fromColorScheme(scheme)`, and adjust individual values with `copyWith`:
+
+```dart
+NepaliCalendarTheme(
+  data: NepaliCalendarThemeData.fromContext(context)
+      .copyWith(todayColor: Colors.orange),
+  child: NepaliCalendar(),
+)
+```
+
+Styling resolves in this order, first match winning:
+
+1. an explicit `calendarStyle` passed to the widget;
+2. the nearest enclosing `NepaliCalendarTheme`;
+3. the built-in defaults.
+
+Theming is therefore opt-in: existing code that passes `calendarStyle`, or
+passes nothing at all, looks exactly as it did before. Prefer `copyWith` on the
+theme over passing a `calendarStyle`, since an explicit style replaces the
+theme rather than merging with it.
+
+## Year view
+
+```dart
+NepaliYearCalendar(
+  year: 2081,
+  eventList: events,
+  onDaySelected: (date) => print(date),
+)
+```
+
+Twelve months in a scrollable grid, two per row by default (`monthsPerRow`),
+responsive from phone to desktop, with today, the selected date, event dots and
+holiday indicators. Also supports `onYearChanged`, `jumpToSelectedMonth`,
+`headerBuilder` and `monthTitleBuilder`, and picks up `NepaliCalendarTheme`
+like everything else.
+
+## Events
+
+A date may carry any number of events. Mark holidays with
+`CalendarEvent.isHoliday`:
+
+```dart
+NepaliCalendar<String>(
+  eventList: [
+    CalendarEvent(date: date, additionalInfo: 'Standup'),
+    CalendarEvent(date: date, isHoliday: true, additionalInfo: 'Dashain'),
+  ],
+  calendarBuilder: CalendarBuilder<String>(
+    cellBuilder: (data) => MyCell(
+      events: data.events,       // every event that day
+      isHoliday: data.isHoliday, // true if any of them is a holiday
+    ),
+  ),
+)
+```
+
+`checkIsHoliday` is deprecated and no longer required — it was never read.
 
 ## Upgrading to 0.0.8
 

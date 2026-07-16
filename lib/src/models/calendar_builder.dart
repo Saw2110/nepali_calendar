@@ -165,14 +165,34 @@ class CalendarCellData<T> {
   /// Whether this date falls on a weekend
   final bool isWeekend;
 
-  /// The event associated with this date, if any
+  /// The first event on this date, if any.
+  ///
+  /// **Deprecated:** a date may have several events; this only ever exposes
+  /// the first, so a cell cannot tell that a date carries both an ordinary
+  /// event and a holiday. Use [events] instead.
+  @Deprecated(
+    'A date can have more than one event and this exposes only the first. '
+    'Use events instead. Will be removed in 1.0.0.',
+  )
   final CalendarEvent<T>? event;
+
+  /// Every event on this date, in the order they were supplied.
+  ///
+  /// Empty when the date has no events. Added in 0.1.0; before that only the
+  /// first event on a date was reachable.
+  final List<CalendarEvent<T>> events;
 
   /// Callback to invoke when the cell is tapped
   final VoidCallback onTap;
 
   /// The calendar style configuration for accessing colors and text styles
   final NepaliCalendarStyle style;
+
+  /// Whether any event on this date is marked as a holiday.
+  bool get isHoliday => events.any((event) => event.isHoliday);
+
+  /// Whether this date has any events.
+  bool get hasEvents => events.isNotEmpty;
 
   const CalendarCellData({
     required this.date,
@@ -181,7 +201,8 @@ class CalendarCellData<T> {
     required this.isSelected,
     required this.isDimmed,
     required this.isWeekend,
-    required this.event,
+    @Deprecated('Use events instead') this.event,
+    this.events = const [],
     required this.onTap,
     required this.style,
   });
