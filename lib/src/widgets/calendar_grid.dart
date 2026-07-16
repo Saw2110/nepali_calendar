@@ -11,6 +11,14 @@ class CalendarGrid<T> extends StatelessWidget {
   final NepaliCalendarStyle calendarStyle;
   final Widget Function(CalendarCellData<T>)? cellBuilder;
 
+  /// Width-to-height ratio of each day cell.
+  ///
+  /// Defaults to 1.0 (square cells), which is what every version up to 0.0.7
+  /// used unconditionally. [NepaliCalendar] now passes a ratio greater than 1
+  /// on wide viewports so that cells grow sideways rather than making the
+  /// calendar as tall as the viewport is wide.
+  final double cellAspectRatio;
+
   const CalendarGrid({
     super.key,
     required this.year,
@@ -20,6 +28,7 @@ class CalendarGrid<T> extends StatelessWidget {
     required this.onDaySelected,
     required this.calendarStyle,
     this.cellBuilder,
+    this.cellAspectRatio = 1.0,
   });
 
   @override
@@ -38,8 +47,9 @@ class CalendarGrid<T> extends StatelessWidget {
       shrinkWrap: true,
       padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7, // 7 columns for 7 days in a week
+        childAspectRatio: cellAspectRatio,
       ),
       itemCount: 42, // Always show 6 rows
       itemBuilder: (context, index) {

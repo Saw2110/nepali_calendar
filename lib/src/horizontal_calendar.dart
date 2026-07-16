@@ -6,8 +6,16 @@ class HorizontalNepaliCalendar extends StatefulWidget {
   const HorizontalNepaliCalendar({
     super.key,
     this.initialDate,
+    @Deprecated(
+      'This parameter has never had any effect. Use '
+      'calendarStyle.cellsStyle instead. Will be removed in 1.0.0.',
+    )
     this.textColor,
     this.backgroundColor,
+    @Deprecated(
+      'This parameter has never had any effect. Use '
+      'calendarStyle.cellsStyle.selectedColor instead. Will be removed in 1.0.0.',
+    )
     this.selectedColor,
     this.showMonth = true,
     required this.onDateSelected,
@@ -16,8 +24,34 @@ class HorizontalNepaliCalendar extends StatefulWidget {
   });
 
   final NepaliDateTime? initialDate;
+
+  /// Colour for the date text.
+  ///
+  /// **This parameter has never been read.** It was accepted by the
+  /// constructor in every version up to 0.0.7 but never applied, so passing it
+  /// had no effect. It is deprecated rather than wired up, because making a
+  /// long-dead parameter suddenly take effect would visibly change the
+  /// appearance of apps that pass it.
+  ///
+  /// Use `calendarStyle.cellsStyle` instead.
+  @Deprecated(
+    'This parameter has never had any effect. Use calendarStyle.cellsStyle '
+    'instead. Will be removed in 1.0.0.',
+  )
   final Color? textColor;
+
+  /// Background colour behind the whole strip. This one does take effect.
   final Color? backgroundColor;
+
+  /// Colour for the selected date.
+  ///
+  /// **This parameter has never been read.** See [textColor] for why it is
+  /// deprecated rather than fixed. Use
+  /// `calendarStyle.cellsStyle.selectedColor` instead.
+  @Deprecated(
+    'This parameter has never had any effect. Use '
+    'calendarStyle.cellsStyle.selectedColor instead. Will be removed in 1.0.0.',
+  )
   final Color? selectedColor;
   final bool showMonth;
   final OnDateSelected onDateSelected;
@@ -44,21 +78,40 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
     _startDate = _selectedDate.subtract(Duration(days: 2));
   }
 
+  /// Base height of the scrolling date strip at a text scale of 1.0.
+  ///
+  /// Sized for Devanagari, which is noticeably taller than Latin at the same
+  /// font size -- 56 is enough for "Sun / 12" but clips "आइत / १२".
+  static const double _dateStripBaseHeight = 64.0;
+
   @override
   Widget build(BuildContext context) {
-    final double height = MediaQuery.sizeOf(context).height / 100;
-
-    return Container(
-      height: height * 8,
+    // Scale with the user's text size preference so the strip does not clip
+    // for anyone relying on larger system text.
+    final stripHeight =
+        MediaQuery.textScalerOf(context).scale(_dateStripBaseHeight);
+    // The widget sizes itself to its content. Up to 0.0.7 it was pinned to 8%
+    // of the viewport height, which on a phone left too little room for the
+    // month title and the date strip together: the strip was painted outside
+    // the fixed box, and because Flutter does not hit-test children painted
+    // outside their parent's bounds, taps were silently swallowed.
+    return ColoredBox(
       color: widget.backgroundColor ?? Colors.transparent,
-      child: ListTile(
-        dense: true,
-        contentPadding: EdgeInsets.zero,
-        title: widget.showMonth
-            ? widget.headerBuilder?.call(_todayDate, _selectedDate) ??
-                _buildMonthTitle()
-            : null,
-        subtitle: _buildDateList(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.showMonth)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: widget.headerBuilder?.call(_todayDate, _selectedDate) ??
+                  _buildMonthTitle(),
+            ),
+          SizedBox(
+            height: stripHeight,
+            child: _buildDateList(),
+          ),
+        ],
       ),
     );
   }
@@ -84,37 +137,24 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
   }
 
   Widget _buildDateList() {
-    return Center(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: 7,
-              shrinkWrap: true,
-              scrollDirection: Axis.horizontal,
-              itemBuilder: (context, index) {
-                final date = _startDate.add(Duration(days: index));
+    return ListView.builder(
+      itemCount: 7,
+      scrollDirection: Axis.horizontal,
+      itemBuilder: (context, index) {
+        final date = _startDate.add(Duration(days: index));
 
-                // Check if the date is today
-                final bool isToday = _isSameDay(date, _todayDate);
-                final bool isSelected = _isSameDay(date, _selectedDate);
+        // Check if the date is today
+        final bool isToday = _isSameDay(date, _todayDate);
+        final bool isSelected = _isSameDay(date, _selectedDate);
 
-                return CalendarItem(
-                  date: date,
-                  textColor:
-                      _getCellTextColor(isToday, isSelected, date.weekday),
-                  backgroundColor:
-                      _getCellColor(isToday, isSelected, date.weekday),
-                  style: widget.calendarStyle,
-                  onDatePressed: () => _handleDateSelection(date),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+        return CalendarItem(
+          date: date,
+          textColor: _getCellTextColor(isToday, isSelected, date.weekday),
+          backgroundColor: _getCellColor(isToday, isSelected, date.weekday),
+          style: widget.calendarStyle,
+          onDatePressed: () => _handleDateSelection(date),
+        );
+      },
     );
   }
 

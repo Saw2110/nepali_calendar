@@ -1,6 +1,21 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../src.dart';
+
+/// Columns in the day grid: one per weekday.
+const int _gridColumns = 7;
+
+/// Rows in the day grid. Always six, so the month's last days are never
+/// pushed out of the viewport and left unbuilt.
+const int _gridRows = 6;
+
+/// Width the picker uses when there is room for it.
+const double _preferredWidth = 420.0;
+
+/// Height the picker uses when there is room for it.
+const double _preferredHeight = 480.0;
 
 /// A customizable Nepali Date Picker widget for selecting dates in the Bikram Sambat calendar.
 ///
@@ -128,12 +143,38 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     });
   }
 
+  /// The years the year grid may offer.
+  ///
+  /// A window around the displayed year, clamped to the range the calendar
+  /// actually holds data for. Up to 0.0.7 this was an unclamped
+  /// `displayYear - 15 .. displayYear + 14`, so near either end of the
+  /// calendar it offered years with no data behind them -- picking one threw
+  /// a null-check error on `CalendarUtils.nepaliYears[year]!`.
+  List<int> _selectableYears() {
+    const windowBefore = 15;
+    const windowSize = 30;
+
+    final firstSupported = CalendarUtils.nepaliYears.keys.first;
+    final lastSupported = CalendarUtils.nepaliYears.keys.last;
+
+    // Slide the window back inside the supported range rather than truncating
+    // it, so the grid keeps offering a full set of years at either end.
+    var start = displayDate.year - windowBefore;
+    if (start + windowSize - 1 > lastSupported) {
+      start = lastSupported - windowSize + 1;
+    }
+    if (start < firstSupported) start = firstSupported;
+
+    final end = math.min(start + windowSize - 1, lastSupported);
+
+    return [for (var year = start; year <= end; year++) year];
+  }
+
   /// Scroll to the selected year in the year grid
   void _scrollToSelectedYear() {
     if (!_yearScrollController.hasClients) return;
 
-    final currentYear = displayDate.year;
-    final years = List.generate(30, (index) => currentYear - 15 + index);
+    final years = _selectableYears();
     final selectedIndex = years.indexOf(displayDate.year);
 
     if (selectedIndex != -1) {
@@ -257,32 +298,44 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
               ),
             ),
           ),
-          Row(
-            children: [
-              if (viewMode == NepaliDatePickerMode.day) ...[
-                _buildNavigationButton(
-                  Icons.chevron_left_rounded,
-                  _previousMonth,
+          // Flexible so a long title shrinks rather than overflowing. English
+          // month names are wider than their Nepali equivalents ("Baisakh
+          // 2081" vs "बैशाख २०८१"), and up to 0.0.7 this Row was rigid: the
+          // English header overflowed at every screen size, including on
+          // desktop, because it did not fit the picker's own fixed width.
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (viewMode == NepaliDatePickerMode.day) ...[
+                  _buildNavigationButton(
+                    Icons.chevron_left_rounded,
+                    _previousMonth,
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(
+                  child: Text(
+                    _getHeaderText(),
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    style: widget.calendarStyle.headersStyle.monthHeaderStyle
+                        .copyWith(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 12),
+                if (viewMode == NepaliDatePickerMode.day) ...[
+                  const SizedBox(width: 8),
+                  _buildNavigationButton(
+                    Icons.chevron_right_rounded,
+                    _nextMonth,
+                  ),
+                ],
               ],
-              Text(
-                _getHeaderText(),
-                style:
-                    widget.calendarStyle.headersStyle.monthHeaderStyle.copyWith(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              if (viewMode == NepaliDatePickerMode.day) ...[
-                const SizedBox(width: 12),
-                _buildNavigationButton(
-                  Icons.chevron_right_rounded,
-                  _nextMonth,
-                ),
-              ],
-            ],
+            ),
           ),
           InkWell(
             onTap: _toggleEditMode,
@@ -411,47 +464,71 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
                 _previousMonth();
               }
             },
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-                crossAxisSpacing: 4,
-                mainAxisSpacing: 4,
-              ),
-              itemCount: previousMonthDays.length +
-                  currentMonthDays.length +
-                  nextMonthDays,
-              itemBuilder: (context, index) {
-                if (index < previousMonthDays.length) {
-                  return _buildDayCell(
-                    previousMonthDays[index],
-                    isCurrentMonth: false,
-                  );
-                } else if (index <
-                    previousMonthDays.length + currentMonthDays.length) {
-                  final day =
-                      currentMonthDays[index - previousMonthDays.length];
-                  final isSelected = selectedDate.year == displayDate.year &&
-                      selectedDate.month == displayDate.month &&
-                      selectedDate.day == day;
-                  final today = NepaliDateTime.now();
-                  final isToday = today.year == displayDate.year &&
-                      today.month == displayDate.month &&
-                      today.day == day;
-                  return _buildDayCell(
-                    day,
-                    isSelected: isSelected,
-                    isToday: isToday,
-                    onTap: () => _selectDay(day),
-                  );
-                } else {
-                  final day = index -
-                      previousMonthDays.length -
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Size the cells so all six rows fit the space available.
+                //
+                // Up to 0.0.7 cells were square regardless of the room on
+                // offer. Inside the picker's fixed height that left the grid
+                // short of a row, and because a GridView only builds what its
+                // viewport covers -- with scrolling disabled here, so it could
+                // not be reached either -- the sixth row was never built. The
+                // last days of the month, the 30th and 31st, simply did not
+                // exist and could not be selected.
+                const spacing = 4.0;
+                final cellWidth =
+                    (constraints.maxWidth - (spacing * (_gridColumns - 1))) /
+                        _gridColumns;
+                final cellHeight =
+                    (constraints.maxHeight - (spacing * (_gridRows - 1))) /
+                        _gridRows;
+
+                return GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: _gridColumns,
+                    crossAxisSpacing: spacing,
+                    mainAxisSpacing: spacing,
+                    childAspectRatio:
+                        cellHeight > 0 ? cellWidth / cellHeight : 1.0,
+                  ),
+                  itemCount: previousMonthDays.length +
                       currentMonthDays.length +
-                      1;
-                  return _buildDayCell(day, isCurrentMonth: false);
-                }
+                      nextMonthDays,
+                  itemBuilder: (context, index) {
+                    if (index < previousMonthDays.length) {
+                      return _buildDayCell(
+                        previousMonthDays[index],
+                        isCurrentMonth: false,
+                      );
+                    } else if (index <
+                        previousMonthDays.length + currentMonthDays.length) {
+                      final day =
+                          currentMonthDays[index - previousMonthDays.length];
+                      final isSelected =
+                          selectedDate.year == displayDate.year &&
+                              selectedDate.month == displayDate.month &&
+                              selectedDate.day == day;
+                      final today = NepaliDateTime.now();
+                      final isToday = today.year == displayDate.year &&
+                          today.month == displayDate.month &&
+                          today.day == day;
+                      return _buildDayCell(
+                        day,
+                        isSelected: isSelected,
+                        isToday: isToday,
+                        onTap: () => _selectDay(day),
+                      );
+                    } else {
+                      final day = index -
+                          previousMonthDays.length -
+                          currentMonthDays.length +
+                          1;
+                      return _buildDayCell(day, isCurrentMonth: false);
+                    }
+                  },
+                );
               },
             ),
           ),
@@ -535,8 +612,7 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     final cellStyle = widget.calendarStyle.cellsStyle;
     final yearStyle = widget.calendarStyle.headersStyle.yearHeaderStyle;
 
-    final currentYear = displayDate.year;
-    final years = List.generate(30, (index) => currentYear - 15 + index);
+    final years = _selectableYears();
 
     return GridView.builder(
       controller: _yearScrollController,
@@ -671,10 +747,32 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
         parent: _animationController,
         curve: Curves.easeOutCubic,
       ),
-      child: SizedBox(
-        width: 420,
-        height: 480,
-        child: content,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Prefer the natural size, but never exceed what is actually
+          // available. Up to 0.0.7 this was pinned to 420x480 regardless of
+          // the screen, so the picker overflowed on any phone narrower than
+          // 420 logical pixels -- an iPhone SE, for instance.
+          final available = MediaQuery.sizeOf(context);
+          final width = math.min(
+            _preferredWidth,
+            constraints.hasBoundedWidth
+                ? constraints.maxWidth
+                : available.width,
+          );
+          final height = math.min(
+            _preferredHeight,
+            constraints.hasBoundedHeight
+                ? constraints.maxHeight
+                : available.height,
+          );
+
+          return SizedBox(
+            width: width,
+            height: height,
+            child: content,
+          );
+        },
       ),
     );
   }
@@ -683,36 +781,47 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
   _buildActions() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      // Flexible so the labels shrink rather than overflow. The Nepali labels
+      // are much wider than the English ones ("रद्द गर्नुहोस्" vs "Cancel"),
+      // which pushed this Row past the edge on a narrow phone.
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: Text(
-              widget.calendarStyle.effectiveConfig.language == Language.nepali
-                  ? 'रद्द गर्नुहोस्'
-                  : 'Cancel',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade500,
+          Flexible(
+            child: TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                widget.calendarStyle.effectiveConfig.language == Language.nepali
+                    ? 'रद्द गर्नुहोस्'
+                    : 'Cancel',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade500,
+                ),
               ),
             ),
           ),
           const SizedBox(width: 8),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(selectedDate);
-            },
-            child: Text(
-              widget.calendarStyle.effectiveConfig.language == Language.nepali
-                  ? 'ठीक छ'
-                  : 'OK',
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
+          Flexible(
+            child: TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(selectedDate);
+              },
+              child: Text(
+                widget.calendarStyle.effectiveConfig.language == Language.nepali
+                    ? 'ठीक छ'
+                    : 'OK',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),

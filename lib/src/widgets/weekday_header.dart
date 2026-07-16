@@ -11,10 +11,17 @@ class WeekdayHeader extends StatelessWidget {
   // Optional custom weekday builder
   final Widget Function(WeekdayData)? weekdayBuilder;
 
+  /// Width-to-height ratio of each weekday cell.
+  ///
+  /// Defaults to 1.0 (square), matching every version up to 0.0.7. See
+  /// [CalendarGrid.cellAspectRatio].
+  final double cellAspectRatio;
+
   const WeekdayHeader({
     super.key,
     required this.style,
     this.weekdayBuilder,
+    this.cellAspectRatio = 1.0,
   });
 
   @override
@@ -26,8 +33,9 @@ class WeekdayHeader extends StatelessWidget {
       shrinkWrap: true,
       padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7, // 7 columns for 7 days in a week
+        childAspectRatio: cellAspectRatio,
       ),
       itemCount: 7,
       itemBuilder: (context, index) {
