@@ -22,6 +22,30 @@ const double _preferredWidth = 420.0;
 /// Height the picker uses when there is room for it.
 const double _preferredHeight = 480.0;
 
+/// Material's minimum touch target.
+///
+/// Held in portrait on every phone. It cannot be held everywhere: six rows of
+/// 48 plus a header, a weekday row and the actions needs roughly 452dp, and a
+/// phone in landscape has about 342dp to give. Cells shrink towards
+/// [_minCellExtent] rather than the dialog overflowing or the grid scrolling
+/// half a month out of sight.
+const double _minTouchTarget = 48.0;
+
+/// The smallest a day cell may get before it stops being usable.
+const double _minCellExtent = 36.0;
+
+/// Horizontal padding inside the picker.
+///
+/// Deliberately tight: seven columns need 336dp to hold a 48dp target, and a
+/// 375dp phone minus the dialog's insets leaves only a little over that.
+const double _gutter = 12.0;
+
+/// Corner radius for interactive surfaces inside the picker.
+const double _cornerRadius = 12.0;
+
+/// How long a view change takes.
+const Duration _transitionDuration = Duration(milliseconds: 200);
+
 /// A customizable Nepali Date Picker widget for selecting dates in the Bikram Sambat calendar.
 ///
 /// This widget provides three view modes:
@@ -275,18 +299,6 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     });
   }
 
-  /// Toggle to year selection mode
-  void _toggleEditMode() {
-    setState(() {
-      viewMode = NepaliDatePickerMode.year;
-    });
-
-    // Scroll to selected year after the view changes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToSelectedYear();
-    });
-  }
-
   /// The years the year grid may offer.
   ///
   /// A window around the displayed year, clamped to the selectable range --
@@ -423,84 +435,106 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
   }
 
   /// Build header with navigation
+  /// Header: the month/year acts as the toggle into year selection, with
+  /// month navigation on the right.
+  ///
+  /// Up to 0.1.0 year selection hid behind an unlabelled edit-calendar icon,
+  /// while "Today" occupied the most prominent corner. The title is the thing
+  /// users reach for, so it is the control; Today moves down to the actions.
   Widget _buildHeader() {
-    final effectiveConfig = _style.effectiveConfig;
-    final todayButtonColor = _style.cellsStyle.selectedColor;
+    final isDayView = viewMode == NepaliDatePickerMode.day;
+    final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      padding: const EdgeInsets.fromLTRB(_gutter, 12, 8, 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          InkWell(
-            onTap: _goToToday,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Text(
-                effectiveConfig.language == Language.nepali ? 'आज' : 'Today',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: todayButtonColor,
-                  letterSpacing: 0.2,
-                ),
-              ),
+          Flexible(child: _buildTitleToggle(theme, isDayView)),
+          const Spacer(),
+          // Navigation only means anything on the day grid.
+          if (isDayView) ...[
+            _buildNavigationButton(
+              Icons.chevron_left_rounded,
+              _canGoToPreviousMonth ? _previousMonth : null,
+              _style.effectiveConfig.language == Language.nepali
+                  ? 'अघिल्लो महिना'
+                  : 'Previous month',
             ),
-          ),
-          // Flexible so a long title shrinks rather than overflowing. English
-          // month names are wider than their Nepali equivalents ("Baisakh
-          // 2081" vs "बैशाख २०८१"), and up to 0.0.7 this Row was rigid: the
-          // English header overflowed at every screen size, including on
-          // desktop, because it did not fit the picker's own fixed width.
-          Flexible(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (viewMode == NepaliDatePickerMode.day) ...[
-                  _buildNavigationButton(
-                    Icons.chevron_left_rounded,
-                    _previousMonth,
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Flexible(
-                  child: Text(
-                    _getHeaderText(),
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: _style.headersStyle.monthHeaderStyle.copyWith(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                ),
-                if (viewMode == NepaliDatePickerMode.day) ...[
-                  const SizedBox(width: 8),
-                  _buildNavigationButton(
-                    Icons.chevron_right_rounded,
-                    _nextMonth,
-                  ),
-                ],
-              ],
+            _buildNavigationButton(
+              Icons.chevron_right_rounded,
+              _canGoToNextMonth ? _nextMonth : null,
+              _style.effectiveConfig.language == Language.nepali
+                  ? 'अर्को महिना'
+                  : 'Next month',
             ),
-          ),
-          InkWell(
-            onTap: _toggleEditMode,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Icon(
-                Icons.edit_calendar_rounded,
-                color: todayButtonColor,
-                size: 22,
-              ),
-            ),
-          ),
+          ],
         ],
       ),
     );
+  }
+
+  /// The month/year title, doubling as the day <-> year toggle.
+  Widget _buildTitleToggle(ThemeData theme, bool isDayView) {
+    final nepali = _style.effectiveConfig.language == Language.nepali;
+
+    return Semantics(
+      button: true,
+      label: isDayView
+          ? (nepali ? 'वर्ष छान्नुहोस्' : 'Select year')
+          : (nepali ? 'मिति छान्नुहोस्' : 'Select date'),
+      child: InkWell(
+        onTap: _toggleYearView,
+        borderRadius: BorderRadius.circular(_cornerRadius),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Flexible: English month names run wider than their Nepali
+              // equivalents ("Baisakh 2081" vs "बैशाख २०८१"), and a rigid Row
+              // here overflowed at every screen size in English.
+              Flexible(
+                child: Text(
+                  _getHeaderText(),
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  style: _style.headersStyle.monthHeaderStyle.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              AnimatedRotation(
+                turns: isDayView ? 0 : 0.5,
+                duration: _transitionDuration,
+                child: Icon(
+                  Icons.arrow_drop_down_rounded,
+                  size: 24,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Switches between the day grid and year selection.
+  void _toggleYearView() {
+    setState(() {
+      viewMode = viewMode == NepaliDatePickerMode.day
+          ? NepaliDatePickerMode.year
+          : NepaliDatePickerMode.day;
+    });
+
+    if (viewMode == NepaliDatePickerMode.year) {
+      // The grid has to exist before it can be scrolled.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToSelectedYear();
+      });
+    }
   }
 
   /// Get header text based on current view mode
@@ -527,18 +561,30 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
   }
 
   /// Build navigation button
-  Widget _buildNavigationButton(IconData icon, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, size: 20, color: const Color(0xFF374151)),
+  /// A month-navigation button.
+  ///
+  /// A null [onTap] renders it disabled rather than hiding it, so the header
+  /// does not reflow when you reach the end of the allowed range.
+  ///
+  /// The colours come from the Material theme. Up to 0.1.0 they were
+  /// hard-coded greys (0xFFF3F4F6 on 0xFF374151), which is a light-mode-only
+  /// palette.
+  Widget _buildNavigationButton(
+    IconData icon,
+    VoidCallback? onTap,
+    String tooltip,
+  ) {
+    return IconButton(
+      onPressed: onTap,
+      icon: Icon(icon, size: 20),
+      tooltip: tooltip,
+      // Meets the 48dp minimum touch target without needing the header to be
+      // any taller.
+      constraints: const BoxConstraints(
+        minWidth: _minTouchTarget,
+        minHeight: _minTouchTarget,
       ),
+      visualDensity: VisualDensity.compact,
     );
   }
 
@@ -628,12 +674,22 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
                 final cellWidth =
                     (constraints.maxWidth - (spacing * (_gridColumns - 1))) /
                         _gridColumns;
-                final cellHeight =
-                    (constraints.maxHeight - (spacing * (_gridRows - 1))) /
-                        _gridRows;
+
+                // Fit six rows into the height on offer, but never shrink a
+                // cell past the point of being usable. If the floor wins, the
+                // grid is taller than its viewport, so it has to scroll --
+                // otherwise the last row would simply never be built, which is
+                // how the 30th and 31st went missing before 0.0.8.
+                final availableHeight =
+                    constraints.maxHeight - (spacing * (_gridRows - 1));
+                final fittedHeight = availableHeight / _gridRows;
+                final cellHeight = math.max(fittedHeight, _minCellExtent);
+                final needsScroll = cellHeight > fittedHeight;
 
                 return GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
+                  physics: needsScroll
+                      ? const ClampingScrollPhysics()
+                      : const NeverScrollableScrollPhysics(),
                   padding: EdgeInsets.zero,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: _gridColumns,
@@ -748,28 +804,46 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
       selected: isSelected,
       label: _semanticLabelFor(day, isToday: isToday, isDisabled: isDisabled),
       excludeSemantics: true,
-      child: InkWell(
+      child: InkResponse(
         // A disabled cell gets no callback, so it neither responds nor shows
         // an ink ripple.
         onTap: isDisabled ? null : onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(12),
-            border: borderColor != null
-                ? Border.all(color: borderColor, width: 1.5)
-                : null,
-          ),
-          child: Center(
-            child: Text(
-              dayText,
-              style: cellStyle.dayStyle.copyWith(
-                color: textColor,
-                fontSize: 15,
-                fontWeight:
-                    isToday || isSelected ? FontWeight.w700 : FontWeight.w500,
-                letterSpacing: -0.2,
+        containedInkWell: true,
+        customBorder: const CircleBorder(),
+        // The tap target is the whole grid cell, not just the circle drawn
+        // inside it -- the disc is decoration, and shrinking the hit area to
+        // match it would make an already-tight target worse.
+        child: Center(
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                shape: BoxShape.circle,
+                border: borderColor != null
+                    ? Border.all(color: borderColor, width: 1.5)
+                    : null,
+              ),
+              child: Center(
+                child: FittedBox(
+                  // Devanagari digits are wider than Latin at the same size;
+                  // scale down rather than overflow a small cell.
+                  fit: BoxFit.scaleDown,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Text(
+                      dayText,
+                      style: cellStyle.dayStyle.copyWith(
+                        color: textColor,
+                        fontSize: 15,
+                        fontWeight: isToday || isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -1016,49 +1090,52 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     Navigator.of(context).pop();
   }
 
-// Action Buttons
-  _buildActions() {
+  /// Actions: Today on the left, Cancel and the confirm action on the right.
+  ///
+  /// Today lives here rather than in the header, where it used to occupy the
+  /// most prominent corner despite being the least-used control.
+  Widget _buildActions() {
+    final nepali = _style.effectiveConfig.language == Language.nepali;
+    // Today is pointless when it is outside the allowed range.
+    final todayIsReachable = _isSelectable(NepaliDateTime.now());
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      // Flexible so the labels shrink rather than overflow. The Nepali labels
-      // are much wider than the English ones ("रद्द गर्नुहोस्" vs "Cancel"),
-      // which pushed this Row past the edge on a narrow phone.
+      padding: const EdgeInsets.fromLTRB(_gutter, 4, _gutter, 12),
+      // Flexible labels: the Nepali strings are much wider than the English
+      // ones ("रद्द गर्नुहोस्" vs "Cancel"), and a rigid Row overflowed on a
+      // narrow phone.
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          if (todayIsReachable)
+            Flexible(
+              child: TextButton(
+                onPressed: _goToToday,
+                child: Text(
+                  nepali ? 'आज' : 'Today',
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                ),
+              ),
+            ),
+          const Spacer(),
           Flexible(
             child: TextButton(
               onPressed: _handleCancel,
               child: Text(
-                widget.cancelText ??
-                    (_style.effectiveConfig.language == Language.nepali
-                        ? 'रद्द गर्नुहोस्'
-                        : 'Cancel'),
+                widget.cancelText ?? (nepali ? 'रद्द गर्नुहोस्' : 'Cancel'),
                 overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade500,
-                ),
+                softWrap: false,
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           Flexible(
             child: TextButton(
               onPressed: _handleConfirm,
               child: Text(
-                widget.confirmText ??
-                    (_style.effectiveConfig.language == Language.nepali
-                        ? 'ठीक छ'
-                        : 'OK'),
+                widget.confirmText ?? (nepali ? 'ठीक छ' : 'OK'),
                 overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
+                softWrap: false,
               ),
             ),
           ),
