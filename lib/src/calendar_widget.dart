@@ -1,8 +1,35 @@
+import 'dart:math' as math;
+
 // Import Flutter material package for UI components
 import 'package:flutter/material.dart';
 
 // Import custom source file containing calendar utilities
 import 'src.dart';
+
+/// Largest height a single day cell is allowed to take.
+///
+/// Without a cap the month view scales with viewport *width*, which makes the
+/// calendar as tall as the window is wide on tablets, desktop and web.
+const double _maxCellHeight = 64.0;
+
+/// Smallest height a day cell may shrink to before it stops being a usable
+/// tap target. Below this the calendar would rather overflow than be unusable.
+const double _minCellHeight = 32.0;
+
+/// Share of the viewport height the month grid may occupy.
+///
+/// The grid lives inside a [Column], so its [LayoutBuilder] is handed an
+/// unbounded height and cannot measure the space actually left for it. This
+/// budget stands in for that, leaving room for the header above and the event
+/// list below. It is what keeps the calendar inside a short viewport, such as
+/// a phone in landscape.
+const double _gridHeightFraction = 0.62;
+
+/// One weekday-header row plus six date rows.
+const int _totalRows = 7;
+
+/// [CalendarMonthView] wraps itself in 8px of padding on every side.
+const double _monthViewPadding = 16.0;
 
 // // Main Nepali Calendar widget with generic event type T
 class NepaliCalendar<T> extends StatefulWidget {
@@ -214,10 +241,37 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
               // Use LayoutBuilder to get available width and calculate height
               LayoutBuilder(
                 builder: (context, constraints) {
-                  // Calculate height based on width for square cells
-                  // 7 columns + 1 header row + 6 data rows + padding
+                  // The month view is one weekday-header row plus six date
+                  // rows, all seven columns wide.
+                  //
+                  // Up to 0.0.7 cells were always square, which made the whole
+                  // calendar as tall as the viewport was wide: on anything
+                  // wider than a phone -- a tablet, desktop window or browser
+                  // -- it overflowed its parent. Cap the cell height instead,
+                  // so cells grow sideways on wide viewports rather than the
+                  // calendar growing without bound.
                   final cellWidth = constraints.maxWidth / 7;
-                  final gridHeight = (cellWidth * 7) + 16; // 6 rows + padding
+
+                  // Square cells, but never taller than the cap, and never
+                  // taller than the height budget allows -- the latter is what
+                  // keeps a phone in landscape from overflowing. Never smaller
+                  // than the minimum, so the cells stay tappable.
+                  final heightBudget = (MediaQuery.sizeOf(context).height *
+                          _gridHeightFraction) /
+                      _totalRows;
+                  final cellHeight = math.max(
+                    _minCellHeight,
+                    math.min(math.min(cellWidth, _maxCellHeight), heightBudget),
+                  );
+                  final cellAspectRatio = cellWidth / cellHeight;
+
+                  // CalendarMonthView adds 8px padding all round, and spaces
+                  // the header off the grid unless borders are drawn.
+                  final rowSpacing =
+                      calendarStyle.effectiveConfig.showBorder ? 0.0 : 10.0;
+                  final gridHeight = (cellHeight * _totalRows) +
+                      rowSpacing +
+                      _monthViewPadding;
 
                   return SizedBox(
                     height: gridHeight,
@@ -288,6 +342,7 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                                 selectedDate: selectedDate,
                                 eventList: widget.eventList,
                                 calendarStyle: calendarStyle,
+                                cellAspectRatio: cellAspectRatio,
                                 cellBuilder:
                                     widget.calendarBuilder?.cellBuilder,
                                 weekdayBuilder:

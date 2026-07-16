@@ -27,8 +27,22 @@ class NepaliDateTime implements Comparable<NepaliDateTime> {
     assert(second >= 0 && second < 60, 'Second must be between 0 and 59');
   }
 
-  /// Constructs a DateTime instance with current date and time
-  factory NepaliDateTime.now() => DateTime.now().toNepaliDateTime();
+  /// Nepal Standard Time's fixed offset from UTC. Nepal does not observe
+  /// daylight saving, so this never varies.
+  static const Duration nepalTimeZoneOffset = Duration(hours: 5, minutes: 45);
+
+  /// Constructs a [NepaliDateTime] for the current date and time in Nepal.
+  ///
+  /// The current instant is resolved against Nepal Standard Time (UTC+5:45),
+  /// so this returns the same Nepali date regardless of where the device is.
+  /// A user in Tokyo just past midnight will therefore still see Nepal's
+  /// current date, which is the date a Nepali calendar is expected to show.
+  factory NepaliDateTime.now() {
+    // Shifting the absolute instant by Nepal's offset yields a value whose
+    // year/month/day/hour fields are Nepal's wall clock.
+    final nepalNow = DateTime.now().toUtc().add(nepalTimeZoneOffset);
+    return nepalNow.toNepaliDateTime();
+  }
 
   DateTime toDateTime() {
     // Setting english reference to 1913/1/1, which converts to 1969/9/18
@@ -162,6 +176,66 @@ class NepaliDateTime implements Comparable<NepaliDateTime> {
     }
     return microsecond.compareTo(other.microsecond);
   }
+
+  /// Whether [other] falls on the same calendar day, ignoring the time.
+  ///
+  /// Use this instead of [==] when the time components are irrelevant:
+  ///
+  /// ```dart
+  /// final a = NepaliDateTime(year: 2081, month: 1, day: 1, hour: 9);
+  /// final b = NepaliDateTime(year: 2081, month: 1, day: 1, hour: 17);
+  /// a == b;              // false -- the hours differ
+  /// a.isSameDayAs(b);    // true
+  /// ```
+  bool isSameDayAs(NepaliDateTime other) {
+    return year == other.year && month == other.month && day == other.day;
+  }
+
+  /// This date with the time components stripped to midnight.
+  ///
+  /// Useful as a stable map key when grouping values by day.
+  NepaliDateTime get dateOnly =>
+      NepaliDateTime(year: year, month: month, day: day);
+
+  /// Value equality across every component, including time.
+  ///
+  /// ## Behaviour change in 0.1.0
+  ///
+  /// Up to 0.0.7 this class inherited identity equality, so two separately
+  /// constructed instances of the same date compared unequal:
+  ///
+  /// ```dart
+  /// NepaliDateTime(year: 2081, month: 1, day: 1) ==
+  ///     NepaliDateTime(year: 2081, month: 1, day: 1); // was false, now true
+  /// ```
+  ///
+  /// That also made [NepaliDateTime] unusable as a `Map` key or in a `Set`.
+  /// If you relied on identity comparison, switch to `identical(a, b)`.
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is NepaliDateTime &&
+        other.year == year &&
+        other.month == month &&
+        other.day == day &&
+        other.hour == hour &&
+        other.minute == minute &&
+        other.second == second &&
+        other.millisecond == millisecond &&
+        other.microsecond == microsecond;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        millisecond,
+        microsecond,
+      );
 
   // int get getDaysInMonth => getDaysInMonth();
   // int getDaysInMonth() {

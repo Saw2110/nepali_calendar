@@ -37,6 +37,33 @@ A feature-rich Flutter package for implementing Nepali (Bikram Sambat) calendar 
 - ✅ Today's date highlighting
 - ✅ Previous/next month day display
 
+## Upgrading to 0.0.8
+
+0.0.8 is a correctness release. It adds no features and removes no APIs, but it
+does fix behaviour you may have worked around. See the
+[CHANGELOG](CHANGELOG.md) for the full list.
+
+**Dates were wrong for users in Nepal.** `toNepaliDateTime()` added an extra
+day whenever the device's timezone was exactly UTC+5:45 and the date fell after
+1986 — so it was wrong in Nepal and only in Nepal:
+
+```dart
+// 0.0.7, on a device in Nepal
+DateTime(2024, 4, 13).toNepaliDateTime(); // BS 2081-01-02  ✗
+// 0.0.8, on any device
+DateTime(2024, 4, 13).toNepaliDateTime(); // BS 2081-01-01  ✓
+```
+
+Since `NepaliDateTime.now()` uses this path, today's-date highlighting was
+wrong in every widget. **If you compensated with your own `-1` day adjustment,
+remove it.**
+
+Also fixed: `HorizontalNepaliCalendar` ignored taps on phones, the date picker
+could not select the 30th or 31st of a month, and both the calendar and the
+picker overflowed on several common screen sizes. `NepaliDateTime` now has
+value equality, so it works as a `Map` key — if you relied on identity
+comparison, switch to `identical(a, b)`.
+
 ## Installation
 
 Add this to your package's `pubspec.yaml` file:

@@ -23,6 +23,10 @@ class CalendarMonthView<T> extends StatelessWidget {
   // Optional custom weekday builder
   final Widget Function(WeekdayData)? weekdayBuilder;
 
+  /// Width-to-height ratio of each cell, applied to both the weekday header
+  /// and the date grid. See [CalendarGrid.cellAspectRatio].
+  final double cellAspectRatio;
+
   // Constructor requiring all necessary parameters
   const CalendarMonthView({
     super.key,
@@ -34,6 +38,7 @@ class CalendarMonthView<T> extends StatelessWidget {
     required this.calendarStyle,
     this.cellBuilder,
     this.weekdayBuilder,
+    this.cellAspectRatio = 1.0,
   });
 
   @override
@@ -45,6 +50,7 @@ class CalendarMonthView<T> extends StatelessWidget {
         WeekdayHeader(
           style: calendarStyle,
           weekdayBuilder: weekdayBuilder,
+          cellAspectRatio: cellAspectRatio,
         ),
         // Display grid of days for the month
         CalendarGrid<T>(
@@ -55,6 +61,7 @@ class CalendarMonthView<T> extends StatelessWidget {
           onDaySelected: onDaySelected,
           calendarStyle: calendarStyle,
           cellBuilder: cellBuilder,
+          cellAspectRatio: cellAspectRatio,
         ),
       ],
     );

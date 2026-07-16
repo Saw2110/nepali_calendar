@@ -9,12 +9,20 @@ import '../src.dart';
 /// * Checking if a year is a leap year.
 /// * Accessing predefined English and Nepali calendar data.
 class CalendarUtils {
-  /// Checks if the given [date] is the current day.
+  /// Checks whether [date] falls on the current day in Nepal.
   ///
-  /// Compares the provided [date] with the current system date.
-  /// Returns `true` if the year, month, and day match; otherwise, `false`.
+  /// "Today" is resolved against Nepal Standard Time (UTC+5:45), matching
+  /// [NepaliDateTime.now], so the whole package agrees on which day is today
+  /// no matter where the device is.
+  ///
+  /// ## Behaviour change in 0.1.0
+  ///
+  /// Up to 0.0.7 this compared against the device's local date while
+  /// [NepaliDateTime.now] used Nepal time. The two disagreed for part of each
+  /// day outside Nepal, so a calendar could highlight one day while `.now()`
+  /// reported another. Users inside Nepal are unaffected.
   static bool isToday(DateTime date) {
-    final DateTime today = DateTime.now();
+    final DateTime today = NepaliDateTime.now().toDateTime();
     return date.year == today.year &&
         date.month == today.month &&
         date.day == today.day;

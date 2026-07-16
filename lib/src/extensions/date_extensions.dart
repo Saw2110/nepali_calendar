@@ -6,75 +6,86 @@ import '../src.dart';
 /// into a [NepaliDateTime] object, which represents the date and time in the
 /// Nepali calendar system.
 extension DateTimeExtension on DateTime {
-  /// Converts the [DateTime] to [NepaliDateTime].
+  /// Converts this [DateTime] to a [NepaliDateTime].
   ///
-  /// This method calculates the corresponding Nepali date and time based on
-  /// the provided [DateTime] object. It accounts for the time zone offset of
-  /// Nepal (UTC+5:45) and adjusts for historical anomalies in the time zone
-  /// offset after 1986.
+  /// The calendar date (`year`, `month`, `day`) is converted as-is; the time
+  /// components are carried across unchanged. The result depends only on the
+  /// calendar date, never on the device's timezone.
+  ///
+  /// ```dart
+  /// DateTime(2024, 4, 13).toNepaliDateTime().toDateFormat(); // 2081-01-01
+  /// ```
+  ///
+  /// To get the current date in Nepal, prefer [NepaliDateTime.now], which
+  /// resolves the current instant against Nepal Standard Time (UTC+5:45)
+  /// before converting.
+  ///
+  /// Throws an [ArgumentError] if the date falls outside the supported range
+  /// (AD 1913-04-13 to roughly AD 2044, i.e. BS 1970 to BS 2100).
+  ///
+  /// ## Behaviour change in 0.1.0
+  ///
+  /// Versions up to 0.0.7 shifted the value into Nepal Standard Time before
+  /// converting, and then added an extra day when the *device* timezone was
+  /// exactly UTC+5:45. That made the result depend on where the user was: a
+  /// device in Nepal produced a date one day later than the true date for any
+  /// date after 1986, while a device east of Nepal could produce one a day
+  /// earlier. Conversion is now timezone-independent and round-trips exactly.
   NepaliDateTime toNepaliDateTime() {
-    // Nepal's time zone offset is UTC+5:45.
-    const nepalTzOffset = Duration(hours: 5, minutes: 45);
+    // Reference point: BS 1970-01-01 corresponds to AD 1913-04-13.
+    //
+    // Both sides of the subtraction are UTC so that the result cannot be
+    // perturbed by the device's timezone or by a daylight-saving transition
+    // shortening a local day to 23 hours (which would truncate `inDays`).
+    final date = DateTime.utc(year, month, day);
+    var difference = date.difference(DateTime.utc(1913, 4, 13)).inDays;
 
-    // Convert the current DateTime to UTC and add Nepal's time zone offset.
-    final now = toUtc().add(nepalTzOffset);
-
-    // Reference point: January 1, 1970 (English date) corresponds to
-    // Bikram Sambat (BS) 1970/1/1, which is April 13, 1913 (English date).
-    var nepaliYear = 1970; // Initial Nepali year (BS 1970).
-    var nepaliMonth = 1; // Initial Nepali month.
-    var nepaliDay = 1; // Initial Nepali day.
-
-    // Normalize the time to avoid issues with date difference calculations.
-    // This removes the time component, focusing only on the date.
-    final date = DateTime(now.year, now.month, now.day);
-
-    // Calculate the difference in days between the provided date and the
-    // reference date (April 13, 1913).
-    var difference = date.difference(DateTime(1913, 4, 13)).inDays;
-
-    // Compensate for the time zone offset anomaly that occurred after 1986.
-    // If the date is after 1986 and the time zone offset matches Nepal's,
-    // add an extra day to the difference.
-    if (date.timeZoneOffset == nepalTzOffset && date.isAfter(DateTime(1986))) {
-      difference += 1;
+    if (difference < 0) {
+      throw ArgumentError(
+        'Date is before the start of the supported range. '
+        'The earliest supported date is AD 1913-04-13 (BS 1970-01-01), '
+        'but got AD ${date.year}-${date.month}-${date.day}.',
+      );
     }
 
-    // Calculate the Nepali year by iterating through the Nepali calendar data.
-    // Each entry in [CalendarUtils.nepaliYears] contains the total days in the
-    // year and the days in each month.
+    // Walk forward year by year while a whole Nepali year still fits in the
+    // remaining difference. Index 0 of each entry holds the year's total days.
+    var nepaliYear = 1970;
     var daysInYear = CalendarUtils.nepaliYears[nepaliYear]!.first;
     while (difference >= daysInYear) {
-      nepaliYear += 1; // Move to the next Nepali year.
-      difference -= daysInYear; // Subtract the days of the current year.
+      nepaliYear++;
+      difference -= daysInYear;
 
-      // Update days in the new year.
-      daysInYear = CalendarUtils.nepaliYears[nepaliYear]!.first;
+      final nextYear = CalendarUtils.nepaliYears[nepaliYear];
+      if (nextYear == null) {
+        throw ArgumentError(
+          'Date is beyond the end of the supported range. '
+          'The calendar has data up to BS ${CalendarUtils.nepaliYears.keys.last}, '
+          'but AD ${date.year}-${date.month}-${date.day} falls past it.',
+        );
+      }
+      daysInYear = nextYear.first;
     }
 
-    // Calculate the Nepali month by iterating through the months of the current year.
+    // Then walk forward month by month within that year.
+    var nepaliMonth = 1;
     var daysInMonth = CalendarUtils.nepaliYears[nepaliYear]![nepaliMonth];
     while (difference >= daysInMonth) {
-      difference -= daysInMonth; // Subtract the days of the current month.
-      nepaliMonth += 1; // Move to the next month.
-
-      // Update days in the new month.
+      difference -= daysInMonth;
+      nepaliMonth++;
       daysInMonth = CalendarUtils.nepaliYears[nepaliYear]![nepaliMonth];
     }
 
-    // The remaining difference is the day in the current month.
-    nepaliDay += difference;
-
-    // Create and return a [NepaliDateTime] object with the calculated values.
+    // Whatever remains is the zero-based offset into the month.
     return NepaliDateTime(
       year: nepaliYear,
       month: nepaliMonth,
-      day: nepaliDay,
-      hour: now.hour,
-      minute: now.minute,
-      second: now.second,
-      millisecond: now.millisecond,
-      microsecond: now.microsecond,
+      day: 1 + difference,
+      hour: hour,
+      minute: minute,
+      second: second,
+      millisecond: millisecond,
+      microsecond: microsecond,
     );
   }
 }
