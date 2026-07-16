@@ -1,5 +1,113 @@
 # CHANGELOG
 
+## 0.1.0
+
+Theming, a year view, and a rewritten event engine. Additive throughout: no
+APIs were removed and no existing calendar changes appearance. Some members are
+now deprecated and will be removed in 1.0.0.
+
+Builds on the correctness fixes in 0.0.8 — if you are upgrading from 0.0.7 or
+earlier, read that section too, as it changes the dates you get in Nepal.
+
+### Added — theming, including dark mode
+
+`NepaliCalendarTheme` styles every calendar widget beneath it:
+
+```dart
+NepaliCalendarTheme(
+  data: NepaliCalendarThemeData.fromContext(context), // follows your app
+  child: NepaliCalendar(),
+)
+```
+
+`fromContext` derives colours and typography from the ambient Material
+`ColorScheme` and `TextTheme`, so the calendar follows your app's light/dark
+mode with no further configuration. `NepaliCalendarThemeData.light()`,
+`.dark()`, `.legacy()` and `.fromColorScheme()` are also available, and
+`copyWith` adjusts individual values.
+
+**Resolution order**, first match winning:
+
+1. an explicit `calendarStyle` passed to the widget;
+2. the nearest enclosing `NepaliCalendarTheme`;
+3. the built-in defaults used up to 0.0.8.
+
+So theming is opt-in and additive: a widget that already passes
+`calendarStyle` is untouched by a theme, and a widget with neither looks
+exactly as before. A style passed purely to set *behaviour* — language,
+weekend days, week start — does not count as appearance and still receives
+themed colours.
+
+An explicit style wins outright rather than merging field by field with the
+theme, because `CellStyle`'s fields are non-nullable with const defaults:
+there is no way to distinguish a colour the caller chose from one that merely
+defaulted. To combine a theme with a tweak, use `copyWith` on the theme data
+rather than passing a style.
+
+### Added — `NepaliYearCalendar`
+
+A whole year on one screen, as a scrollable grid of compact months:
+
+```dart
+NepaliYearCalendar(
+  year: 2081,
+  eventList: events,
+  onDaySelected: (date) => print(date),
+)
+```
+
+Two months per row by default (`monthsPerRow`), responsive from phone to
+desktop, with today, the selected date, event dots and holiday indicators.
+Supports `onYearChanged`, `jumpToSelectedMonth`, `headerBuilder` and
+`monthTitleBuilder`, and follows the same theme as every other widget. Year
+navigation is clamped to the range the calendar has data for.
+
+### Added — a date can now have more than one event
+
+`CalendarEventIndex` replaces the linear per-cell event scan with a date-keyed
+index. Lookups are O(1) and every event on a date is kept:
+
+```dart
+final index = CalendarEventIndex.fromList(events);
+index.eventsOn(date);        // every event that day
+index.eventsInMonth(y, m);   // every event that month
+index.isHoliday(date);       // true if *any* event that day is a holiday
+```
+
+Up to 0.0.8 each of a month's 42 cells searched the whole event list with
+`firstWhere`, catching the not-found exception as control flow, and kept only
+the *first* event on a date. That also meant a date carrying an ordinary event
+ahead of a holiday did not register as a holiday — now fixed, since `isHoliday`
+considers every event on the date.
+
+`CalendarCellData` gains `events`, `hasEvents` and `isHoliday`. The index is
+built once per event-list change rather than once per month page.
+
+### Added
+
+- `CellStyle.dateTextColor`, `.onHighlightColor`, `.dimmedDateTextColor` and
+  `.borderColor`. These colours were previously hard-coded inside the widgets,
+  which made a dark theme impossible. Defaults are unchanged.
+
+### Deprecated
+
+- `NepaliCalendar.checkIsHoliday` — **unused**. Its return value has never been
+  read; holidays come from `CalendarEvent.isHoliday`. It was mandatory whenever
+  `eventList` was given, enforced by an assertion. That assertion has been
+  dropped, so the parameter is now optional and ignored. Set
+  `CalendarEvent.isHoliday` on the event instead.
+- `CalendarCellData.event` and `CalendarCell.event` — a date can have several
+  events and these expose only the first. Use `events`. Existing
+  `cellBuilder`s that read `data.event` keep working.
+
+### Changed
+
+- Nothing that alters existing behaviour. `NepaliCalendar` no longer asserts
+  that `checkIsHoliday` accompanies `eventList`; removing a constraint cannot
+  break a caller that satisfied it.
+
+---
+
 ## 0.0.8
 
 A correctness release. Every change below fixes behaviour that was broken in

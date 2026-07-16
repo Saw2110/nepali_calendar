@@ -8,6 +8,12 @@ import '../src.dart';
 class EventList<T> extends StatelessWidget {
   // Optional list of calendar events
   final List<CalendarEvent<T>>? eventList;
+
+  /// A prebuilt index over [eventList].
+  ///
+  /// When null, one is built from [eventList] on each build.
+  final CalendarEventIndex<T>? eventIndex;
+
   // Currently selected date to filter events
   final NepaliDateTime selectedDate;
   // Optional custom builder for event list items
@@ -21,6 +27,7 @@ class EventList<T> extends StatelessWidget {
   const EventList({
     super.key,
     required this.eventList,
+    this.eventIndex,
     required this.selectedDate,
     this.itemBuilder,
   });
@@ -28,14 +35,16 @@ class EventList<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Return empty widget if no events
-    if (eventList == null) return const SizedBox.shrink();
+    if (eventList == null && eventIndex == null) {
+      return const SizedBox.shrink();
+    }
 
-    // Filter events for selected month and year
-    final eventsForMonth = eventList!.where(
-      (event) =>
-          event.date.month == selectedDate.month &&
-          event.date.year == selectedDate.year,
-    );
+    // Events for the selected month. This used to be a linear `where` over the
+    // whole list, re-scanned on each build and re-walked by `elementAt` for
+    // every row -- quadratic in the number of events in the month.
+    final index = eventIndex ?? CalendarEventIndex<T>.fromList(eventList);
+    final eventsForMonth =
+        index.eventsInMonth(selectedDate.year, selectedDate.month);
 
     // Build scrollable list of events
     return ListView.builder(
@@ -43,7 +52,7 @@ class EventList<T> extends StatelessWidget {
       itemCount: eventsForMonth.length,
       itemBuilder: (context, index) {
         // Get event at current index
-        final event = eventsForMonth.elementAt(index);
+        final event = eventsForMonth[index];
         // Check if event is marked as holiday
         final isHoliday = event.isHoliday;
 

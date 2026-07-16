@@ -35,7 +35,22 @@ const double _monthViewPadding = 16.0;
 class NepaliCalendar<T> extends StatefulWidget {
   final NepaliDateTime? initialDate;
   final List<CalendarEvent<T>>? eventList;
+
+  /// Whether an event marks its date as a holiday.
+  ///
+  /// **Deprecated and unused.** [CalendarEvent.isHoliday] already carries this,
+  /// and that is what the calendar reads -- this callback's return value has
+  /// never been consulted. It was only ever enforced by an assertion that made
+  /// it mandatory alongside [eventList].
+  ///
+  /// Passing it is now optional and has no effect. Set
+  /// [CalendarEvent.isHoliday] on the event instead.
+  @Deprecated(
+    'Unused: the calendar reads CalendarEvent.isHoliday instead. Passing this '
+    'has no effect and it is no longer required. Will be removed in 1.0.0.',
+  )
   final bool Function(CalendarEvent<T> event)? checkIsHoliday;
+
   final NepaliCalendarStyle calendarStyle;
   final OnDateSelected? onMonthChanged;
   final OnDateSelected? onDayChanged;
@@ -91,6 +106,7 @@ class NepaliCalendar<T> extends StatefulWidget {
     super.key,
     this.initialDate,
     this.eventList,
+    @Deprecated('Unused; set CalendarEvent.isHoliday instead')
     this.checkIsHoliday,
     this.calendarStyle = const NepaliCalendarStyle(),
     this.onMonthChanged,
@@ -99,10 +115,11 @@ class NepaliCalendar<T> extends StatefulWidget {
     @Deprecated('Use calendarBuilder.eventBuilder instead') this.eventBuilder,
     this.controller,
     @Deprecated('Use calendarBuilder.headerBuilder instead') this.headerBuilder,
-  }) : assert(
-          eventList == null || checkIsHoliday != null,
-          'checkIsHoliday must be provided when eventList is not null',
-        );
+  });
+  // The assertion requiring checkIsHoliday alongside eventList has been
+  // dropped. It forced callers to supply a callback whose result was never
+  // read -- holidays come from CalendarEvent.isHoliday. Removing a constraint
+  // cannot break a caller that satisfied it.
 
   @override
   State<NepaliCalendar> createState() => _NepaliCalendarState<T>();
@@ -116,6 +133,12 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
   late ValueNotifier<int> _currentPageIndexNotifier;
   late int _currentPageIndex;
 
+  /// Date-keyed index over [NepaliCalendar.eventList].
+  ///
+  /// Built once per event-list change rather than per month page: the PageView
+  /// builds several months at a time, and each month asks after 42 dates.
+  late CalendarEventIndex<T> _eventIndex;
+
   @override
   void initState() {
     super.initState();
@@ -123,6 +146,7 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
     _selectedDateNotifier = ValueNotifier(_currentDate);
     _initializePageController();
     _currentPageIndexNotifier = ValueNotifier(_currentPageIndex);
+    _eventIndex = CalendarEventIndex<T>.fromList(widget.eventList);
 
     // Initialize controller if provided
     widget.controller?.init(
@@ -134,6 +158,13 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
   @override
   void didUpdateWidget(NepaliCalendar<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    // Re-index when the events change. Identity is the right test here: the
+    // list is not owned by this widget and could be mutated in place, so a
+    // deep comparison would be both costly and unreliable.
+    if (!identical(widget.eventList, oldWidget.eventList)) {
+      _eventIndex = CalendarEventIndex<T>.fromList(widget.eventList);
+    }
 
     // Handle controller changes
     if (widget.controller != oldWidget.controller) {
@@ -209,7 +240,9 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final calendarStyle = widget.calendarStyle;
+    // Explicit style > ambient NepaliCalendarTheme > pre-0.1.0 defaults.
+    final calendarStyle =
+        NepaliCalendarTheme.resolve(context, widget.calendarStyle);
 
     return Column(
       children: [
@@ -341,6 +374,7 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                                 month: month,
                                 selectedDate: selectedDate,
                                 eventList: widget.eventList,
+                                eventIndex: _eventIndex,
                                 calendarStyle: calendarStyle,
                                 cellAspectRatio: cellAspectRatio,
                                 cellBuilder:
@@ -393,6 +427,7 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                     '${selectedDate.year}-${selectedDate.month}',
                   ),
                   eventList: widget.eventList,
+                  eventIndex: _eventIndex,
                   selectedDate: selectedDate,
                   itemBuilder: (context, index, event) {
                     // Priority: calendarBuilder.eventBuilder > deprecated eventBuilder > null

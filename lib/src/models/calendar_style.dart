@@ -178,6 +178,29 @@ class CellStyle {
   /// This affects the display of day names (Sun, Mon, etc.).
   final Color weekDayColor;
 
+  /// Text color for ordinary dates.
+  ///
+  /// Added in 0.1.0. This colour was previously hard-coded to [Colors.black]
+  /// inside the cell, which made a dark theme impossible. The default is
+  /// unchanged, so existing calendars look exactly as before.
+  final Color dateTextColor;
+
+  /// Text color used on top of the [todayColor] and [selectedColor]
+  /// highlights.
+  ///
+  /// Added in 0.1.0; previously hard-coded to [Colors.white].
+  final Color onHighlightColor;
+
+  /// Text color for dates belonging to the previous or next month.
+  ///
+  /// Added in 0.1.0; previously hard-coded to [Colors.grey] at 40% opacity.
+  final Color dimmedDateTextColor;
+
+  /// Colour of the cell borders drawn when `showBorder` is enabled.
+  ///
+  /// Added in 0.1.0; previously hard-coded to [Colors.grey] at 30% opacity.
+  final Color borderColor;
+
   /// Creates a [CellStyle] instance with customizable styling options.
   ///
   /// All parameters are optional and have default values.
@@ -191,6 +214,10 @@ class CellStyle {
     this.todayColor = Colors.green,
     this.selectedColor = Colors.blue,
     this.weekDayColor = Colors.red,
+    this.dateTextColor = Colors.black,
+    this.onHighlightColor = Colors.white,
+    this.dimmedDateTextColor = Colors.grey,
+    this.borderColor = Colors.grey,
   });
 
   /// Creates a copy of this style with the given fields replaced with new values.
@@ -209,6 +236,10 @@ class CellStyle {
     Color? todayColor,
     Color? selectedColor,
     Color? weekDayColor,
+    Color? dateTextColor,
+    Color? onHighlightColor,
+    Color? dimmedDateTextColor,
+    Color? borderColor,
   }) {
     return CellStyle(
       dayStyle: dayStyle ?? this.dayStyle,
@@ -217,6 +248,10 @@ class CellStyle {
       todayColor: todayColor ?? this.todayColor,
       selectedColor: selectedColor ?? this.selectedColor,
       weekDayColor: weekDayColor ?? this.weekDayColor,
+      dateTextColor: dateTextColor ?? this.dateTextColor,
+      onHighlightColor: onHighlightColor ?? this.onHighlightColor,
+      dimmedDateTextColor: dimmedDateTextColor ?? this.dimmedDateTextColor,
+      borderColor: borderColor ?? this.borderColor,
     );
   }
 }

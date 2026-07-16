@@ -6,7 +6,22 @@ class CalendarCell<T> extends StatelessWidget {
   final int day;
   final NepaliDateTime date;
   final NepaliDateTime selectedDate;
+
+  /// The first event on this date, if any.
+  ///
+  /// **Deprecated:** use [events], which retains every event on the date.
+  /// Passing [event] still works and is treated as a single-event list.
+  @Deprecated(
+    'A date can have more than one event. Use events instead. '
+    'Will be removed in 1.0.0.',
+  )
   final CalendarEvent<T>? event;
+
+  /// Every event on this date.
+  ///
+  /// When null, falls back to [event] so existing callers keep working.
+  final List<CalendarEvent<T>>? events;
+
   final OnDateSelected onDaySelected;
   final NepaliCalendarStyle calendarStyle;
   final bool isDimmed;
@@ -17,21 +32,33 @@ class CalendarCell<T> extends StatelessWidget {
     required this.day,
     required this.date,
     required this.selectedDate,
-    required this.event,
+    @Deprecated('Use events instead') this.event,
+    this.events,
     required this.onDaySelected,
     required this.calendarStyle,
     this.isDimmed = false,
     this.cellBuilder,
   });
 
+  /// The events to render, from whichever of [events] or [event] was given.
+  List<CalendarEvent<T>> get _effectiveEvents {
+    if (events != null) return events!;
+    final single = event;
+    return single == null ? const [] : [single];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final cellEvents = _effectiveEvents;
+
     // Check if the current date is today
     final isToday = CalendarUtils.isToday(date.toDateTime());
     // Check if the current date is the selected date
     final isSelected = _isSelectedDate(date);
-    // Check if the current date is a holiday
-    final isHoliday = event?.isHoliday ?? false;
+    // A date is a holiday if *any* of its events is one. Up to 0.0.8 only the
+    // first event on a date was consulted, so a date carrying an ordinary
+    // event ahead of a holiday did not read as a holiday.
+    final isHoliday = cellEvents.any((event) => event.isHoliday);
     // Check if the current date is a weekend
     final isWeekend = _isWeekend(date.weekday);
 
@@ -44,7 +71,10 @@ class CalendarCell<T> extends StatelessWidget {
         isSelected: isSelected,
         isDimmed: isDimmed,
         isWeekend: isWeekend,
-        event: event,
+        // Still populated so existing cellBuilders that read `data.event`
+        // keep working.
+        event: cellEvents.isEmpty ? null : cellEvents.first,
+        events: cellEvents,
         onTap: () => onDaySelected(date),
         style: calendarStyle,
       );
@@ -100,7 +130,7 @@ class CalendarCell<T> extends StatelessWidget {
                 ),
               ),
             // Show an event indicator if there is an event
-            if (event != null)
+            if (cellEvents.isNotEmpty)
               Positioned(
                 bottom: 5.0,
                 child: Icon(
@@ -136,29 +166,33 @@ class CalendarCell<T> extends StatelessWidget {
     int weekday, {
     bool isBaseLine = false,
   }) {
+    final cellsStyle = calendarStyle.cellsStyle;
+
     if (isDimmed) {
-      // Dimmed cells: show dimmed weekend color for weekends, grey for regular days
+      // Dimmed cells: show dimmed weekend color for weekends, and the dimmed
+      // date colour for regular days.
       if (_isWeekend(weekday)) {
-        return calendarStyle.cellsStyle.weekDayColor.withValues(alpha: 0.4);
+        return cellsStyle.weekDayColor.withValues(alpha: 0.4);
       }
-      return Colors.grey.withValues(alpha: 0.4);
+      return cellsStyle.dimmedDateTextColor.withValues(alpha: 0.4);
     }
-    if (isToday && isSelected) return Colors.white;
-    // if (isSelected) return Colors.white; // Commented out for now
-    if (isToday) return Colors.white;
-    if (_isWeekend(weekday)) return calendarStyle.cellsStyle.weekDayColor;
-    return isBaseLine
-        ? calendarStyle.cellsStyle.baseLineDateColor
-        : Colors.black;
+    if (isToday && isSelected) return cellsStyle.onHighlightColor;
+    // if (isSelected) return onHighlightColor; // Commented out for now
+    if (isToday) return cellsStyle.onHighlightColor;
+    if (_isWeekend(weekday)) return cellsStyle.weekDayColor;
+    return isBaseLine ? cellsStyle.baseLineDateColor : cellsStyle.dateTextColor;
   }
 
   // Method to get the event indicator color based on holiday, today, and weekday
   // Priority: Dimmed > Today > Event Type (Holiday/Regular) > Weekend
   Color _getEventColor(bool isHoliday, bool isToday, int weekday) {
     // Dimmed cells should have dimmed event indicators
-    if (isDimmed) return Colors.grey.withValues(alpha: 0.4);
-    // Today's events always show white for visibility on colored background
-    if (isToday) return Colors.white;
+    if (isDimmed) {
+      return calendarStyle.cellsStyle.dimmedDateTextColor
+          .withValues(alpha: 0.4);
+    }
+    // Today's events sit on the highlight, so use the on-highlight colour
+    if (isToday) return calendarStyle.cellsStyle.onHighlightColor;
     // Event type takes priority: holidays show weekend color, regular events show dot color
     if (isHoliday) return calendarStyle.cellsStyle.weekDayColor;
     // Regular events show their designated color regardless of weekend
