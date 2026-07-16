@@ -138,7 +138,9 @@ class _NepaliDatePickerDialog extends StatelessWidget {
         borderRadius: BorderRadius.circular(_dialogCornerRadius),
       ),
       clipBehavior: Clip.antiAlias,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      // Tight horizontal insets: the picker wants 368dp for its Nepali action
+      // labels, and a 390dp phone minus 16dp either side leaves only 358.
+      insetPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
       child: NepaliDatePicker(
         initialDate: initialDate,
         calendarStyle: calendarStyle,

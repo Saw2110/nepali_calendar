@@ -9,6 +9,19 @@ import 'package:flutter/material.dart';
 
 import '../src.dart';
 
+/// What [_NepaliDatePickerState._measure] works out for a given viewport.
+class _PickerMetrics {
+  final double width;
+  final double height;
+  final double cellExtent;
+
+  const _PickerMetrics({
+    required this.width,
+    required this.height,
+    required this.cellExtent,
+  });
+}
+
 /// Columns in the day grid: one per weekday.
 const int _gridColumns = 7;
 
@@ -17,27 +30,48 @@ const int _gridColumns = 7;
 const int _gridRows = 6;
 
 /// Width the picker uses when there is room for it.
-const double _preferredWidth = 420.0;
-
-/// Height the picker uses when there is room for it.
-const double _preferredHeight = 480.0;
-
-/// Material's minimum touch target.
 ///
-/// Held in portrait on every phone. It cannot be held everywhere: six rows of
-/// 48 plus a header, a weekday row and the actions needs roughly 452dp, and a
-/// phone in landscape has about 342dp to give. Cells shrink towards
-/// [_minCellExtent] rather than the dialog overflowing or the grid scrolling
-/// half a month out of sight.
+/// Driven by the actions row, not the grid. The Nepali labels are the widest
+/// thing in the picker -- "रद्द गर्नुहोस्" against "Cancel" -- and at 344 they
+/// overflowed by 20dp. The grid is narrower than this and is centred within
+/// it, so cells stay square instead of stretching to fill.
+const double _preferredWidth = 368.0;
+
+/// Height of the month/year header row.
+const double _headerHeight = 48.0;
+
+/// Height of the weekday initials row.
+const double _weekdayRowHeight = 24.0;
+
+/// Height of the actions row.
+const double _actionsHeight = 44.0;
+
+/// Vertical padding above and below the grid, combined.
+const double _verticalPadding = 12.0;
+
+/// Gap between day cells.
+const double _cellSpacing = 2.0;
+
+/// Minimum touch target Material asks for.
+///
+/// Reachable for the header's icon buttons, but not for day cells: seven
+/// columns of 48 need 336dp plus gutters, and a small phone's dialog has
+/// barely that in total. Flutter's own Material DatePicker lands near 42dp for
+/// the same reason. Cells aim for [_maxCellExtent] and shrink towards
+/// [_minCellExtent] as the space demands.
 const double _minTouchTarget = 48.0;
 
+/// The largest a day cell grows to.
+///
+/// Capped so the picker stays compact rather than ballooning on a tablet.
+const double _maxCellExtent = 42.0;
+
 /// The smallest a day cell may get before it stops being usable.
+///
+/// Below this the grid scrolls instead of shrinking further.
 const double _minCellExtent = 36.0;
 
 /// Horizontal padding inside the picker.
-///
-/// Deliberately tight: seven columns need 336dp to hold a 48dp target, and a
-/// 375dp phone minus the dialog's insets leaves only a little over that.
 const double _gutter = 12.0;
 
 /// Corner radius for interactive surfaces inside the picker.
@@ -438,34 +472,38 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
   /// Header: the month/year acts as the toggle into year selection, with
   /// month navigation on the right.
   ///
-  /// Up to 0.1.0 year selection hid behind an unlabelled edit-calendar icon,
-  /// while "Today" occupied the most prominent corner. The title is the thing
-  /// users reach for, so it is the control; Today moves down to the actions.
+  /// Year selection used to hide behind an unlabelled edit-calendar icon while
+  /// "Today" took the most prominent corner despite being the least-used
+  /// action. The title is what users reach for, so the title is the control.
   Widget _buildHeader() {
     final isDayView = viewMode == NepaliDatePickerMode.day;
-    final theme = Theme.of(context);
+    final nepali = _style.effectiveConfig.language == Language.nepali;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(_gutter, 12, 8, 4),
+      padding: const EdgeInsets.only(left: _gutter, right: 4),
       child: Row(
         children: [
-          Flexible(child: _buildTitleToggle(theme, isDayView)),
-          const Spacer(),
+          // Expanded, not Flexible-beside-a-Spacer. Both default to flex: 1,
+          // so a Flexible and a Spacer *split* the free space and the title
+          // ellipsised with room to spare -- "असार २०..." on a full-size
+          // phone. Expanded gives the title whatever the buttons leave.
+          Expanded(
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: _buildTitleToggle(isDayView),
+            ),
+          ),
           // Navigation only means anything on the day grid.
           if (isDayView) ...[
             _buildNavigationButton(
               Icons.chevron_left_rounded,
               _canGoToPreviousMonth ? _previousMonth : null,
-              _style.effectiveConfig.language == Language.nepali
-                  ? 'अघिल्लो महिना'
-                  : 'Previous month',
+              nepali ? 'अघिल्लो महिना' : 'Previous month',
             ),
             _buildNavigationButton(
               Icons.chevron_right_rounded,
               _canGoToNextMonth ? _nextMonth : null,
-              _style.effectiveConfig.language == Language.nepali
-                  ? 'अर्को महिना'
-                  : 'Next month',
+              nepali ? 'अर्को महिना' : 'Next month',
             ),
           ],
         ],
@@ -474,7 +512,7 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
   }
 
   /// The month/year title, doubling as the day <-> year toggle.
-  Widget _buildTitleToggle(ThemeData theme, bool isDayView) {
+  Widget _buildTitleToggle(bool isDayView) {
     final nepali = _style.effectiveConfig.language == Language.nepali;
 
     return Semantics(
@@ -486,13 +524,12 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
         onTap: _toggleYearView,
         borderRadius: BorderRadius.circular(_cornerRadius),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Flexible: English month names run wider than their Nepali
-              // equivalents ("Baisakh 2081" vs "बैशाख २०८१"), and a rigid Row
-              // here overflowed at every screen size in English.
+              // Flexible so a genuinely oversized title degrades rather than
+              // overflowing -- a last resort, not the normal case.
               Flexible(
                 child: Text(
                   _getHeaderText(),
@@ -504,15 +541,11 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
                   ),
                 ),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 2),
               AnimatedRotation(
                 turns: isDayView ? 0 : 0.5,
                 duration: _transitionDuration,
-                child: Icon(
-                  Icons.arrow_drop_down_rounded,
-                  size: 24,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+                child: const Icon(Icons.arrow_drop_down_rounded, size: 22),
               ),
             ],
           ),
@@ -588,42 +621,45 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     );
   }
 
-  /// Build weekday headers based on week start configuration
+  /// The weekday initials above the grid.
+  ///
+  /// Deliberately the *short* form regardless of `weekTitleType`. The half
+  /// form ("आइत", "मंगल", "बिहि") forces the columns far wider than the digits
+  /// need, and was half of what made the picker look bulky; a date grid only
+  /// needs enough to identify the column, which is why native pickers use
+  /// initials. `weekTitleType` still applies to the calendar widgets, where
+  /// there is room for it.
   Widget _buildWeekDayHeaders() {
     final effectiveConfig = _style.effectiveConfig;
     final weekendColor = _style.cellsStyle.weekDayColor;
     final weekdayStyle = _style.headersStyle.weekHeaderStyle;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: _getWeekdayOrder().map((dayIndex) {
-          final weekday = WeekUtils.formattedWeekDay(
-            dayIndex,
-            effectiveConfig.language,
-            effectiveConfig.weekTitleType,
-          );
-          final isWeekend = WeekUtils.isWeekend(
-            dayIndex,
-            effectiveConfig.weekendType,
-          );
-          return Expanded(
-            child: Center(
-              child: Text(
-                weekday,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                style: weekdayStyle.copyWith(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: isWeekend ? weekendColor : weekdayStyle.color,
-                  letterSpacing: 0.5,
-                ),
+    return Row(
+      children: _getWeekdayOrder().map((dayIndex) {
+        final weekday = WeekUtils.formattedShortWeekDay(
+          dayIndex,
+          effectiveConfig.language,
+        );
+        final isWeekend = WeekUtils.isWeekend(
+          dayIndex,
+          effectiveConfig.weekendType,
+        );
+
+        return Expanded(
+          child: Center(
+            child: Text(
+              weekday,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: weekdayStyle.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isWeekend ? weekendColor : weekdayStyle.color,
               ),
             ),
-          );
-        }).toList(),
-      ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -644,109 +680,102 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     final totalCells = previousMonthDays.length + currentMonthDays.length;
     final nextMonthDays = (42 - totalCells) > 0 ? 42 - totalCells : 0;
 
-    return Column(
-      children: [
-        _buildWeekDayHeaders(),
-        Expanded(
-          child: GestureDetector(
-            onHorizontalDragEnd: (details) {
-              // Swipe right to left (next month)
-              if (details.primaryVelocity! < -500) {
-                _nextMonth();
-              }
-              // Swipe left to right (previous month)
-              else if (details.primaryVelocity! > 500) {
-                _previousMonth();
-              }
-            },
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                // Size the cells so all six rows fit the space available.
-                //
-                // Up to 0.0.7 cells were square regardless of the room on
-                // offer. Inside the picker's fixed height that left the grid
-                // short of a row, and because a GridView only builds what its
-                // viewport covers -- with scrolling disabled here, so it could
-                // not be reached either -- the sixth row was never built. The
-                // last days of the month, the 30th and 31st, simply did not
-                // exist and could not be selected.
-                const spacing = 4.0;
-                final cellWidth =
-                    (constraints.maxWidth - (spacing * (_gridColumns - 1))) /
-                        _gridColumns;
+    return SizedBox.expand(
+      child: GestureDetector(
+        onHorizontalDragEnd: (details) {
+          // Swipe right to left (next month)
+          if (details.primaryVelocity! < -500) {
+            _nextMonth();
+          }
+          // Swipe left to right (previous month)
+          else if (details.primaryVelocity! > 500) {
+            _previousMonth();
+          }
+        },
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Size the cells so all six rows fit the space available.
+            //
+            // Up to 0.0.7 cells were square regardless of the room on
+            // offer. Inside the picker's fixed height that left the grid
+            // short of a row, and because a GridView only builds what its
+            // viewport covers -- with scrolling disabled here, so it could
+            // not be reached either -- the sixth row was never built. The
+            // last days of the month, the 30th and 31st, simply did not
+            // exist and could not be selected.
 
-                // Fit six rows into the height on offer, but never shrink a
-                // cell past the point of being usable. If the floor wins, the
-                // grid is taller than its viewport, so it has to scroll --
-                // otherwise the last row would simply never be built, which is
-                // how the 30th and 31st went missing before 0.0.8.
-                final availableHeight =
-                    constraints.maxHeight - (spacing * (_gridRows - 1));
-                final fittedHeight = availableHeight / _gridRows;
-                final cellHeight = math.max(fittedHeight, _minCellExtent);
-                final needsScroll = cellHeight > fittedHeight;
+            final cellWidth =
+                (constraints.maxWidth - (_cellSpacing * (_gridColumns - 1))) /
+                    _gridColumns;
 
-                return GridView.builder(
-                  physics: needsScroll
-                      ? const ClampingScrollPhysics()
-                      : const NeverScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: _gridColumns,
-                    crossAxisSpacing: spacing,
-                    mainAxisSpacing: spacing,
-                    childAspectRatio:
-                        cellHeight > 0 ? cellWidth / cellHeight : 1.0,
-                  ),
-                  itemCount: previousMonthDays.length +
+            // Fit six rows into the height on offer, but never shrink a
+            // cell past the point of being usable. If the floor wins, the
+            // grid is taller than its viewport, so it has to scroll --
+            // otherwise the last row would simply never be built, which is
+            // how the 30th and 31st went missing before 0.0.8.
+            final availableHeight =
+                constraints.maxHeight - (_cellSpacing * (_gridRows - 1));
+            final fittedHeight = availableHeight / _gridRows;
+            final cellHeight = math.max(fittedHeight, _minCellExtent);
+            final needsScroll = cellHeight > fittedHeight;
+
+            return GridView.builder(
+              physics: needsScroll
+                  ? const ClampingScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: _gridColumns,
+                crossAxisSpacing: _cellSpacing,
+                mainAxisSpacing: _cellSpacing,
+                childAspectRatio: cellHeight > 0 ? cellWidth / cellHeight : 1.0,
+              ),
+              itemCount: previousMonthDays.length +
+                  currentMonthDays.length +
+                  nextMonthDays,
+              itemBuilder: (context, index) {
+                if (index < previousMonthDays.length) {
+                  return _buildDayCell(
+                    previousMonthDays[index],
+                    isCurrentMonth: false,
+                  );
+                } else if (index <
+                    previousMonthDays.length + currentMonthDays.length) {
+                  final day =
+                      currentMonthDays[index - previousMonthDays.length];
+                  final isSelected = selectedDate.year == displayDate.year &&
+                      selectedDate.month == displayDate.month &&
+                      selectedDate.day == day;
+                  final today = NepaliDateTime.now();
+                  final isToday = today.year == displayDate.year &&
+                      today.month == displayDate.month &&
+                      today.day == day;
+                  final isDisabled = !_isSelectable(
+                    NepaliDateTime(
+                      year: displayDate.year,
+                      month: displayDate.month,
+                      day: day,
+                    ),
+                  );
+                  return _buildDayCell(
+                    day,
+                    isSelected: isSelected,
+                    isToday: isToday,
+                    isDisabled: isDisabled,
+                    onTap: () => _selectDay(day),
+                  );
+                } else {
+                  final day = index -
+                      previousMonthDays.length -
                       currentMonthDays.length +
-                      nextMonthDays,
-                  itemBuilder: (context, index) {
-                    if (index < previousMonthDays.length) {
-                      return _buildDayCell(
-                        previousMonthDays[index],
-                        isCurrentMonth: false,
-                      );
-                    } else if (index <
-                        previousMonthDays.length + currentMonthDays.length) {
-                      final day =
-                          currentMonthDays[index - previousMonthDays.length];
-                      final isSelected =
-                          selectedDate.year == displayDate.year &&
-                              selectedDate.month == displayDate.month &&
-                              selectedDate.day == day;
-                      final today = NepaliDateTime.now();
-                      final isToday = today.year == displayDate.year &&
-                          today.month == displayDate.month &&
-                          today.day == day;
-                      final isDisabled = !_isSelectable(
-                        NepaliDateTime(
-                          year: displayDate.year,
-                          month: displayDate.month,
-                          day: day,
-                        ),
-                      );
-                      return _buildDayCell(
-                        day,
-                        isSelected: isSelected,
-                        isToday: isToday,
-                        isDisabled: isDisabled,
-                        onTap: () => _selectDay(day),
-                      );
-                    } else {
-                      final day = index -
-                          previousMonthDays.length -
-                          currentMonthDays.length +
-                          1;
-                      return _buildDayCell(day, isCurrentMonth: false);
-                    }
-                  },
-                );
+                      1;
+                  return _buildDayCell(day, isCurrentMonth: false);
+                }
               },
-            ),
-          ),
+            );
+          },
         ),
-      ],
+      ),
     );
   }
 
@@ -993,41 +1022,6 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     // Explicit style > ambient NepaliCalendarTheme > pre-0.1.0 defaults.
     _style = NepaliCalendarTheme.resolve(context, widget.calendarStyle);
 
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildHeader(),
-        Divider(
-          height: 1,
-          color: _style.cellsStyle.borderColor.withValues(alpha: 0.2),
-        ),
-        Flexible(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              transitionBuilder: (child, animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: ScaleTransition(
-                    scale:
-                        Tween<double>(begin: 0.95, end: 1.0).animate(animation),
-                    child: child,
-                  ),
-                );
-              },
-              child: viewMode == NepaliDatePickerMode.day
-                  ? _buildDayGrid()
-                  : viewMode == NepaliDatePickerMode.month
-                      ? _buildMonthGrid()
-                      : _buildYearGrid(),
-            ),
-          ),
-        ),
-        _buildActions(),
-      ],
-    );
-
     return ScaleTransition(
       scale: CurvedAnimation(
         parent: _animationController,
@@ -1035,31 +1029,112 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // Prefer the natural size, but never exceed what is actually
-          // available. Up to 0.0.7 this was pinned to 420x480 regardless of
-          // the screen, so the picker overflowed on any phone narrower than
-          // 420 logical pixels -- an iPhone SE, for instance.
-          final available = MediaQuery.sizeOf(context);
-          final width = math.min(
-            _preferredWidth,
-            constraints.hasBoundedWidth
-                ? constraints.maxWidth
-                : available.width,
-          );
-          final height = math.min(
-            _preferredHeight,
-            constraints.hasBoundedHeight
-                ? constraints.maxHeight
-                : available.height,
-          );
-
+          final size = _measure(context, constraints);
           return SizedBox(
-            width: width,
-            height: height,
-            child: content,
+            width: size.width,
+            height: size.height,
+            child: _buildContent(size.cellExtent),
           );
         },
       ),
+    );
+  }
+
+  /// Works out how big the picker wants to be.
+  ///
+  /// The picker sizes to its content rather than filling a fixed box. Up to
+  /// 0.1.0 it was pinned to 420x480 whatever it contained, so on most screens
+  /// the rows floated apart in dead space -- which is what made it look bulky.
+  _PickerMetrics _measure(BuildContext context, BoxConstraints constraints) {
+    final available = MediaQuery.sizeOf(context);
+    final maxWidth =
+        constraints.hasBoundedWidth ? constraints.maxWidth : available.width;
+    final maxHeight =
+        constraints.hasBoundedHeight ? constraints.maxHeight : available.height;
+
+    final width = math.min(_preferredWidth, maxWidth);
+
+    // Cell height follows the width, so cells stay roughly square, capped so
+    // they do not balloon on a tablet.
+    final cellWidth =
+        (width - (_gutter * 2) - (_cellSpacing * (_gridColumns - 1))) /
+            _gridColumns;
+    var cellExtent = cellWidth.clamp(_minCellExtent, _maxCellExtent);
+
+    const chrome =
+        _headerHeight + _weekdayRowHeight + _actionsHeight + _verticalPadding;
+    const gaps = _cellSpacing * (_gridRows - 1);
+
+    var height = chrome + (cellExtent * _gridRows) + gaps;
+
+    if (height > maxHeight) {
+      // Not enough room -- a phone in landscape, typically. Shrink the cells
+      // towards the floor; below it the grid scrolls rather than the dialog
+      // overflowing or a row going unbuilt.
+      final budget = maxHeight - chrome - gaps;
+      cellExtent = math.max(budget / _gridRows, _minCellExtent);
+      height = math.min(maxHeight, chrome + (cellExtent * _gridRows) + gaps);
+    }
+
+    return _PickerMetrics(
+      width: width,
+      height: height,
+      cellExtent: cellExtent,
+    );
+  }
+
+  Widget _buildContent(double cellExtent) {
+    final isDayView = viewMode == NepaliDatePickerMode.day;
+
+    // The grid takes exactly the width its cells need and sits centred, rather
+    // than stretching to the dialog's width -- which is set by the actions row
+    // and is wider. Stretching would give oblong cells on every screen.
+    final gridWidth =
+        (cellExtent * _gridColumns) + (_cellSpacing * (_gridColumns - 1));
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(height: _headerHeight, child: _buildHeader()),
+        // The weekday row means nothing outside the day grid. Total height is
+        // fixed either way, so hiding it hands the space to the grid rather
+        // than making the dialog jump.
+        if (isDayView)
+          SizedBox(
+            height: _weekdayRowHeight,
+            child: Center(
+              child: SizedBox(width: gridWidth, child: _buildWeekDayHeaders()),
+            ),
+          ),
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: _verticalPadding / 2,
+              ),
+              child: SizedBox(
+                width: gridWidth,
+                child: AnimatedSwitcher(
+                  duration: _transitionDuration,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  ),
+                  child: KeyedSubtree(
+                    key: ValueKey(viewMode),
+                    child: switch (viewMode) {
+                      NepaliDatePickerMode.day => _buildDayGrid(),
+                      NepaliDatePickerMode.month => _buildMonthGrid(),
+                      NepaliDatePickerMode.year => _buildYearGrid(),
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: _actionsHeight, child: _buildActions()),
+      ],
     );
   }
 
@@ -1090,53 +1165,75 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     Navigator.of(context).pop();
   }
 
-  /// Actions: Today on the left, Cancel and the confirm action on the right.
+  /// Actions: Today on the left, Cancel and confirm on the right.
   ///
-  /// Today lives here rather than in the header, where it used to occupy the
-  /// most prominent corner despite being the least-used control.
+  /// Today sits here rather than in the header, where it used to take the most
+  /// prominent corner despite being the least-used control.
   Widget _buildActions() {
     final nepali = _style.effectiveConfig.language == Language.nepali;
-    // Today is pointless when it is outside the allowed range.
+    // Today is meaningless when it falls outside the allowed range.
     final todayIsReachable = _isSelectable(NepaliDateTime.now());
 
+    // No Flexible on the buttons: they take their natural width and the Spacer
+    // absorbs the rest. Wrapping them in Flexible made them compete with the
+    // Spacer for free space, so "रद्द गर्नुहोस्" ellipsised to "रद्द गर्नुह..."
+    // on a screen with room to spare.
+    // Tight padding rather than a wider dialog. The Nepali labels are much
+    // longer than the English ones ("रद्द गर्नुहोस्" vs "Cancel"), and at the
+    // default TextButton padding all three together do not fit a compact
+    // picker on a phone.
+    final style = TextButton.styleFrom(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      minimumSize: const Size(0, _actionsHeight - 8),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
+    );
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(_gutter, 4, _gutter, 12),
-      // Flexible labels: the Nepali strings are much wider than the English
-      // ones ("रद्द गर्नुहोस्" vs "Cancel"), and a rigid Row overflowed on a
-      // narrow phone.
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (todayIsReachable)
-            Flexible(
-              child: TextButton(
-                onPressed: _goToToday,
-                child: Text(
-                  nepali ? 'आज' : 'Today',
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
+            TextButton(
+              onPressed: _goToToday,
+              style: style,
+              child: Text(nepali ? 'आज' : 'Today', softWrap: false),
+            )
+          else
+            const SizedBox.shrink(),
+          // One Flexible taking the remaining space, rather than a Flexible
+          // sitting next to a Spacer. Both default to flex: 1, so that pairing
+          // *splits* the free space and the labels ellipsised with room to
+          // spare -- "रद्द गर्नुह..." on a full-size phone. Here the labels
+          // take their natural width and only shrink when they genuinely
+          // cannot fit, as at a large text scale.
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: TextButton(
+                    onPressed: _handleCancel,
+                    style: style,
+                    child: Text(
+                      widget.cancelText ??
+                          (nepali ? 'रद्द गर्नुहोस्' : 'Cancel'),
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          const Spacer(),
-          Flexible(
-            child: TextButton(
-              onPressed: _handleCancel,
-              child: Text(
-                widget.cancelText ?? (nepali ? 'रद्द गर्नुहोस्' : 'Cancel'),
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: TextButton(
-              onPressed: _handleConfirm,
-              child: Text(
-                widget.confirmText ?? (nepali ? 'ठीक छ' : 'OK'),
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-              ),
+                TextButton(
+                  onPressed: _handleConfirm,
+                  style: style,
+                  child: Text(
+                    widget.confirmText ?? (nepali ? 'ठीक छ' : 'OK'),
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

@@ -490,17 +490,18 @@ class _DatePickerExampleState extends State<DatePickerExample> {
     final selected = await picker.showNepaliDatePicker(
       context: context,
       initialDate: selectedDate,
+      // Config only -- deliberately no cellsStyle. An explicit style beats the
+      // ambient NepaliCalendarTheme, so setting colours here would opt the
+      // picker out of theming and strand it in light mode. This tab used to do
+      // exactly that.
       calendarStyle: NepaliCalendarStyle(
-        config: CalendarConfig(
-          language: widget.language,
-          weekTitleType: TitleFormat.half,
-        ),
-        cellsStyle: const CellStyle(
-          selectedColor: Color(0xFF6366F1),
-          todayColor: Colors.green,
-          weekDayColor: Colors.red,
-        ),
+        config: CalendarConfig(language: widget.language),
       ),
+      // Birthdays are the reason initialMode exists: landing on the year grid
+      // saves paging back through months.
+      initialMode: NepaliDatePickerMode.day,
+      minDate: NepaliDateTime(year: 2070, month: 1, day: 1),
+      maxDate: NepaliDateTime(year: 2090, month: 12, day: 30),
     );
 
     if (selected != null) {
@@ -523,8 +524,14 @@ class _DatePickerExampleState extends State<DatePickerExample> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    // Colours come from the ColorScheme, not hard-coded hexes. This tab used to
+    // pin 0xFFF8F9FA / white / 0xFF1F2937, so in a dark app it rendered a white
+    // card with near-black text -- the tab that demonstrates the date picker
+    // was the one that looked broken in dark mode.
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: Text(
           widget.language == Language.nepali
@@ -537,15 +544,8 @@ class _DatePickerExampleState extends State<DatePickerExample> {
           margin: const EdgeInsets.all(24),
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.colorScheme.surfaceContainer,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -553,13 +553,13 @@ class _DatePickerExampleState extends State<DatePickerExample> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                  color: theme.colorScheme.primaryContainer,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.calendar_today_rounded,
                   size: 40,
-                  color: Color(0xFF6366F1),
+                  color: theme.colorScheme.onPrimaryContainer,
                 ),
               ),
               const SizedBox(height: 24),
@@ -567,10 +567,9 @@ class _DatePickerExampleState extends State<DatePickerExample> {
                 widget.language == Language.nepali
                     ? 'मिति छान्नुहोस्'
                     : 'Select a Date',
-                style: const TextStyle(
-                  fontSize: 28,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
                 ),
               ),
               const SizedBox(height: 12),
@@ -580,11 +579,11 @@ class _DatePickerExampleState extends State<DatePickerExample> {
                     : widget.language == Language.nepali
                         ? 'कुनै मिति चयन गरिएको छैन'
                         : 'No date selected',
-                style: TextStyle(
-                  fontSize: 16,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge?.copyWith(
                   color: selectedDate != null
-                      ? const Color(0xFF6366F1)
-                      : const Color(0xFF9CA3AF),
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.outline,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -592,10 +591,10 @@ class _DatePickerExampleState extends State<DatePickerExample> {
               ElevatedButton(
                 onPressed: _showDatePickerDialog,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1),
-                  foregroundColor: Colors.white,
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
+                    horizontal: 24,
                     vertical: 16,
                   ),
                   shape: RoundedRectangleBorder(
