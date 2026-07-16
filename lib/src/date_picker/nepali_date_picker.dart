@@ -156,7 +156,11 @@ class _Layout {
   /// The picker sizes to its content. Up to 0.1.0 it was pinned to 420x480
   /// whatever it held, so the rows floated apart in dead space -- which is
   /// what made it look bulky.
-  factory _Layout.measure(BuildContext context, BoxConstraints constraints) {
+  factory _Layout.measure(
+    BuildContext context,
+    BoxConstraints constraints, {
+    required bool withActions,
+  }) {
     final screen = MediaQuery.sizeOf(context);
     final maxWidth =
         constraints.hasBoundedWidth ? constraints.maxWidth : screen.width;
@@ -172,8 +176,10 @@ class _Layout {
         (width - (_gutter * 2) - (_cellGap * (_columns - 1))) / _columns;
     var cell = widthBudget.clamp(_minCell, _preferredCell);
 
-    const chrome =
-        _headerHeight + _weekdayHeight + _actionsHeight + _verticalPadding;
+    final chrome = _headerHeight +
+        _weekdayHeight +
+        _verticalPadding +
+        (withActions ? _actionsHeight : 0.0);
     const gaps = _cellGap * (_rows - 1);
 
     var height = chrome + (cell * _rows) + gaps;
@@ -207,6 +213,13 @@ class _Layout {
 ///
 /// For a modal, see [showNepaliDatePicker].
 class NepaliDatePicker extends StatefulWidget {
+  /// The width the picker takes when there is room for it.
+  ///
+  /// Exposed so a host that must give the picker a tight width can ask for the
+  /// right one. [AlertDialog], for instance, measures its content's intrinsic
+  /// width, which a [LayoutBuilder] cannot answer -- so it has to be told.
+  static const double preferredWidth = _preferredWidth;
+
   /// Called whenever a date is tapped, before it is confirmed.
   ///
   /// Fires on every tap. For what the user settled on, use [onConfirm] or the
@@ -251,6 +264,13 @@ class NepaliDatePicker extends StatefulWidget {
   /// Label for the cancel action. Defaults to "Cancel" / "रद्द गर्नुहोस्".
   final String? cancelText;
 
+  /// Whether to render the Today / Cancel / OK row.
+  ///
+  /// Set false when the host supplies its own actions -- an [AlertDialog], for
+  /// instance, which owns its action area. Pair it with [onConfirm] and
+  /// [onCancel], or with [onDateSelected], so the selection still reaches you.
+  final bool showActions;
+
   const NepaliDatePicker({
     super.key,
     required this.onDateSelected,
@@ -263,6 +283,7 @@ class NepaliDatePicker extends StatefulWidget {
     this.onCancel,
     this.confirmText,
     this.cancelText,
+    this.showActions = true,
   });
 
   @override
@@ -409,12 +430,27 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
 
   @override
   Widget build(BuildContext context) {
-    // Explicit style > ambient NepaliCalendarTheme > the built-in defaults.
-    final style = NepaliCalendarTheme.resolve(context, widget.calendarStyle);
+    // Explicit style > ambient NepaliCalendarTheme > the Material theme.
+    //
+    // The picker falls back to the Material theme where the calendar widgets
+    // fall back to the legacy palette. Those widgets look as they always did,
+    // so their defaults are worth preserving; the picker was rebuilt in 0.1.0
+    // and resembles nothing of its old self, so there is no prior appearance
+    // to protect -- and the legacy palette is light-only, which would leave a
+    // dark app with black dates on a dark alert.
+    final style = NepaliCalendarTheme.resolve(
+      context,
+      widget.calendarStyle,
+      fallback: NepaliCalendarThemeData.fromContext(context),
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final layout = _Layout.measure(context, constraints);
+        final layout = _Layout.measure(
+          context,
+          constraints,
+          withActions: widget.showActions,
+        );
         return SizedBox(
           width: layout.width,
           height: layout.height,
@@ -474,18 +510,19 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
             ),
           ),
         ),
-        SizedBox(
-          height: _actionsHeight,
-          child: _Actions(
-            style: style,
-            showToday: _bounds.contains(NepaliDateTime.now()),
-            confirmText: widget.confirmText,
-            cancelText: widget.cancelText,
-            onToday: _goToToday,
-            onCancel: _cancel,
-            onConfirm: _confirm,
+        if (widget.showActions)
+          SizedBox(
+            height: _actionsHeight,
+            child: _Actions(
+              style: style,
+              showToday: _bounds.contains(NepaliDateTime.now()),
+              confirmText: widget.confirmText,
+              cancelText: widget.cancelText,
+              onToday: _goToToday,
+              onCancel: _cancel,
+              onConfirm: _confirm,
+            ),
           ),
-        ),
       ],
     );
   }

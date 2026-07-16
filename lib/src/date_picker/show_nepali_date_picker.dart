@@ -1,9 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../src.dart';
-
-/// Corner radius of the modal picker's surface.
-const double _dialogCornerRadius = 28.0;
 
 /// Shows a modal Nepali date picker dialog.
 ///
@@ -57,6 +56,10 @@ const double _dialogCornerRadius = 28.0;
 ///
 /// [confirmText] and [cancelText] override the action labels, which otherwise
 /// follow the configured [Language].
+///
+/// The picker is shown as a plain [AlertDialog], so it inherits the app's
+/// `dialogTheme` and sits beside the app's other alerts rather than announcing
+/// itself as a special case.
 Future<NepaliDateTime?> showNepaliDatePicker({
   required BuildContext context,
   NepaliDateTime? initialDate,
@@ -74,7 +77,7 @@ Future<NepaliDateTime?> showNepaliDatePicker({
     barrierDismissible: barrierDismissible,
     barrierColor: barrierColor ?? Colors.black.withValues(alpha: 0.5),
     builder: (BuildContext context) {
-      return _NepaliDatePickerDialog(
+      return _NepaliDatePickerAlert(
         initialDate: initialDate,
         calendarStyle: calendarStyle,
         initialMode: initialMode,
@@ -87,12 +90,15 @@ Future<NepaliDateTime?> showNepaliDatePicker({
   );
 }
 
-/// Internal dialog widget that wraps the NepaliDatePicker
-/// Internal dialog that hosts a [NepaliDatePicker].
+/// The picker's modal presentation.
 ///
-/// Stateless on purpose: the picker owns the selection and pops with it, so
-/// mirroring the selected date here would be write-only state.
-class _NepaliDatePickerDialog extends StatelessWidget {
+/// A plain [AlertDialog]: it brings no surface, radius or elevation of its
+/// own, so it picks up whatever `dialogTheme` the app already uses and sits
+/// beside the app's other alerts rather than announcing itself.
+///
+/// Stateful because the actions live outside the picker here -- the dialog has
+/// to hold the selection to hand back on confirm.
+class _NepaliDatePickerAlert extends StatefulWidget {
   final NepaliDateTime? initialDate;
   final NepaliCalendarStyle calendarStyle;
   final NepaliDatePickerMode initialMode;
@@ -101,7 +107,7 @@ class _NepaliDatePickerDialog extends StatelessWidget {
   final String? confirmText;
   final String? cancelText;
 
-  const _NepaliDatePickerDialog({
+  const _NepaliDatePickerAlert({
     this.initialDate,
     required this.calendarStyle,
     required this.initialMode,
@@ -112,47 +118,66 @@ class _NepaliDatePickerDialog extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // The surface has to match the palette the picker actually renders with,
-    // which is not the same question as "is the app dark?".
-    //
-    // Up to 0.1.0 this was hard-coded to Colors.white. That was wrong for a
-    // dark app, but self-consistent: with no NepaliCalendarTheme the picker
-    // draws with the legacy light palette (black text), which needs a light
-    // surface. Switching the surface to the Material ColorScheme without
-    // regard for the picker's own palette swaps one unreadable combination
-    // for another -- black text on a dark sheet.
-    //
-    // So: themed picker gets a themed surface, legacy picker keeps the legacy
-    // white one. Dark mode is opt-in via NepaliCalendarTheme, exactly as it is
-    // for every other widget here.
-    final calendarTheme = NepaliCalendarTheme.maybeOf(context);
-    final surface = calendarTheme == null
-        ? Colors.white
-        : Theme.of(context).colorScheme.surfaceContainerHigh;
+  State<_NepaliDatePickerAlert> createState() => _NepaliDatePickerAlertState();
+}
 
-    return Dialog(
-      backgroundColor: surface,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(_dialogCornerRadius),
+class _NepaliDatePickerAlertState extends State<_NepaliDatePickerAlert> {
+  NepaliDateTime? _selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = NepaliCalendarTheme.resolve(context, widget.calendarStyle);
+    final language = style.effectiveConfig.language;
+    final nepali = language == Language.nepali;
+    final selected = _selected ?? widget.initialDate ?? NepaliDateTime.now();
+
+    return AlertDialog(
+      // Deliberately no backgroundColor, shape or elevation: the point of this
+      // layout is that it looks like the app's other alerts.
+      title: Text(
+        nepali ? 'मिति छान्नुहोस्' : 'Select date',
+        style: Theme.of(context).textTheme.titleMedium,
       ),
-      clipBehavior: Clip.antiAlias,
-      // Tight horizontal insets: the picker wants 368dp for its Nepali action
-      // labels, and a 390dp phone minus 16dp either side leaves only 358.
-      insetPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
-      child: NepaliDatePicker(
-        initialDate: initialDate,
-        calendarStyle: calendarStyle,
-        initialMode: initialMode,
-        minDate: minDate,
-        maxDate: maxDate,
-        confirmText: confirmText,
-        cancelText: cancelText,
-        // No onConfirm/onCancel: the picker then pops the dialog itself, with
-        // the chosen date, which is what this future resolves to.
-        onDateSelected: (_) {},
+      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+      // AlertDialog's default 40dp side insets leave a small phone only ~295dp
+      // of content, which is not enough for the header. Colours, shape and
+      // elevation still come from the app's dialogTheme -- only the position
+      // is nudged.
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      // A tight width, on purpose. AlertDialog measures its content's
+      // intrinsic width, and the picker's root is a LayoutBuilder, which
+      // cannot report one -- laying it out speculatively could mutate the live
+      // tree, so Flutter refuses. A tight width short-circuits that query.
+      // `- 32` matches the insetPadding set above.
+      content: SizedBox(
+        width: math.min(
+          NepaliDatePicker.preferredWidth,
+          MediaQuery.sizeOf(context).width - 32,
+        ),
+        child: NepaliDatePicker(
+          initialDate: widget.initialDate,
+          calendarStyle: widget.calendarStyle,
+          initialMode: widget.initialMode,
+          minDate: widget.minDate,
+          maxDate: widget.maxDate,
+          // The AlertDialog owns the action area, so the picker does not draw
+          // one -- and therefore never touches the Navigator either.
+          showActions: false,
+          onDateSelected: (date) => setState(() => _selected = date),
+        ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            widget.cancelText ?? (nepali ? 'रद्द गर्नुहोस्' : 'Cancel'),
+          ),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(selected),
+          child: Text(widget.confirmText ?? (nepali ? 'ठीक छ' : 'OK')),
+        ),
+      ],
     );
   }
 }
