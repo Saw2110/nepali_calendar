@@ -93,7 +93,19 @@ class CalendarUtils {
       [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
   /// The starting year of the predefined Nepali calendar data.
-  static int calenderyearStart = 1969;
+  ///
+  /// This is a property of the bundled data, not a setting. It is the key of
+  /// the first entry in [nepaliYears], and page indexes throughout the package
+  /// are computed relative to it.
+  ///
+  /// ## Behaviour change in 0.1.0
+  ///
+  /// This used to be a mutable static. Assigning to it corrupted every date
+  /// calculation in the package at once -- page indexes would point at the
+  /// wrong months and lookups would miss the data map entirely -- so there was
+  /// never a working reason to. It is now `const`; assigning to it is a
+  /// compile error rather than a silent corruption.
+  static const int calenderyearStart = 1969;
 
   /// Predefined Nepali calendar year data.
   ///
