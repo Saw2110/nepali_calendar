@@ -1,3 +1,8 @@
+// Boundary dates are written out in full: on a range edge, `month: 1, day: 1`
+// states the intent, where leaning on the constructor's defaults would hide
+// it.
+// ignore_for_file: avoid_redundant_argument_values
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -37,7 +42,10 @@ const double _preferredHeight = 480.0;
 /// )
 /// ```
 class NepaliDatePicker extends StatefulWidget {
-  /// Callback function called when a date is selected
+  /// Called whenever a date is tapped, before it is confirmed.
+  ///
+  /// Fires on every tap. To learn what the user actually settled on, use
+  /// [onConfirm], or the value returned by [showNepaliDatePicker].
   final Function(NepaliDateTime) onDateSelected;
 
   /// Initial date to display (defaults to current Nepali date)
@@ -46,11 +54,59 @@ class NepaliDatePicker extends StatefulWidget {
   /// Styling configuration for the date picker
   final NepaliCalendarStyle calendarStyle;
 
+  /// Which view the picker opens on.
+  ///
+  /// [NepaliDatePickerMode.year] is the useful one for dates far from today,
+  /// such as a birthday: it saves the user paging through months. Whatever the
+  /// mode, the picker still returns a full date.
+  ///
+  /// Added in 0.1.0. [NepaliDatePickerMode] existed before but nothing
+  /// accepted it -- it was internal state, so the picker always opened on the
+  /// day grid.
+  final NepaliDatePickerMode initialMode;
+
+  /// Earliest selectable date. Dates before it are shown but not selectable.
+  ///
+  /// Clamped to the range the bundled calendar data covers, so a [minDate]
+  /// earlier than that has no additional effect.
+  final NepaliDateTime? minDate;
+
+  /// Latest selectable date. Dates after it are shown but not selectable.
+  ///
+  /// Clamped to the range the bundled calendar data covers.
+  final NepaliDateTime? maxDate;
+
+  /// Called when the user confirms their choice.
+  ///
+  /// When null the picker pops the enclosing route with the selected date,
+  /// which is what [showNepaliDatePicker] relies on. Supply this to embed the
+  /// picker in a page: the widget then leaves the [Navigator] alone and simply
+  /// reports the date.
+  final ValueChanged<NepaliDateTime>? onConfirm;
+
+  /// Called when the user cancels.
+  ///
+  /// When null the picker pops the enclosing route. See [onConfirm].
+  final VoidCallback? onCancel;
+
+  /// Label for the confirm action. Defaults to "OK" / "ठीक छ".
+  final String? confirmText;
+
+  /// Label for the cancel action. Defaults to "Cancel" / "रद्द गर्नुहोस्".
+  final String? cancelText;
+
   const NepaliDatePicker({
     super.key,
     required this.onDateSelected,
     this.initialDate,
     this.calendarStyle = const NepaliCalendarStyle(),
+    this.initialMode = NepaliDatePickerMode.day,
+    this.minDate,
+    this.maxDate,
+    this.onConfirm,
+    this.onCancel,
+    this.confirmText,
+    this.cancelText,
   });
 
   @override
@@ -70,13 +126,59 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
   /// below have no [BuildContext] of their own.
   NepaliCalendarStyle _style = const NepaliCalendarStyle();
 
+  /// Earliest selectable date: [NepaliDatePicker.minDate], never earlier than
+  /// the bundled calendar data reaches.
+  NepaliDateTime get _minDate {
+    final dataStart = NepaliDateTime(
+      year: CalendarUtils.nepaliYears.keys.first,
+      month: 1,
+      day: 1,
+    );
+    final requested = widget.minDate;
+    if (requested == null) return dataStart;
+    return requested.compareTo(dataStart) > 0 ? requested : dataStart;
+  }
+
+  /// Latest selectable date: [NepaliDatePicker.maxDate], never later than the
+  /// bundled calendar data reaches.
+  NepaliDateTime get _maxDate {
+    final lastYear = CalendarUtils.nepaliYears.keys.last;
+    final dataEnd = NepaliDateTime(
+      year: lastYear,
+      month: 12,
+      day: CalendarUtils.nepaliYears[lastYear]![12],
+    );
+    final requested = widget.maxDate;
+    if (requested == null) return dataEnd;
+    return requested.compareTo(dataEnd) < 0 ? requested : dataEnd;
+  }
+
+  /// Whether [date] may be selected.
+  bool _isSelectable(NepaliDateTime date) {
+    final day = date.dateOnly;
+    return day.compareTo(_minDate.dateOnly) >= 0 &&
+        day.compareTo(_maxDate.dateOnly) <= 0;
+  }
+
+  /// [date] pulled inside the selectable range.
+  ///
+  /// The picker clamps rather than asserting: an out-of-range initialDate is
+  /// easy to produce from stored data, and opening on the nearest legal date
+  /// is friendlier than crashing the app that asked for it.
+  NepaliDateTime _clamp(NepaliDateTime date) {
+    if (date.compareTo(_minDate) < 0) return _minDate;
+    if (date.compareTo(_maxDate) > 0) return _maxDate;
+    return date;
+  }
+
   @override
   void initState() {
     super.initState();
     final now = NepaliDateTime.now();
-    selectedDate = widget.initialDate ?? now;
-    displayDate = widget.initialDate ?? now;
-    viewMode = NepaliDatePickerMode.day;
+    final initial = _clamp(widget.initialDate ?? now);
+    selectedDate = initial;
+    displayDate = initial;
+    viewMode = widget.initialMode;
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -96,15 +198,18 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
 
   /// Navigate to today's date
   void _goToToday() {
+    // Clamped: today may sit outside a caller's min/max window.
+    final today = _clamp(NepaliDateTime.now());
     setState(() {
-      displayDate = NepaliDateTime.now();
-      selectedDate = NepaliDateTime.now();
+      displayDate = today;
+      selectedDate = today;
       viewMode = NepaliDatePickerMode.day;
     });
   }
 
   /// Navigate to previous month
   void _previousMonth() {
+    if (!_canGoToPreviousMonth) return;
     setState(() {
       if (displayDate.month == 1) {
         displayDate = NepaliDateTime(
@@ -120,8 +225,42 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     });
   }
 
+  /// Whether any part of the previous month is selectable.
+  bool get _canGoToPreviousMonth {
+    final previous = displayDate.month == 1
+        ? NepaliDateTime(year: displayDate.year - 1, month: 12, day: 1)
+        : NepaliDateTime(
+            year: displayDate.year,
+            month: displayDate.month - 1,
+            day: 1,
+          );
+    if (previous.year < CalendarUtils.nepaliYears.keys.first) return false;
+    // The month is reachable if its last day is still on or after the minimum.
+    final lastDay = CalendarUtils.nepaliYears[previous.year]![previous.month];
+    final monthEnd = NepaliDateTime(
+      year: previous.year,
+      month: previous.month,
+      day: lastDay,
+    );
+    return monthEnd.compareTo(_minDate.dateOnly) >= 0;
+  }
+
+  /// Whether any part of the next month is selectable.
+  bool get _canGoToNextMonth {
+    final next = displayDate.month == 12
+        ? NepaliDateTime(year: displayDate.year + 1, month: 1, day: 1)
+        : NepaliDateTime(
+            year: displayDate.year,
+            month: displayDate.month + 1,
+            day: 1,
+          );
+    if (next.year > CalendarUtils.nepaliYears.keys.last) return false;
+    return next.compareTo(_maxDate.dateOnly) <= 0;
+  }
+
   /// Navigate to next month
   void _nextMonth() {
+    if (!_canGoToNextMonth) return;
     setState(() {
       if (displayDate.month == 12) {
         displayDate = NepaliDateTime(
@@ -150,8 +289,9 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
 
   /// The years the year grid may offer.
   ///
-  /// A window around the displayed year, clamped to the range the calendar
-  /// actually holds data for. Up to 0.0.7 this was an unclamped
+  /// A window around the displayed year, clamped to the selectable range --
+  /// which is the caller's min/max intersected with the years the bundled
+  /// calendar data covers. Up to 0.0.7 this was an unclamped
   /// `displayYear - 15 .. displayYear + 14`, so near either end of the
   /// calendar it offered years with no data behind them -- picking one threw
   /// a null-check error on `CalendarUtils.nepaliYears[year]!`.
@@ -159,8 +299,8 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     const windowBefore = 15;
     const windowSize = 30;
 
-    final firstSupported = CalendarUtils.nepaliYears.keys.first;
-    final lastSupported = CalendarUtils.nepaliYears.keys.last;
+    final firstSupported = _minDate.year;
+    final lastSupported = _maxDate.year;
 
     // Slide the window back inside the supported range rather than truncating
     // it, so the grid keeps offering a full set of years at either end.
@@ -222,12 +362,17 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
 
   /// Select a day and trigger callback
   void _selectDay(int day) {
+    final date = NepaliDateTime(
+      year: displayDate.year,
+      month: displayDate.month,
+      day: day,
+    );
+    // Cells outside the range are not given an onTap, so this is a backstop
+    // rather than the primary guard.
+    if (!_isSelectable(date)) return;
+
     setState(() {
-      selectedDate = NepaliDateTime(
-        year: displayDate.year,
-        month: displayDate.month,
-        day: day,
-      );
+      selectedDate = date;
       widget.onDateSelected(selectedDate);
     });
   }
@@ -518,10 +663,18 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
                       final isToday = today.year == displayDate.year &&
                           today.month == displayDate.month &&
                           today.day == day;
+                      final isDisabled = !_isSelectable(
+                        NepaliDateTime(
+                          year: displayDate.year,
+                          month: displayDate.month,
+                          day: day,
+                        ),
+                      );
                       return _buildDayCell(
                         day,
                         isSelected: isSelected,
                         isToday: isToday,
+                        isDisabled: isDisabled,
                         onTap: () => _selectDay(day),
                       );
                     } else {
@@ -547,6 +700,7 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     bool isCurrentMonth = true,
     bool isSelected = false,
     bool isToday = false,
+    bool isDisabled = false,
     VoidCallback? onTap,
   }) {
     final effectiveConfig = _style.effectiveConfig;
@@ -573,41 +727,86 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
             ? cellStyle.todayColor.withValues(alpha: 0.3)
             : Colors.transparent;
 
+    // A date outside min/max is dimmed further than an adjacent-month date,
+    // so "not this month" and "not allowed" stay tellable apart.
     final textColor = isSelected
         ? _style.cellsStyle.onHighlightColor
         : !isCurrentMonth
             ? _style.cellsStyle.dimmedDateTextColor.withValues(alpha: 0.4)
-            : isWeekend
-                ? cellStyle.weekDayColor
-                : cellStyle.dayStyle.color ?? cellStyle.dateTextColor;
+            : isDisabled
+                ? (isWeekend ? cellStyle.weekDayColor : cellStyle.dateTextColor)
+                    .withValues(alpha: 0.3)
+                : isWeekend
+                    ? cellStyle.weekDayColor
+                    : cellStyle.dayStyle.color ?? cellStyle.dateTextColor;
 
     final borderColor = isToday && !isSelected ? cellStyle.todayColor : null;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(12),
-          border: borderColor != null
-              ? Border.all(color: borderColor, width: 1.5)
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            dayText,
-            style: cellStyle.dayStyle.copyWith(
-              color: textColor,
-              fontSize: 15,
-              fontWeight:
-                  isToday || isSelected ? FontWeight.w700 : FontWeight.w500,
-              letterSpacing: -0.2,
+    return Semantics(
+      button: !isDisabled,
+      enabled: !isDisabled,
+      selected: isSelected,
+      label: _semanticLabelFor(day, isToday: isToday, isDisabled: isDisabled),
+      excludeSemantics: true,
+      child: InkWell(
+        // A disabled cell gets no callback, so it neither responds nor shows
+        // an ink ripple.
+        onTap: isDisabled ? null : onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(12),
+            border: borderColor != null
+                ? Border.all(color: borderColor, width: 1.5)
+                : null,
+          ),
+          child: Center(
+            child: Text(
+              dayText,
+              style: cellStyle.dayStyle.copyWith(
+                color: textColor,
+                fontSize: 15,
+                fontWeight:
+                    isToday || isSelected ? FontWeight.w700 : FontWeight.w500,
+                letterSpacing: -0.2,
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// What a screen reader announces for a date cell.
+  ///
+  /// Spelled out rather than read as bare digits: "15" alone tells a screen
+  /// reader user nothing about which month they are in.
+  String _semanticLabelFor(
+    int day, {
+    required bool isToday,
+    required bool isDisabled,
+  }) {
+    final language = _style.effectiveConfig.language;
+    final nepali = language == Language.nepali;
+    final date = NepaliDateTime(
+      year: displayDate.year,
+      month: displayDate.month,
+      day: day,
+    );
+
+    final parts = <String>[
+      MonthUtils.formattedMonth(displayDate.month, language),
+      NepaliNumberConverter.formattedNumber('$day', language: language),
+      NepaliNumberConverter.formattedNumber(
+        '${displayDate.year}',
+        language: language,
+      ),
+      WeekUtils.formattedWeekDay(date.weekday, language),
+      if (isToday) nepali ? 'आज' : 'Today',
+      if (isDisabled) nepali ? 'उपलब्ध छैन' : 'Unavailable',
+    ];
+    return parts.join(', ');
   }
 
   /// Build year grid view
@@ -790,6 +989,33 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     );
   }
 
+  /// Confirm.
+  ///
+  /// Reports through [NepaliDatePicker.onConfirm] when the caller supplied
+  /// one and leaves the Navigator alone -- that is what makes the picker
+  /// embeddable in a page. With no callback it falls back to popping the
+  /// enclosing route with the selected date, which is what
+  /// [showNepaliDatePicker] relies on and what every version up to 0.1.0 did
+  /// unconditionally.
+  void _handleConfirm() {
+    final onConfirm = widget.onConfirm;
+    if (onConfirm != null) {
+      onConfirm(selectedDate);
+      return;
+    }
+    Navigator.of(context).pop(selectedDate);
+  }
+
+  /// Cancel. See [_handleConfirm] for why the pop is conditional.
+  void _handleCancel() {
+    final onCancel = widget.onCancel;
+    if (onCancel != null) {
+      onCancel();
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
 // Action Buttons
   _buildActions() {
     return Padding(
@@ -802,13 +1028,12 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
         children: [
           Flexible(
             child: TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: _handleCancel,
               child: Text(
-                _style.effectiveConfig.language == Language.nepali
-                    ? 'रद्द गर्नुहोस्'
-                    : 'Cancel',
+                widget.cancelText ??
+                    (_style.effectiveConfig.language == Language.nepali
+                        ? 'रद्द गर्नुहोस्'
+                        : 'Cancel'),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
                 style: TextStyle(
@@ -822,13 +1047,12 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
           const SizedBox(width: 8),
           Flexible(
             child: TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(selectedDate);
-              },
+              onPressed: _handleConfirm,
               child: Text(
-                _style.effectiveConfig.language == Language.nepali
-                    ? 'ठीक छ'
-                    : 'OK',
+                widget.confirmText ??
+                    (_style.effectiveConfig.language == Language.nepali
+                        ? 'ठीक छ'
+                        : 'OK'),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
                 style: const TextStyle(
