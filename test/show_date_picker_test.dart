@@ -201,6 +201,57 @@ void main() {
     });
   });
 
+  group('cell sizing', () {
+    /// Records the sizing contract as it actually is, measured, rather than as
+    /// one might wish it were.
+    ///
+    /// Material asks for a 48dp touch target. Seven columns of 48 need 336dp
+    /// plus gutters, and an iPhone SE dialog has about 343dp in total, so 48
+    /// is not reachable on a small phone at any sensible padding. Flutter's
+    /// own Material DatePicker uses roughly 42dp cells for the same reason.
+    ///
+    /// What the picker does guarantee: cells never fall below
+    /// [_minCellExtent]-ish (36dp), and the dialog never overflows.
+    const devices = <String, Size>{
+      'iPhone SE': Size(375, 667),
+      'iPhone 14': Size(390, 844),
+      'Pixel 7': Size(412, 915),
+      'phone landscape': Size(844, 390),
+      'tablet': Size(1024, 768),
+    };
+
+    for (final entry in devices.entries) {
+      testWidgets('${entry.key} keeps cells usable', (tester) async {
+        tester.view.physicalSize = entry.value;
+        tester.view.devicePixelRatio = 1.0;
+
+        await tester.pumpWidget(
+          host(brightness: Brightness.light, language: Language.english),
+        );
+        await open(tester);
+
+        // Day 12 is unique in Baisakh 2081's grid.
+        final cell = tester.getSize(
+          find
+              .ancestor(of: find.text('12'), matching: find.byType(InkResponse))
+              .first,
+        );
+
+        expect(
+          cell.width,
+          greaterThanOrEqualTo(36.0),
+          reason: '${entry.key}: cells ${cell.width}x${cell.height} too narrow',
+        );
+        expect(
+          cell.height,
+          greaterThanOrEqualTo(36.0),
+          reason: '${entry.key}: cells ${cell.width}x${cell.height} too short',
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+  });
+
   group('fits its viewport', () {
     const devices = <String, Size>{
       'iPhone SE': Size(375, 667),

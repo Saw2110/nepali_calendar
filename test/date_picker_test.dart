@@ -9,6 +9,10 @@ import 'package:nepali_calendar_plus/nepali_calendar_plus.dart';
 void main() {
   Widget host(Widget child) => MaterialApp(home: Scaffold(body: child));
 
+  // Year selection is reached by tapping the month/year title, which carries a
+  // drop-down arrow. Up to 0.1.0 it hid behind an unlabelled edit-calendar
+  // icon.
+
   const englishStyle = NepaliCalendarStyle(
     config: CalendarConfig(language: Language.english),
   );
@@ -88,8 +92,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // 6 rows x 7 columns, filled out with adjacent months' days.
-      expect(find.byType(InkWell), findsAtLeast(42));
+      // 6 rows x 7 columns, filled out with adjacent months' days. Day cells
+      // are InkResponse (a circular Material ripple); InkWell is a different
+      // type, so this counts cells and nothing else.
+      expect(find.byType(InkResponse), findsNWidgets(42));
     });
 
     testWidgets('tapping a day fires onDateSelected', (tester) async {
@@ -135,7 +141,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Open the year view.
-      await tester.tap(find.byIcon(Icons.edit_calendar_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_drop_down_rounded));
       await tester.pumpAndSettle();
 
       final lastSupported = CalendarUtils.nepaliYears.keys.last;
@@ -162,7 +168,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.edit_calendar_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_drop_down_rounded));
       await tester.pumpAndSettle();
 
       final firstSupported = CalendarUtils.nepaliYears.keys.first;
@@ -187,7 +193,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.edit_calendar_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_drop_down_rounded));
       await tester.pumpAndSettle();
 
       // Whatever years are on offer near the end of the calendar, picking one
@@ -283,7 +289,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Year view: neighbouring years become visible.
-      await tester.tap(find.byIcon(Icons.edit_calendar_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_drop_down_rounded));
       await tester.pumpAndSettle();
       expect(find.text('2085'), findsOneWidget);
 
