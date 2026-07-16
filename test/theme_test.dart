@@ -320,6 +320,119 @@ void main() {
     });
   });
 
+  group('crosses route boundaries', () {
+    /// NepaliCalendarTheme is an InheritedTheme, not a plain InheritedWidget,
+    /// so Flutter captures and re-injects it across a route push. Without
+    /// that, anything shown via a Navigator -- a dialog, a pushed page --
+    /// would silently fall back to the legacy palette, because the overlay's
+    /// ancestors are the Navigator and the app, not whatever sits in `home:`.
+    Widget pushedCalendar() => Scaffold(
+          body: NepaliCalendar(
+            initialDate: baisakh2081,
+            calendarStyle: const NepaliCalendarStyle(
+              config: CalendarConfig(language: Language.english),
+            ),
+          ),
+        );
+
+    /// Documents a real limitation rather than a bug: `showDialog` captures
+    /// InheritedThemes, but `Navigator.push` does not. A theme placed in
+    /// `home:` therefore covers that subtree and any dialog opened from it,
+    /// but not a pushed route -- the new route is a sibling under the
+    /// Navigator, not a descendant of `home:`. Nothing the package can do
+    /// about it; the answer is to place the theme above the Navigator.
+    testWidgets('a theme inside home: does NOT reach a pushed route',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NepaliCalendarTheme(
+            data: NepaliCalendarThemeData.legacy()
+                .copyWith(dateTextColor: Colors.purple),
+            child: Builder(
+              builder: (context) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => pushedCalendar()),
+                  ),
+                  child: const Text('push'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('push'));
+      await tester.pumpAndSettle();
+
+      expect(
+        dayTextColour(tester, '12'),
+        Colors.black,
+        reason: 'falls back to the legacy palette, as documented',
+      );
+    });
+
+    testWidgets('a theme in MaterialApp.builder DOES reach a pushed route',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          // Above the Navigator, so every route sees it. This is the placement
+          // to recommend for app-wide theming.
+          builder: (context, child) => NepaliCalendarTheme(
+            data: NepaliCalendarThemeData.legacy()
+                .copyWith(dateTextColor: Colors.purple),
+            child: child!,
+          ),
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => pushedCalendar()),
+                ),
+                child: const Text('push'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('push'));
+      await tester.pumpAndSettle();
+
+      expect(dayTextColour(tester, '12'), Colors.purple);
+    });
+
+    testWidgets('reaches a dialog', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NepaliCalendarTheme(
+            data: NepaliCalendarThemeData.legacy()
+                .copyWith(dateTextColor: Colors.purple),
+            child: Builder(
+              builder: (context) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => showNepaliDatePicker(
+                    context: context,
+                    initialDate: baisakh2081,
+                    calendarStyle: const NepaliCalendarStyle(
+                      config: CalendarConfig(language: Language.english),
+                    ),
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      expect(dayTextColour(tester, '12'), Colors.purple);
+    });
+  });
+
   group('theme reaches the other widgets', () {
     testWidgets('HorizontalNepaliCalendar', (tester) async {
       await tester.pumpWidget(

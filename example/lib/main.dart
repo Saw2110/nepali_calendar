@@ -39,10 +39,13 @@ class _MainAppState extends State<MainApp> {
         ),
         useMaterial3: true,
       ),
+      // The theme goes above the Navigator, so it reaches every route and
+      // dialog. `fromContext` reads the ambient Material ColorScheme, so
+      // flipping themeMode restyles every calendar with no other change.
       builder: (context, child) {
-        return SafeArea(
-          top: false,
-          child: child!,
+        return NepaliCalendarTheme(
+          data: NepaliCalendarThemeData.fromContext(context),
+          child: SafeArea(top: false, child: child!),
         );
       },
       themeMode: _themeMode,
@@ -82,52 +85,48 @@ class _ExamplesTabScreenState extends State<ExamplesTabScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // One NepaliCalendarTheme above every example. `fromContext` reads the
-    // ambient Material ColorScheme, so flipping the app between light and dark
-    // restyles every calendar below with no other changes.
-    return NepaliCalendarTheme(
-      data: NepaliCalendarThemeData.fromContext(context),
-      child: DefaultTabController(
-        // Must match the number of tabs below, or DefaultTabController throws.
-        length: 5,
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Nepali Calendar Plus'),
-            actions: [
-              IconButton(
-                icon: Icon(
-                  widget.isDark ? Icons.light_mode : Icons.dark_mode,
-                ),
-                onPressed: widget.onToggleTheme,
-                tooltip: 'Toggle Light/Dark',
+    // The NepaliCalendarTheme lives in MaterialApp.builder, above the
+    // Navigator, so it also covers dialogs and pushed routes.
+    return DefaultTabController(
+      // Must match the number of tabs below, or DefaultTabController throws.
+      length: 5,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Nepali Calendar Plus'),
+          actions: [
+            IconButton(
+              icon: Icon(
+                widget.isDark ? Icons.light_mode : Icons.dark_mode,
               ),
-              IconButton(
-                icon: const Icon(Icons.language),
-                onPressed: _toggleLanguage,
-                tooltip: 'Toggle Language',
-              ),
-            ],
-            bottom: const TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.center,
-              tabs: [
-                Tab(icon: Icon(Icons.calendar_month), text: 'Calendar'),
-                Tab(icon: Icon(Icons.view_week), text: 'Horizontal'),
-                Tab(icon: Icon(Icons.date_range), text: 'Date Picker'),
-                Tab(icon: Icon(Icons.grid_view), text: 'Year View'),
-                Tab(icon: Icon(Icons.brush), text: 'Custom'),
-              ],
+              onPressed: widget.onToggleTheme,
+              tooltip: 'Toggle Light/Dark',
             ),
-          ),
-          body: TabBarView(
-            children: [
-              NepaliCalendarExample(language: currentLanguage),
-              HorizontalCalendarExample(language: currentLanguage),
-              DatePickerExample(language: currentLanguage),
-              YearCalendarExample(language: currentLanguage),
-              CustomBuildersExample(language: currentLanguage),
+            IconButton(
+              icon: const Icon(Icons.language),
+              onPressed: _toggleLanguage,
+              tooltip: 'Toggle Language',
+            ),
+          ],
+          bottom: const TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.center,
+            tabs: [
+              Tab(icon: Icon(Icons.calendar_month), text: 'Calendar'),
+              Tab(icon: Icon(Icons.view_week), text: 'Horizontal'),
+              Tab(icon: Icon(Icons.date_range), text: 'Date Picker'),
+              Tab(icon: Icon(Icons.grid_view), text: 'Year View'),
+              Tab(icon: Icon(Icons.brush), text: 'Custom'),
             ],
           ),
+        ),
+        body: TabBarView(
+          children: [
+            NepaliCalendarExample(language: currentLanguage),
+            HorizontalCalendarExample(language: currentLanguage),
+            DatePickerExample(language: currentLanguage),
+            YearCalendarExample(language: currentLanguage),
+            CustomBuildersExample(language: currentLanguage),
+          ],
         ),
       ),
     );
