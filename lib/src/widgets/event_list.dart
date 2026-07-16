@@ -1,3 +1,7 @@
+// The package deliberately uses its own deprecated members: back-compatible
+// code paths have to keep calling them until they are removed in 1.0.0.
+// ignore_for_file: deprecated_member_use_from_same_package
+
 // Import Flutter material package for UI components
 import 'package:flutter/material.dart';
 
@@ -5,6 +9,17 @@ import 'package:flutter/material.dart';
 import '../src.dart';
 
 // Widget to display a list of calendar events with generic type T
+/// The event list is an implementation detail of [NepaliCalendar]. To build
+/// your own, query [CalendarEventIndex.eventsInMonth] and render it however
+/// you like.
+///
+/// **Deprecated:** this was never intended as public API; it became so
+/// because the package exported every internal file. It will be removed in
+/// 1.0.0. If you depend on it, please open an issue describing your use
+/// case.
+@Deprecated(
+  'Internal implementation detail, not intended as public API. Will be removed in 1.0.0.',
+)
 class EventList<T> extends StatelessWidget {
   // Optional list of calendar events
   final List<CalendarEvent<T>>? eventList;

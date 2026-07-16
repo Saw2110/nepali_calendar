@@ -1,3 +1,7 @@
+// These tests exercise deprecated members on purpose -- they must keep working
+// until 1.0.0, and that is exactly what is being verified.
+// ignore_for_file: deprecated_member_use_from_same_package
+
 // ignore_for_file: avoid_redundant_argument_values
 
 import 'package:flutter/material.dart';

@@ -99,12 +99,31 @@ built once per event-list change rather than once per month page.
 - `CalendarCellData.event` and `CalendarCell.event` — a date can have several
   events and these expose only the first. Use `events`. Existing
   `cellBuilder`s that read `data.event` keep working.
+- **The internal rendering widgets**, all scheduled for removal in 1.0.0:
+  `CalendarCell`, `CalendarGrid`, `CalendarHeader`, `CalendarMonthView`,
+  `EmptyCell`, `EventList` and `WeekdayHeader`.
+
+  These were never intended as public API — they became public because the
+  package exported every internal file. They still work and are unchanged; the
+  deprecation is notice, not removal. Use `NepaliCalendar`,
+  `NepaliYearCalendar` and `CalendarBuilder` instead, or
+  `CalendarEventIndex.eventsInMonth` to build your own event list. (`EmptyCell`
+  is unused even inside the package: it renders a `SizedBox.shrink()`.)
+
+  If you rely on one of these, please open an issue before 1.0.0.
+
+  Everything else stays public: the widgets, controllers, models, theme,
+  enums, and the formatting utilities `MonthUtils`, `WeekUtils`,
+  `NepaliNumberConverter` and `CalendarUtils`.
 
 ### Changed
 
-- Nothing that alters existing behaviour. `NepaliCalendar` no longer asserts
-  that `checkIsHoliday` accompanies `eventList`; removing a constraint cannot
-  break a caller that satisfied it.
+- `NepaliCalendar` no longer asserts that `checkIsHoliday` accompanies
+  `eventList`. Removing a constraint cannot break a caller that satisfied it.
+- `CalendarUtils.calenderyearStart` is now `const` rather than a mutable
+  static. Reading it is unaffected. **Assigning to it is now a compile error**
+  — but doing so corrupted every date calculation in the package at once, so
+  there was never a working reason to.
 
 ---
 

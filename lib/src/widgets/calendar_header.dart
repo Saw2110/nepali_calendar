@@ -5,6 +5,16 @@ import 'package:flutter/material.dart';
 import '../src.dart';
 
 // Widget to display the calendar header with month/year and navigation buttons
+/// The header is an implementation detail of [NepaliCalendar]. To replace it,
+/// use `CalendarBuilder.headerBuilder`.
+///
+/// **Deprecated:** this was never intended as public API; it became so
+/// because the package exported every internal file. It will be removed in
+/// 1.0.0. If you depend on it, please open an issue describing your use
+/// case.
+@Deprecated(
+  'Internal implementation detail, not intended as public API. Will be removed in 1.0.0.',
+)
 class CalendarHeader extends StatelessWidget {
   // Selected date to display in header
   final NepaliDateTime selectedDate;

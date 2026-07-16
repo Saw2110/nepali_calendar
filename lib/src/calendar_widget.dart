@@ -1,3 +1,7 @@
+// The package deliberately uses its own deprecated members: back-compatible
+// code paths have to keep calling them until they are removed in 1.0.0.
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'dart:math' as math;
 
 // Import Flutter material package for UI components
