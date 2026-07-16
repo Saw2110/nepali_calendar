@@ -45,12 +45,29 @@ const double _dialogCornerRadius = 28.0;
 ///
 /// Returns a [Future] that resolves to the selected [NepaliDateTime] or `null`
 /// if the picker was dismissed without selecting a date.
+/// The [initialMode] decides which view the picker opens on. Use
+/// [NepaliDatePickerMode.year] for dates far from today, such as a birthday.
+/// The picker returns a full date regardless.
+///
+/// [minDate] and [maxDate] bound the selection. Dates outside the range are
+/// shown but dimmed and unselectable, and month/year navigation will not leave
+/// it. Both are clamped to the range the bundled calendar data covers
+/// (BS 1970-2100), and an [initialDate] outside the range is pulled to the
+/// nearest date inside it rather than throwing.
+///
+/// [confirmText] and [cancelText] override the action labels, which otherwise
+/// follow the configured [Language].
 Future<NepaliDateTime?> showNepaliDatePicker({
   required BuildContext context,
   NepaliDateTime? initialDate,
   NepaliCalendarStyle calendarStyle = const NepaliCalendarStyle(),
   bool barrierDismissible = true,
   Color? barrierColor,
+  NepaliDatePickerMode initialMode = NepaliDatePickerMode.day,
+  NepaliDateTime? minDate,
+  NepaliDateTime? maxDate,
+  String? confirmText,
+  String? cancelText,
 }) async {
   return showDialog<NepaliDateTime>(
     context: context,
@@ -60,6 +77,11 @@ Future<NepaliDateTime?> showNepaliDatePicker({
       return _NepaliDatePickerDialog(
         initialDate: initialDate,
         calendarStyle: calendarStyle,
+        initialMode: initialMode,
+        minDate: minDate,
+        maxDate: maxDate,
+        confirmText: confirmText,
+        cancelText: cancelText,
       );
     },
   );
@@ -73,10 +95,20 @@ Future<NepaliDateTime?> showNepaliDatePicker({
 class _NepaliDatePickerDialog extends StatelessWidget {
   final NepaliDateTime? initialDate;
   final NepaliCalendarStyle calendarStyle;
+  final NepaliDatePickerMode initialMode;
+  final NepaliDateTime? minDate;
+  final NepaliDateTime? maxDate;
+  final String? confirmText;
+  final String? cancelText;
 
   const _NepaliDatePickerDialog({
     this.initialDate,
     required this.calendarStyle,
+    required this.initialMode,
+    this.minDate,
+    this.maxDate,
+    this.confirmText,
+    this.cancelText,
   });
 
   @override
@@ -110,8 +142,13 @@ class _NepaliDatePickerDialog extends StatelessWidget {
       child: NepaliDatePicker(
         initialDate: initialDate,
         calendarStyle: calendarStyle,
-        // The picker pops the dialog with the chosen date itself, so nothing
-        // needs doing here.
+        initialMode: initialMode,
+        minDate: minDate,
+        maxDate: maxDate,
+        confirmText: confirmText,
+        cancelText: cancelText,
+        // No onConfirm/onCancel: the picker then pops the dialog itself, with
+        // the chosen date, which is what this future resolves to.
         onDateSelected: (_) {},
       ),
     );
