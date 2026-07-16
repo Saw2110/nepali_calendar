@@ -382,14 +382,23 @@ class NepaliCalendarTheme extends InheritedTheme {
   /// language, weekend days, week start, whether to show English dates -- is
   /// behaviour rather than appearance, so it is carried across and a caller
   /// who passes a style purely to set the language still gets themed colours.
+  /// [fallback] stands in when there is no [NepaliCalendarTheme] in the tree.
+  ///
+  /// The calendar widgets leave it null, so with no theme they render exactly
+  /// as they did before this class existed. [NepaliDatePicker] passes
+  /// [NepaliCalendarThemeData.fromContext], because it was redesigned in 0.1.0
+  /// and no longer resembles its old self anyway -- there is no prior
+  /// appearance left to preserve, and defaulting to the Material theme is what
+  /// makes its dark mode work without configuration.
   static NepaliCalendarStyle resolve(
     BuildContext context,
-    NepaliCalendarStyle? style,
-  ) {
-    final theme = maybeOf(context);
+    NepaliCalendarStyle? style, {
+    NepaliCalendarThemeData? fallback,
+  }) {
+    final theme = maybeOf(context) ?? fallback;
     final effective = style ?? const NepaliCalendarStyle();
 
-    // No theme in the tree: render exactly as before this class existed.
+    // No theme and no fallback: render exactly as before this class existed.
     if (theme == null) return effective;
 
     // A style whose appearance was customised wins outright.
