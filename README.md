@@ -51,6 +51,25 @@ NepaliCalendarTheme(
 )
 ```
 
+For app-wide theming, put it **above the Navigator** — `MaterialApp.builder` is
+the simplest place:
+
+```dart
+MaterialApp(
+  builder: (context, child) => NepaliCalendarTheme(
+    data: NepaliCalendarThemeData.fromContext(context),
+    child: child!,
+  ),
+  home: const HomePage(),
+)
+```
+
+Placed inside `home:` it covers that subtree and any dialog opened from it
+(including `showNepaliDatePicker`), but not a route pushed with
+`Navigator.push` — the pushed route is a sibling under the Navigator, not a
+descendant of `home:`. This is ordinary Flutter behaviour and applies equally
+to Material's own `Theme`.
+
 `fromContext` derives the palette and typography from your app's Material
 `ColorScheme` and `TextTheme`, so the calendar follows your light/dark mode
 automatically. You can also use `NepaliCalendarThemeData.light()`, `.dark()`,
