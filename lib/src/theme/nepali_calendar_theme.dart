@@ -289,6 +289,28 @@ class NepaliCalendarThemeData {
 /// )
 /// ```
 ///
+/// ## Where to put it
+///
+/// For app-wide theming, place it **above the Navigator** -- most simply in
+/// `MaterialApp.builder`:
+///
+/// ```dart
+/// MaterialApp(
+///   builder: (context, child) => NepaliCalendarTheme(
+///     data: NepaliCalendarThemeData.fromContext(context),
+///     child: child!,
+///   ),
+///   home: const HomePage(),
+/// )
+/// ```
+///
+/// Placed inside `home:` instead, it covers that subtree and any dialog opened
+/// from it -- including [showNepaliDatePicker], because Flutter captures
+/// [InheritedTheme]s across a dialog boundary -- but **not** a route pushed
+/// with `Navigator.push`, since the new route is a sibling under the Navigator
+/// rather than a descendant of `home:`. That is ordinary Flutter behaviour and
+/// applies to Material's own `Theme` in the same position.
+///
 /// ## Resolution order
 ///
 /// Each widget picks its style as follows, first match winning:
@@ -314,7 +336,14 @@ class NepaliCalendarThemeData {
 ///   child: NepaliCalendar(),
 /// )
 /// ```
-class NepaliCalendarTheme extends InheritedWidget {
+/// It extends [InheritedTheme] rather than [InheritedWidget] so that it
+/// survives a route boundary. `showDialog` and friends insert their content
+/// into the Navigator's overlay, whose ancestors are the Navigator and the app
+/// -- not whatever sits in `home:`. A plain InheritedWidget placed there would
+/// be invisible to [showNepaliDatePicker]. Flutter captures and re-injects
+/// [InheritedTheme]s across that boundary, so being one is what lets a theme
+/// declared anywhere above the call site reach a dialog.
+class NepaliCalendarTheme extends InheritedTheme {
   /// The colours and typography to apply.
   final NepaliCalendarThemeData data;
 
@@ -323,6 +352,11 @@ class NepaliCalendarTheme extends InheritedWidget {
     required this.data,
     required super.child,
   });
+
+  @override
+  Widget wrap(BuildContext context, Widget child) {
+    return NepaliCalendarTheme(data: data, child: child);
+  }
 
   /// The nearest enclosing theme, or `null` if there is none.
   static NepaliCalendarThemeData? maybeOf(BuildContext context) {
