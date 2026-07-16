@@ -14,6 +14,9 @@ class CalendarMonthView<T> extends StatelessWidget {
   final NepaliDateTime selectedDate;
   // Optional list of calendar events
   final List<CalendarEvent<T>>? eventList;
+
+  /// A prebuilt index over [eventList]. See [CalendarGrid.eventIndex].
+  final CalendarEventIndex<T>? eventIndex;
   // Callback function when a day is selected
   final OnDateSelected onDaySelected;
   // Style configuration for the calendar
@@ -34,6 +37,7 @@ class CalendarMonthView<T> extends StatelessWidget {
     required this.month,
     required this.selectedDate,
     required this.eventList,
+    this.eventIndex,
     required this.onDaySelected,
     required this.calendarStyle,
     this.cellBuilder,
@@ -58,6 +62,7 @@ class CalendarMonthView<T> extends StatelessWidget {
           month: month,
           selectedDate: selectedDate,
           eventList: eventList,
+          eventIndex: eventIndex,
           onDaySelected: onDaySelected,
           calendarStyle: calendarStyle,
           cellBuilder: cellBuilder,
@@ -67,16 +72,15 @@ class CalendarMonthView<T> extends StatelessWidget {
     );
 
     // Wrap with table-style border container if borders are enabled
+    final borderColor =
+        calendarStyle.cellsStyle.borderColor.withValues(alpha: 0.3);
+
     final content = calendarStyle.effectiveConfig.showBorder
         ? DecoratedBox(
             decoration: BoxDecoration(
               border: Border(
-                top: BorderSide(
-                  color: Colors.grey.withValues(alpha: 0.3),
-                ),
-                left: BorderSide(
-                  color: Colors.grey.withValues(alpha: 0.3),
-                ),
+                top: BorderSide(color: borderColor),
+                left: BorderSide(color: borderColor),
               ),
             ),
             child: column,

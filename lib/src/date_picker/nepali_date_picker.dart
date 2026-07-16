@@ -65,6 +65,11 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
   late AnimationController _animationController;
   late ScrollController _yearScrollController;
 
+  /// The style to render with, resolved in [build] against any ambient
+  /// [NepaliCalendarTheme]. Held as a field because the section builders
+  /// below have no [BuildContext] of their own.
+  NepaliCalendarStyle _style = const NepaliCalendarStyle();
+
   @override
   void initState() {
     super.initState();
@@ -244,7 +249,7 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     final weekday = firstDay.weekday; // 0=Sunday, 1=Monday, ..., 6=Saturday
 
     // Normalize based on week start type
-    switch (widget.calendarStyle.effectiveConfig.weekStartType) {
+    switch (_style.effectiveConfig.weekStartType) {
       case WeekStartType.sunday:
         return weekday; // No change needed
       case WeekStartType.monday:
@@ -274,8 +279,8 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
 
   /// Build header with navigation
   Widget _buildHeader() {
-    final effectiveConfig = widget.calendarStyle.effectiveConfig;
-    final todayButtonColor = widget.calendarStyle.cellsStyle.selectedColor;
+    final effectiveConfig = _style.effectiveConfig;
+    final todayButtonColor = _style.cellsStyle.selectedColor;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
@@ -319,8 +324,7 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
                     _getHeaderText(),
                     overflow: TextOverflow.ellipsis,
                     softWrap: false,
-                    style: widget.calendarStyle.headersStyle.monthHeaderStyle
-                        .copyWith(
+                    style: _style.headersStyle.monthHeaderStyle.copyWith(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -0.3,
@@ -356,7 +360,7 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
 
   /// Get header text based on current view mode
   String _getHeaderText() {
-    final effectiveConfig = widget.calendarStyle.effectiveConfig;
+    final effectiveConfig = _style.effectiveConfig;
     final monthName = MonthUtils.formattedMonth(
       displayDate.month,
       effectiveConfig.language,
@@ -395,9 +399,9 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
 
   /// Build weekday headers based on week start configuration
   Widget _buildWeekDayHeaders() {
-    final effectiveConfig = widget.calendarStyle.effectiveConfig;
-    final weekendColor = widget.calendarStyle.cellsStyle.weekDayColor;
-    final weekdayStyle = widget.calendarStyle.headersStyle.weekHeaderStyle;
+    final effectiveConfig = _style.effectiveConfig;
+    final weekendColor = _style.cellsStyle.weekDayColor;
+    final weekdayStyle = _style.headersStyle.weekHeaderStyle;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -434,7 +438,7 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
 
   /// Get weekday order based on week start configuration
   List<int> _getWeekdayOrder() {
-    switch (widget.calendarStyle.effectiveConfig.weekStartType) {
+    switch (_style.effectiveConfig.weekStartType) {
       case WeekStartType.sunday:
         return [0, 1, 2, 3, 4, 5, 6]; // Sun-Sat
       case WeekStartType.monday:
@@ -545,8 +549,8 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
     bool isToday = false,
     VoidCallback? onTap,
   }) {
-    final effectiveConfig = widget.calendarStyle.effectiveConfig;
-    final cellStyle = widget.calendarStyle.cellsStyle;
+    final effectiveConfig = _style.effectiveConfig;
+    final cellStyle = _style.cellsStyle;
 
     final dayText = effectiveConfig.language == Language.nepali
         ? NepaliNumberConverter.englishToNepali(day.toString())
@@ -570,12 +574,12 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
             : Colors.transparent;
 
     final textColor = isSelected
-        ? Colors.white
+        ? _style.cellsStyle.onHighlightColor
         : !isCurrentMonth
-            ? Colors.grey.withValues(alpha: 0.4)
+            ? _style.cellsStyle.dimmedDateTextColor.withValues(alpha: 0.4)
             : isWeekend
                 ? cellStyle.weekDayColor
-                : cellStyle.dayStyle.color ?? Colors.black;
+                : cellStyle.dayStyle.color ?? cellStyle.dateTextColor;
 
     final borderColor = isToday && !isSelected ? cellStyle.todayColor : null;
 
@@ -608,9 +612,9 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
 
   /// Build year grid view
   Widget _buildYearGrid() {
-    final effectiveConfig = widget.calendarStyle.effectiveConfig;
-    final cellStyle = widget.calendarStyle.cellsStyle;
-    final yearStyle = widget.calendarStyle.headersStyle.yearHeaderStyle;
+    final effectiveConfig = _style.effectiveConfig;
+    final cellStyle = _style.cellsStyle;
+    final yearStyle = _style.headersStyle.yearHeaderStyle;
 
     final years = _selectableYears();
 
@@ -638,14 +642,15 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
             decoration: BoxDecoration(
               color: isSelected
                   ? cellStyle.selectedColor
-                  : Colors.grey.withValues(alpha: 0.1),
+                  : cellStyle.borderColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
               child: Text(
                 yearText,
                 style: yearStyle.copyWith(
-                  color: isSelected ? Colors.white : yearStyle.color,
+                  color:
+                      isSelected ? cellStyle.onHighlightColor : yearStyle.color,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   letterSpacing: -0.2,
@@ -660,9 +665,9 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
 
   /// Build month grid view
   Widget _buildMonthGrid() {
-    final effectiveConfig = widget.calendarStyle.effectiveConfig;
-    final cellStyle = widget.calendarStyle.cellsStyle;
-    final monthStyle = widget.calendarStyle.headersStyle.monthHeaderStyle;
+    final effectiveConfig = _style.effectiveConfig;
+    final cellStyle = _style.cellsStyle;
+    final monthStyle = _style.headersStyle.monthHeaderStyle;
 
     return GridView.builder(
       padding: const EdgeInsets.all(8),
@@ -688,14 +693,16 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
             decoration: BoxDecoration(
               color: isSelected
                   ? cellStyle.selectedColor
-                  : Colors.grey.withValues(alpha: 0.1),
+                  : cellStyle.borderColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
               child: Text(
                 monthName,
                 style: monthStyle.copyWith(
-                  color: isSelected ? Colors.white : monthStyle.color,
+                  color: isSelected
+                      ? cellStyle.onHighlightColor
+                      : monthStyle.color,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.2,
@@ -710,11 +717,17 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
 
   @override
   Widget build(BuildContext context) {
+    // Explicit style > ambient NepaliCalendarTheme > pre-0.1.0 defaults.
+    _style = NepaliCalendarTheme.resolve(context, widget.calendarStyle);
+
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildHeader(),
-        Divider(height: 1, color: Colors.grey[200]),
+        Divider(
+          height: 1,
+          color: _style.cellsStyle.borderColor.withValues(alpha: 0.2),
+        ),
         Flexible(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -793,7 +806,7 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
                 Navigator.of(context).pop();
               },
               child: Text(
-                widget.calendarStyle.effectiveConfig.language == Language.nepali
+                _style.effectiveConfig.language == Language.nepali
                     ? 'रद्द गर्नुहोस्'
                     : 'Cancel',
                 overflow: TextOverflow.ellipsis,
@@ -813,7 +826,7 @@ class _NepaliDatePickerState extends State<NepaliDatePicker>
                 Navigator.of(context).pop(selectedDate);
               },
               child: Text(
-                widget.calendarStyle.effectiveConfig.language == Language.nepali
+                _style.effectiveConfig.language == Language.nepali
                     ? 'ठीक छ'
                     : 'OK',
                 overflow: TextOverflow.ellipsis,

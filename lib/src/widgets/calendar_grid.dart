@@ -6,7 +6,20 @@ class CalendarGrid<T> extends StatelessWidget {
   final int year;
   final int month;
   final NepaliDateTime selectedDate;
+
+  /// The events to mark on the grid.
+  ///
+  /// Prefer passing a prebuilt [eventIndex]: this list is re-indexed on every
+  /// build, whereas an index can be built once and reused across months.
   final List<CalendarEvent<T>>? eventList;
+
+  /// A prebuilt index over [eventList].
+  ///
+  /// When null, one is built from [eventList] on each build. [NepaliCalendar]
+  /// supplies this so the index is built once per event-list change rather
+  /// than once per month page.
+  final CalendarEventIndex<T>? eventIndex;
+
   final OnDateSelected onDaySelected;
   final NepaliCalendarStyle calendarStyle;
   final Widget Function(CalendarCellData<T>)? cellBuilder;
@@ -25,6 +38,7 @@ class CalendarGrid<T> extends StatelessWidget {
     required this.month,
     required this.selectedDate,
     required this.eventList,
+    this.eventIndex,
     required this.onDaySelected,
     required this.calendarStyle,
     this.cellBuilder,
@@ -41,7 +55,8 @@ class CalendarGrid<T> extends StatelessWidget {
     final daysCountInMonth = _getDaysInMonth(year, month);
 
     // Build the grid items with 6 rows (42 cells)
-    final gridItems = _buildCalendarGrid(weekdayOfFirstDay, daysCountInMonth);
+    final gridItems =
+        _buildCalendarGrid(weekdayOfFirstDay, daysCountInMonth, _index);
 
     final gridView = GridView.builder(
       shrinkWrap: true,
@@ -66,7 +81,11 @@ class CalendarGrid<T> extends StatelessWidget {
   }
 
   // Method to build the complete calendar grid with 6 rows
-  List<Widget> _buildCalendarGrid(int weekdayOfFirstDay, int daysCountInMonth) {
+  List<Widget> _buildCalendarGrid(
+    int weekdayOfFirstDay,
+    int daysCountInMonth,
+    CalendarEventIndex<T> index,
+  ) {
     final gridItems = <Widget>[];
 
     // Add previous month days
@@ -78,14 +97,14 @@ class CalendarGrid<T> extends StatelessWidget {
       for (int i = weekdayOfFirstDay - 1; i >= 0; i--) {
         final day = daysInPrevMonth - i;
         final date = NepaliDateTime(year: prevYear, month: prevMonth, day: day);
-        final event = _getEventForDate(date);
+        final events = index.eventsOn(date);
 
         gridItems.add(
           CalendarCell<T>(
             day: day,
             date: date,
             selectedDate: selectedDate,
-            event: event,
+            events: events,
             onDaySelected: onDaySelected,
             calendarStyle: calendarStyle,
             isDimmed: true,
@@ -98,14 +117,14 @@ class CalendarGrid<T> extends StatelessWidget {
     // Add current month days
     for (int day = 1; day <= daysCountInMonth; day++) {
       final date = NepaliDateTime(year: year, month: month, day: day);
-      final event = _getEventForDate(date);
+      final events = index.eventsOn(date);
 
       gridItems.add(
         CalendarCell<T>(
           day: day,
           date: date,
           selectedDate: selectedDate,
-          event: event,
+          events: events,
           onDaySelected: onDaySelected,
           calendarStyle: calendarStyle,
           cellBuilder: cellBuilder,
@@ -121,14 +140,14 @@ class CalendarGrid<T> extends StatelessWidget {
 
       for (int day = 1; day <= remainingCells; day++) {
         final date = NepaliDateTime(year: nextYear, month: nextMonth, day: day);
-        final event = _getEventForDate(date);
+        final events = index.eventsOn(date);
 
         gridItems.add(
           CalendarCell<T>(
             day: day,
             date: date,
             selectedDate: selectedDate,
-            event: event,
+            events: events,
             onDaySelected: onDaySelected,
             calendarStyle: calendarStyle,
             isDimmed: true,
@@ -141,21 +160,12 @@ class CalendarGrid<T> extends StatelessWidget {
     return gridItems;
   }
 
-  // Method to get the event for a specific date
-  CalendarEvent<T>? _getEventForDate(NepaliDateTime date) {
-    if (eventList == null) return null; // Return null if no events are provided
-    try {
-      // Find the event that matches the given date
-      return eventList!.firstWhere(
-        (e) =>
-            e.date.year == date.year &&
-            e.date.month == date.month &&
-            e.date.day == date.day,
-      );
-    } catch (e) {
-      return null;
-    }
-  }
+  /// The index to look events up in.
+  ///
+  /// Uses the prebuilt [eventIndex] when given; otherwise builds one from
+  /// [eventList] so callers constructing a [CalendarGrid] directly still work.
+  CalendarEventIndex<T> get _index =>
+      eventIndex ?? CalendarEventIndex<T>.fromList(eventList);
 
   // Method to get the number of days in a specific month and year
   int _getDaysInMonth(int year, int month) {
@@ -179,15 +189,14 @@ class CalendarGrid<T> extends StatelessWidget {
   /// This creates a clean grid pattern when combined with the container's
   /// top and left borders.
   Widget _wrapWithTableBorder(Widget child) {
+    final borderColor =
+        calendarStyle.cellsStyle.borderColor.withValues(alpha: 0.3);
+
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border(
-          right: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.3),
-          ),
-          bottom: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.3),
-          ),
+          right: BorderSide(color: borderColor),
+          bottom: BorderSide(color: borderColor),
         ),
       ),
       child: child,

@@ -70,6 +70,11 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
   late NepaliDateTime _selectedDate;
   late NepaliDateTime _startDate;
 
+  /// The style to render with, resolved in [build] against any ambient
+  /// [NepaliCalendarTheme]. Held as a field because the colour helpers below
+  /// have no [BuildContext] of their own.
+  NepaliCalendarStyle _style = const NepaliCalendarStyle();
+
   @override
   void initState() {
     super.initState();
@@ -86,6 +91,9 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
 
   @override
   Widget build(BuildContext context) {
+    // Explicit style > ambient NepaliCalendarTheme > pre-0.1.0 defaults.
+    _style = NepaliCalendarTheme.resolve(context, widget.calendarStyle);
+
     // Scale with the user's text size preference so the strip does not clip
     // for anyone relying on larger system text.
     final stripHeight =
@@ -119,20 +127,19 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
   Widget _buildMonthTitle() {
     final month = MonthUtils.formattedMonth(
       _selectedDate.month,
-      widget.calendarStyle.effectiveConfig.language,
+      _style.effectiveConfig.language,
     );
-    final year =
-        widget.calendarStyle.effectiveConfig.language == Language.english
-            ? "${_selectedDate.year}"
-            : NepaliNumberConverter.englishToNepali(
-                _selectedDate.year.toString(),
-              );
+    final year = _style.effectiveConfig.language == Language.english
+        ? "${_selectedDate.year}"
+        : NepaliNumberConverter.englishToNepali(
+            _selectedDate.year.toString(),
+          );
 
     ///
     return Text(
       "$year, $month",
       textAlign: TextAlign.start,
-      style: widget.calendarStyle.headersStyle.monthHeaderStyle,
+      style: _style.headersStyle.monthHeaderStyle,
     );
   }
 
@@ -151,7 +158,7 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
           date: date,
           textColor: _getCellTextColor(isToday, isSelected, date.weekday),
           backgroundColor: _getCellColor(isToday, isSelected, date.weekday),
-          style: widget.calendarStyle,
+          style: _style,
           onDatePressed: () => _handleDateSelection(date),
         );
       },
@@ -179,18 +186,16 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
     final isWeekend = _isWeekend(weekday);
 
     if (isToday && !isWeekend) {
-      return widget.calendarStyle.cellsStyle.todayColor;
+      return _style.cellsStyle.todayColor;
     }
     if (isToday && isWeekend) {
-      return widget.calendarStyle.cellsStyle.weekDayColor;
+      return _style.cellsStyle.weekDayColor;
     }
     if (isSelected && !isWeekend) {
-      return widget.calendarStyle.cellsStyle.selectedColor
-          .withValues(alpha: 0.2);
+      return _style.cellsStyle.selectedColor.withValues(alpha: 0.2);
     }
     if (isSelected && isWeekend) {
-      return widget.calendarStyle.cellsStyle.weekDayColor
-          .withValues(alpha: 0.2);
+      return _style.cellsStyle.weekDayColor.withValues(alpha: 0.2);
     }
 
     return Colors.transparent; // Default case
@@ -200,22 +205,23 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
   Color _getCellTextColor(bool isToday, bool isSelected, int weekday) {
     final isWeekend = _isWeekend(weekday);
 
-    if (isToday) return Colors.white; // Today always white text
+    // Today sits on a filled highlight, so use the on-highlight colour.
+    if (isToday) return _style.cellsStyle.onHighlightColor;
     if (isSelected && !isWeekend) {
-      return widget.calendarStyle.cellsStyle.selectedColor;
+      return _style.cellsStyle.selectedColor;
     }
     if (isSelected && isWeekend) {
-      return widget.calendarStyle.cellsStyle.weekDayColor;
+      return _style.cellsStyle.weekDayColor;
     }
-    if (isWeekend) return widget.calendarStyle.cellsStyle.weekDayColor;
-    return Colors.black; // Default text color
+    if (isWeekend) return _style.cellsStyle.weekDayColor;
+    return _style.cellsStyle.dateTextColor;
   }
 
   // Method to check if a weekday is a weekend based on the weekend type
   bool _isWeekend(int weekday) {
     return WeekUtils.isWeekend(
       weekday,
-      widget.calendarStyle.effectiveConfig.weekendType,
+      _style.effectiveConfig.weekendType,
     );
   }
 }
