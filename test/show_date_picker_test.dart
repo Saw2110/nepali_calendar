@@ -61,55 +61,41 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  group('surface matches the palette in use', () {
-    /// The surface must match the palette the picker actually draws with, not
-    /// the app's brightness. Up to 0.1.0 it was hard-coded white; a naive fix
-    /// that keys off the ColorScheme alone puts the legacy black date text on
-    /// a dark sheet, which is just as unreadable from the other direction.
-    testWidgets('with a NepaliCalendarTheme, follows the themed surface',
-        (tester) async {
-      await tester.pumpWidget(
-        host(brightness: Brightness.dark, themed: true),
-      );
-      await open(tester);
+  /// The colour the alert actually paints behind the picker.
+  ///
+  /// The AlertDialog declares no backgroundColor -- that is the point -- so it
+  /// has to be read off the Material that Dialog builds.
+  Color alertSurface(WidgetTester tester) {
+    final material = tester.widget<Material>(
+      find
+          .descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    return material.color!;
+  }
 
-      final dialog = tester.widget<Dialog>(find.byType(Dialog));
-      expect(
-        dialog.backgroundColor,
-        ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.dark,
-        ).surfaceContainerHigh,
-      );
-    });
-
-    testWidgets('without a NepaliCalendarTheme, keeps the legacy light surface',
-        (tester) async {
-      // The picker draws with the legacy light palette here, so the sheet
-      // stays light -- unchanged from 0.0.7, and readable.
-      await tester.pumpWidget(
-        host(brightness: Brightness.dark, themed: false),
-      );
-      await open(tester);
-
-      final dialog = tester.widget<Dialog>(find.byType(Dialog));
-      expect(dialog.backgroundColor, Colors.white);
-    });
-
-    /// The property that actually matters, asserted directly: whatever the
-    /// combination, you can read the dates.
+  group('readable in every theme', () {
+    /// The picker is shown as a plain AlertDialog, so its surface comes from
+    /// the app's dialogTheme -- dark in a dark app. Its *contents* therefore
+    /// have to follow the Material theme too, or a dark app gets the legacy
+    /// light palette's black dates on a dark sheet. That is why the picker
+    /// falls back to NepaliCalendarThemeData.fromContext where the calendar
+    /// widgets fall back to the legacy palette.
+    ///
+    /// Asserted as contrast rather than as particular colours: the property
+    /// that matters is that you can read the dates.
     for (final brightness in Brightness.values) {
       for (final themed in [true, false]) {
         testWidgets(
             'date text is readable (${brightness.name}, themed: $themed)',
             (tester) async {
-          await tester.pumpWidget(
-            host(brightness: brightness, themed: themed),
-          );
+          await tester.pumpWidget(host(brightness: brightness, themed: themed));
           await open(tester);
 
-          final surface =
-              tester.widget<Dialog>(find.byType(Dialog)).backgroundColor!;
+          final surface = alertSurface(tester);
           // BS 2081-01-01 is a Saturday, so the 12th is a plain weekday and
           // carries the ordinary date colour rather than the weekend one.
           final dayColour =
@@ -124,6 +110,19 @@ void main() {
         });
       }
     }
+
+    testWidgets('the alert brings no surface of its own', (tester) async {
+      await tester.pumpWidget(host(brightness: Brightness.dark));
+      await open(tester);
+
+      final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+      expect(
+        dialog.backgroundColor,
+        isNull,
+        reason: 'it should look like every other alert in the app',
+      );
+      expect(dialog.shape, isNull);
+    });
   });
 
   group('result', () {

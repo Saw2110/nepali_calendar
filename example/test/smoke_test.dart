@@ -69,6 +69,24 @@ void main() {
     }
   });
 
+  /// The picker opens as an alert dialog and closes cleanly.
+  testWidgets('the date picker opens and cancels', (tester) async {
+    await tester.pumpWidget(const MainApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Date Picker'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('मिति छान्नुहोस्').last);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    await tester.tap(find.text('रद्द गर्नुहोस्'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
   testWidgets('every tab survives a language switch', (tester) async {
     await tester.pumpWidget(const MainApp());
     await tester.pumpAndSettle();
