@@ -648,121 +648,160 @@ class _DatePickerExampleState extends State<DatePickerExample> {
 }
 
 // ============================================================================
-// 5. CUSTOM
+// 5. CUSTOM -- three ready-made designs
 // ============================================================================
 
-/// Shows what `CalendarBuilder` can do: every visible part of the calendar --
-/// header, weekday row, day cell and event row -- replaced with a custom
-/// design, while the package still handles the dates, layout and event lookup.
+/// `CalendarBuilder` replaces the header, the weekday row, the day cell and the
+/// event row. The package keeps owning the dates, the grid layout and the event
+/// lookup, so a custom design is a drawing job rather than a rewrite.
 ///
-/// The colours come from `data.style`, which [NepaliCalendar] has already
-/// resolved against the ambient [NepaliCalendarTheme]. That is what lets a
-/// fully custom design follow light and dark mode for free — hard-coding
-/// `Colors.white` here would look right in one mode and unreadable in the
-/// other.
-class CustomBuildersExample extends StatelessWidget {
+/// Three are shown because "custom" means different things per product, and a
+/// single sample only ever demonstrates one of them:
+///
+/// * **Minimal** -- a personal calendar. Airy, circular, quiet event dots.
+/// * **Agenda** -- a work calendar. Filled tiles and per-day counts, so a busy
+///   stretch is obvious without reading anything.
+/// * **Booking** -- availability rather than events. The grid encodes open,
+///   limited and closed, with a legend and per-day slots.
+///
+/// Every colour comes from the theme: `Theme.of(context).colorScheme` for
+/// surfaces, and `data.style` for calendar-semantic colours, which the calendar
+/// has already resolved against the ambient [NepaliCalendarTheme]. Hard-coding
+/// one here would look right in one mode and unreadable in the other.
+enum _CustomDesign {
+  minimal('Minimal'),
+  agenda('Agenda'),
+  booking('Booking');
+
+  const _CustomDesign(this.label);
+
+  final String label;
+}
+
+/// Built once. Rebuilding it per frame would re-index the whole event list on
+/// every rebuild.
+final _eventIndex = CalendarEventIndex.fromList(eventList);
+
+/// Steps the calendar a month at a time.
+///
+/// `headerBuilder` is handed the same [PageController] the calendar pages with,
+/// so a custom header drives navigation without any extra plumbing.
+void _stepMonth(PageController controller, int delta) {
+  controller.animateToPage(
+    (controller.page?.round() ?? 0) + delta,
+    duration: const Duration(milliseconds: 300),
+    curve: Curves.easeOutCubic,
+  );
+}
+
+class CustomBuildersExample extends StatefulWidget {
   const CustomBuildersExample({super.key, required this.language});
 
   final Language language;
 
   @override
-  Widget build(BuildContext context) {
-    return NepaliCalendar<Events>(
-      eventList: eventList,
-      calendarBuilder: CalendarBuilder<Events>(
-        headerBuilder: (date, controller) =>
-            _Header(date: date, controller: controller, language: language),
-        weekdayBuilder: (data) => _Weekday(data: data),
-        cellBuilder: (data) => _DayCell(data: data, language: language),
-        eventBuilder: (context, index, date, event) =>
-            _EventRow(event: event, language: language),
-      ),
-      calendarStyle: NepaliCalendarStyle(
-        // Config only: no colours, so the theme still drives the palette.
-        config: CalendarConfig(
-          language: language,
-          weekendType: WeekendType.saturday,
-        ),
-      ),
-    );
-  }
+  State<CustomBuildersExample> createState() => _CustomBuildersExampleState();
 }
 
-/// A large month/year title with plain navigation controls.
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.date,
-    required this.controller,
-    required this.language,
-  });
-
-  final NepaliDateTime date;
-  final PageController controller;
-  final Language language;
-
-  void _step(int delta) {
-    controller.animateToPage(
-      (controller.page?.round() ?? 0) + delta,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
-    );
-  }
+class _CustomBuildersExampleState extends State<CustomBuildersExample> {
+  _CustomDesign _design = _CustomDesign.minimal;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final year = NepaliNumberConverter.formattedNumber(
-      '${date.year}',
-      language: language,
-    );
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  MonthUtils.formattedMonth(date.month, language),
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                Text(
-                  year,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.outline,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ],
+    return Column(
+      children: [
+        _buildSwitcher(),
+        Expanded(
+          child: NepaliCalendar<Events>(
+            // Keyed by design so a switch rebuilds from scratch rather than
+            // trying to reuse the previous design's element tree.
+            key: ValueKey(_design),
+            eventList: eventList,
+            calendarBuilder: _builderFor(_design),
+            calendarStyle: NepaliCalendarStyle(
+              // Config only: no colours, so the theme still drives the palette.
+              config: CalendarConfig(
+                language: widget.language,
+                weekendType: WeekendType.saturday,
+              ),
             ),
           ),
-          IconButton.filledTonal(
-            onPressed: () => _step(-1),
-            icon: const Icon(Icons.arrow_back_rounded, size: 18),
-            tooltip: 'Previous month',
-          ),
-          const SizedBox(width: 8),
-          IconButton.filledTonal(
-            onPressed: () => _step(1),
-            icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-            tooltip: 'Next month',
-          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSwitcher() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: SegmentedButton<_CustomDesign>(
+        // Labels only, no icons: three icon+label segments do not fit a small
+        // phone, and a segmented button has no graceful overflow.
+        segments: [
+          for (final design in _CustomDesign.values)
+            ButtonSegment(value: design, label: Text(design.label)),
         ],
+        selected: {_design},
+        showSelectedIcon: false,
+        onSelectionChanged: (selection) =>
+            setState(() => _design = selection.first),
       ),
     );
   }
+
+  CalendarBuilder<Events> _builderFor(_CustomDesign design) {
+    final language = widget.language;
+
+    switch (design) {
+      case _CustomDesign.minimal:
+        return CalendarBuilder<Events>(
+          headerBuilder: (date, controller) => _MinimalHeader(
+            date: date,
+            controller: controller,
+            language: language,
+          ),
+          weekdayBuilder: (data) => _QuietWeekday(data: data),
+          cellBuilder: (data) => _MinimalCell(data: data, language: language),
+          eventBuilder: (context, index, date, event) =>
+              _MinimalEventRow(event: event),
+        );
+
+      case _CustomDesign.agenda:
+        return CalendarBuilder<Events>(
+          headerBuilder: (date, controller) => _AgendaHeader(
+            date: date,
+            controller: controller,
+            language: language,
+          ),
+          weekdayBuilder: (data) => _BoldWeekday(data: data),
+          cellBuilder: (data) => _AgendaCell(data: data, language: language),
+          eventBuilder: (context, index, date, event) =>
+              _AgendaEventRow(event: event, language: language),
+        );
+
+      case _CustomDesign.booking:
+        return CalendarBuilder<Events>(
+          headerBuilder: (date, controller) => _BookingHeader(
+            date: date,
+            controller: controller,
+            language: language,
+          ),
+          weekdayBuilder: (data) => _QuietWeekday(data: data),
+          cellBuilder: (data) => _BookingCell(data: data, language: language),
+          eventBuilder: (context, index, date, event) =>
+              _BookingEventRow(event: event, language: language),
+        );
+    }
+  }
 }
 
-/// Weekday initials, spaced out and quiet.
-class _Weekday extends StatelessWidget {
-  const _Weekday({required this.data});
+// ---------------------------------------------------------------------------
+// Shared weekday rows
+// ---------------------------------------------------------------------------
+
+/// Quiet initials. Used by the designs that want the dates to carry the page.
+class _QuietWeekday extends StatelessWidget {
+  const _QuietWeekday({required this.data});
 
   final WeekdayData data;
 
@@ -786,10 +825,110 @@ class _Weekday extends StatelessWidget {
   }
 }
 
-/// A day: today is a filled dot, the selection is a ring, and events show as
-/// up to three dots underneath.
-class _DayCell extends StatelessWidget {
-  const _DayCell({required this.data, required this.language});
+/// Heavier initials on a tinted strip, to anchor a dense grid.
+class _BoldWeekday extends StatelessWidget {
+  const _BoldWeekday({required this.data});
+
+  final WeekdayData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            WeekUtils.formattedShortWeekDay(data.weekday, data.language),
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: data.isWeekend
+                  ? data.style.cellsStyle.weekDayColor
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Design 1: Minimal -- a personal calendar
+// ---------------------------------------------------------------------------
+
+/// A large month with the year beneath it, and plain navigation.
+class _MinimalHeader extends StatelessWidget {
+  const _MinimalHeader({
+    required this.date,
+    required this.controller,
+    required this.language,
+  });
+
+  final NepaliDateTime date;
+  final PageController controller;
+  final Language language;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  MonthUtils.formattedMonth(date.month, language),
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                Text(
+                  NepaliNumberConverter.formattedNumber(
+                    '${date.year}',
+                    language: language,
+                  ),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.outline,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton.filledTonal(
+            onPressed: () => _stepMonth(controller, -1),
+            icon: const Icon(Icons.arrow_back_rounded, size: 18),
+            tooltip: 'Previous month',
+          ),
+          const SizedBox(width: 8),
+          IconButton.filledTonal(
+            onPressed: () => _stepMonth(controller, 1),
+            icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+            tooltip: 'Next month',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Today is a filled disc, the selection a ring, and events show as dots.
+class _MinimalCell extends StatelessWidget {
+  const _MinimalCell({required this.data, required this.language});
 
   final CalendarCellData<Events> data;
   final Language language;
@@ -901,12 +1040,11 @@ class _EventDots extends StatelessWidget {
   }
 }
 
-/// An event row: a coloured rail, the title, and a holiday chip.
-class _EventRow extends StatelessWidget {
-  const _EventRow({required this.event, required this.language});
+/// A coloured rail, the title, and a holiday chip.
+class _MinimalEventRow extends StatelessWidget {
+  const _MinimalEventRow({required this.event});
 
   final CalendarEvent<Events> event;
-  final Language language;
 
   @override
   Widget build(BuildContext context) {
@@ -954,23 +1092,7 @@ class _EventRow extends StatelessWidget {
                           ),
                         ),
                         if (event.isHoliday)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: accent.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'Holiday',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: accent,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
+                          _Chip(label: 'Holiday', color: accent),
                       ],
                     ),
                     if (info != null && info.description.isNotEmpty) ...[
@@ -994,6 +1116,564 @@ class _EventRow extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Design 2: Agenda -- a dense work calendar
+// ---------------------------------------------------------------------------
+
+/// Month and year on one line, with the month's event count beside them.
+class _AgendaHeader extends StatelessWidget {
+  const _AgendaHeader({
+    required this.date,
+    required this.controller,
+    required this.language,
+  });
+
+  final NepaliDateTime date;
+  final PageController controller;
+  final Language language;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final count = _eventIndex.eventsInMonth(date.year, date.month).length;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    '${MonthUtils.formattedMonth(date.month, language)} '
+                    '${NepaliNumberConverter.formattedNumber('${date.year}', language: language)}',
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (count > 0) ...[
+                  const SizedBox(width: 8),
+                  _Chip(label: '$count', color: theme.colorScheme.primary),
+                ],
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => _stepMonth(controller, -1),
+            icon: const Icon(Icons.chevron_left_rounded),
+            tooltip: 'Previous month',
+            visualDensity: VisualDensity.compact,
+          ),
+          IconButton(
+            onPressed: () => _stepMonth(controller, 1),
+            icon: const Icon(Icons.chevron_right_rounded),
+            tooltip: 'Next month',
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A filled tile per day, tinted by how loaded it is, with a count badge.
+///
+/// The point of this design: a busy stretch is visible without reading any
+/// text, which is what a work calendar is scanned for.
+class _AgendaCell extends StatelessWidget {
+  const _AgendaCell({required this.data, required this.language});
+
+  final CalendarCellData<Events> data;
+  final Language language;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cells = data.style.cellsStyle;
+    final count = data.events.length;
+
+    final Color background;
+    final Color foreground;
+    if (data.isDimmed) {
+      background = Colors.transparent;
+      foreground = cells.dimmedDateTextColor.withValues(alpha: 0.45);
+    } else if (data.isToday) {
+      background = cells.todayColor;
+      foreground = cells.onHighlightColor;
+    } else if (count > 0) {
+      // Denser days read darker, so load shows as a gradient across the month.
+      background = theme.colorScheme.primaryContainer
+          .withValues(alpha: (0.35 + (count * 0.25)).clamp(0.0, 1.0));
+      foreground = theme.colorScheme.onPrimaryContainer;
+    } else {
+      background =
+          theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35);
+      foreground = data.isWeekend ? cells.weekDayColor : cells.dateTextColor;
+    }
+
+    return GestureDetector(
+      onTap: data.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(8),
+            border: data.isSelected && !data.isToday
+                ? Border.all(color: cells.selectedColor, width: 1.5)
+                : null,
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: 4,
+                left: 6,
+                child: Text(
+                  NepaliNumberConverter.formattedNumber(
+                    '${data.day}',
+                    language: language,
+                  ),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight:
+                        data.isToday ? FontWeight.w800 : FontWeight.w600,
+                    color: foreground,
+                  ),
+                ),
+              ),
+              if (count > 0 && !data.isDimmed)
+                Positioned(
+                  right: 4,
+                  bottom: 3,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: data.isHoliday
+                          ? cells.weekDayColor
+                          : theme.colorScheme.primary,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontSize: 9,
+                        height: 1.1,
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A date block on the left, then the title and description.
+class _AgendaEventRow extends StatelessWidget {
+  const _AgendaEventRow({required this.event, required this.language});
+
+  final CalendarEvent<Events> event;
+  final Language language;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent =
+        event.isHoliday ? theme.colorScheme.error : theme.colorScheme.primary;
+    final info = event.additionalInfo;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 3, 12, 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  NepaliNumberConverter.formattedNumber(
+                    '${event.date.day}',
+                    language: language,
+                  ),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: accent,
+                    height: 1.1,
+                  ),
+                ),
+                Text(
+                  WeekUtils.formattedShortWeekDay(
+                    event.date.weekday,
+                    language,
+                  ),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: accent.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    info?.title ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (info != null && info.additionalInfo.isNotEmpty)
+                    Text(
+                      info.additionalInfo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Design 3: Booking -- availability rather than events
+// ---------------------------------------------------------------------------
+
+/// What a day looks like to someone trying to book it.
+///
+/// Derived from the real event data rather than invented, so the grid stays
+/// consistent with the list below it.
+enum _Availability {
+  open('Open'),
+  limited('Limited'),
+  closed('Closed');
+
+  const _Availability(this.label);
+
+  final String label;
+
+  Color colorFrom(ColorScheme scheme) => switch (this) {
+        _Availability.open => scheme.primary,
+        _Availability.limited => scheme.tertiary,
+        _Availability.closed => scheme.error,
+      };
+}
+
+_Availability _availabilityOf({
+  required bool isWeekend,
+  required bool isHoliday,
+  required bool hasEvents,
+}) {
+  if (isHoliday || isWeekend) return _Availability.closed;
+  if (hasEvents) return _Availability.limited;
+  return _Availability.open;
+}
+
+/// The key to reading the grid. Without it the colours are decoration.
+class _BookingLegend extends StatelessWidget {
+  const _BookingLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (final status in _Availability.values)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 7),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: status.colorFrom(theme.colorScheme),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  status.label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Month and year, centred, with a line explaining what the colours mean.
+class _BookingHeader extends StatelessWidget {
+  const _BookingHeader({
+    required this.date,
+    required this.controller,
+    required this.language,
+  });
+
+  final NepaliDateTime date;
+  final PageController controller;
+  final Language language;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => _stepMonth(controller, -1),
+                icon: const Icon(Icons.chevron_left_rounded),
+                tooltip: 'Previous month',
+                visualDensity: VisualDensity.compact,
+              ),
+              Expanded(
+                child: Text(
+                  '${MonthUtils.formattedMonth(date.month, language)} '
+                  '${NepaliNumberConverter.formattedNumber('${date.year}', language: language)}',
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () => _stepMonth(controller, 1),
+                icon: const Icon(Icons.chevron_right_rounded),
+                tooltip: 'Next month',
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          const _BookingLegend(),
+        ],
+      ),
+    );
+  }
+}
+
+/// The date over a status bar, so a month can be read as a strip of
+/// availability rather than a list of events.
+class _BookingCell extends StatelessWidget {
+  const _BookingCell({required this.data, required this.language});
+
+  final CalendarCellData<Events> data;
+  final Language language;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cells = data.style.cellsStyle;
+
+    final status = _availabilityOf(
+      isWeekend: data.isWeekend,
+      isHoliday: data.isHoliday,
+      hasEvents: data.hasEvents,
+    );
+    final statusColor = status.colorFrom(theme.colorScheme);
+
+    return GestureDetector(
+      onTap: data.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          decoration: BoxDecoration(
+            color: data.isDimmed
+                ? Colors.transparent
+                : statusColor.withValues(alpha: data.isToday ? 0.22 : 0.10),
+            borderRadius: BorderRadius.circular(8),
+            border: data.isSelected
+                ? Border.all(color: cells.selectedColor, width: 1.5)
+                : data.isToday
+                    ? Border.all(color: statusColor, width: 1.2)
+                    : null,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      NepaliNumberConverter.formattedNumber(
+                        '${data.day}',
+                        language: language,
+                      ),
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight:
+                            data.isToday ? FontWeight.w800 : FontWeight.w500,
+                        color: data.isDimmed
+                            ? cells.dimmedDateTextColor.withValues(alpha: 0.45)
+                            : cells.dateTextColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (!data.isDimmed)
+                Container(
+                  height: 3,
+                  width: 18,
+                  margin: const EdgeInsets.only(bottom: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A booking rather than an event: what it is, and whether it blocks the day.
+class _BookingEventRow extends StatelessWidget {
+  const _BookingEventRow({required this.event, required this.language});
+
+  final CalendarEvent<Events> event;
+  final Language language;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final status =
+        event.isHoliday ? _Availability.closed : _Availability.limited;
+    final statusColor = status.colorFrom(theme.colorScheme);
+    final info = event.additionalInfo;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 3, 12, 3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: statusColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  info?.title ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '${MonthUtils.formattedMonth(event.date.month, language)} '
+                  '${NepaliNumberConverter.formattedNumber('${event.date.day}', language: language)}',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _Chip(label: status.label, color: statusColor),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Small shared pieces
+// ---------------------------------------------------------------------------
+
+/// A tinted pill. Shared so the three designs stay visually consistent where
+/// they are not deliberately different.
+class _Chip extends StatelessWidget {
+  const _Chip({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
+  }
+}
+
 // ============================================================================
 // SHARED WIDGETS & DATA
 // ============================================================================
