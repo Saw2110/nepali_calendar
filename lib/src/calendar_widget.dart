@@ -20,13 +20,17 @@ const double _maxCellHeight = 64.0;
 /// tap target. Below this the calendar would rather overflow than be unusable.
 const double _minCellHeight = 32.0;
 
-/// Share of the viewport height the month grid may occupy.
+/// Share of the available height the month grid may occupy.
 ///
-/// The grid lives inside a [Column], so its [LayoutBuilder] is handed an
-/// unbounded height and cannot measure the space actually left for it. This
-/// budget stands in for that, leaving room for the header above and the event
-/// list below. It is what keeps the calendar inside a short viewport, such as
-/// a phone in landscape.
+/// The grid sits in a [Column] alongside the header and the event list, so its
+/// own [LayoutBuilder] is handed an unbounded height and cannot see what is
+/// left for it. [NepaliCalendar] measures the height it was actually given and
+/// hands the grid this share of it, leaving the rest for the header above and
+/// the event list below.
+///
+/// Measured, not assumed: up to 0.1.0 this was a fraction of the *screen*
+/// height, so putting anything above the calendar -- a toolbar, a filter row --
+/// overflowed it by however tall that thing was.
 const double _gridHeightFraction = 0.62;
 
 /// One weekday-header row plus six date rows.
@@ -248,6 +252,28 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
     final calendarStyle =
         NepaliCalendarTheme.resolve(context, widget.calendarStyle);
 
+    // Measure the height actually on offer rather than assuming the calendar
+    // owns the screen. Anything placed above it -- a toolbar, a filter row --
+    // shrinks what it gets, and sizing from MediaQuery would overflow by
+    // exactly that much.
+    return LayoutBuilder(
+      builder: (context, outerConstraints) {
+        final availableHeight = outerConstraints.hasBoundedHeight
+            ? outerConstraints.maxHeight
+            // Unbounded: inside a scroll view, say. Nothing better to measure
+            // against, so fall back to the screen.
+            : MediaQuery.sizeOf(context).height;
+
+        return _buildCalendar(context, calendarStyle, availableHeight);
+      },
+    );
+  }
+
+  Widget _buildCalendar(
+    BuildContext context,
+    NepaliCalendarStyle calendarStyle,
+    double availableHeight,
+  ) {
     return Column(
       children: [
         // Calendar card containing header and month view (outside PageView)
@@ -293,9 +319,8 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                   // taller than the height budget allows -- the latter is what
                   // keeps a phone in landscape from overflowing. Never smaller
                   // than the minimum, so the cells stay tappable.
-                  final heightBudget = (MediaQuery.sizeOf(context).height *
-                          _gridHeightFraction) /
-                      _totalRows;
+                  final heightBudget =
+                      (availableHeight * _gridHeightFraction) / _totalRows;
                   final cellHeight = math.max(
                     _minCellHeight,
                     math.min(math.min(cellWidth, _maxCellHeight), heightBudget),

@@ -138,6 +138,8 @@ void main() {
     });
   });
 
+  group('height budget', _measuresItsActualHeight);
+
   group('selection', () {
     testWidgets('tapping a day fires onDayChanged with that date',
         (tester) async {
@@ -319,5 +321,44 @@ void main() {
       expect(find.text('header-1'), findsOneWidget);
       expect(find.byType(CalendarHeader), findsNothing);
     });
+  });
+}
+
+/// Regression guard for the grid-height budget.
+///
+/// Up to 0.1.0 the grid took a share of the *screen* height, so putting
+/// anything above the calendar -- a toolbar, a filter row, a segmented button
+/// -- overflowed it by however tall that thing was. The example's Custom tab
+/// surfaced it: a 68px switcher above the calendar overflowed by 8px.
+void _measuresItsActualHeight() {
+  testWidgets('sizes to the height it is given, not the screen',
+      (tester) async {
+    tester.view.physicalSize = const Size(375, 667);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              // Chrome above the calendar, which is what used to break it.
+              const SizedBox(height: 120, child: Placeholder()),
+              Expanded(
+                child: NepaliCalendar(
+                  initialDate: NepaliDateTime(year: 2081, month: 1, day: 1),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
   });
 }
