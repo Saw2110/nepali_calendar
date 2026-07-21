@@ -173,7 +173,8 @@ class _YearCalendarExampleState extends State<YearCalendarExample> {
               config: CalendarConfig(language: widget.language),
             ),
             // Two per row on a phone, more when there is room.
-            monthsPerRow: MediaQuery.sizeOf(context).width > 900 ? 4 : 2,
+            // monthsPerRow: MediaQuery.sizeOf(context).width > 900 ? 4 : 2,
+            monthsPerRow: 2,
             onDaySelected: (date) => setState(() => _selected = date),
           ),
         ),
@@ -1905,6 +1906,59 @@ final List<CalendarEvent<Events>> eventList = [
       title: "शहीद दिवस",
       description: "Martyrs' Day and Pradosh fast.",
       additionalInfo: "National observance",
+      eventType: "notHoliday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2083, month: 3, day: 1),
+    isHoliday: false,
+    additionalInfo: Events(
+      title: "आषाढ १",
+      description:
+          "Start of Ashadh, the final month of the outgoing fiscal year.",
+      additionalInfo: "Fiscal year-end month begins",
+      eventType: "notHoliday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2083, month: 3, day: 5),
+    isHoliday: false,
+    additionalInfo: Events(
+      title: "गुरु पूर्णिमा",
+      description: "Guru Purnima -- a day to honour teachers and mentors.",
+      additionalInfo: "Religious observance",
+      eventType: "notHoliday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2083, month: 3, day: 15),
+    isHoliday: true,
+    additionalInfo: Events(
+      title: "राष्ट्रिय धान दिवस (रोपाइँ दिवस)",
+      description:
+          "National Paddy Day / Ropain Diwas -- rice-planting festival with mud games.",
+      additionalInfo: "Public holiday",
+      eventType: "holiday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2083, month: 3, day: 29),
+    isHoliday: false,
+    additionalInfo: Events(
+      title: "आर्थिक वर्ष २०८२/८३ को समापन",
+      description:
+          "Closing of fiscal year 2082/83; government offices finalise accounts.",
+      additionalInfo: "Fiscal year-end closing",
+      eventType: "notHoliday",
+    ),
+  ),
+  CalendarEvent(
+    date: NepaliDateTime(year: 2083, month: 4, day: 1),
+    isHoliday: false,
+    additionalInfo: Events(
+      title: "नयाँ आर्थिक वर्ष २०८३/८४ सुरु",
+      description: "Start of Nepal's new fiscal year, 2083/84.",
+      additionalInfo: "New fiscal year begins",
       eventType: "notHoliday",
     ),
   ),
