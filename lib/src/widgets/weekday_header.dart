@@ -71,6 +71,15 @@ class WeekdayHeader extends StatelessWidget {
         } else {
           // Default weekday header implementation
           // Note: Borders are handled by grid wrapper, not individual cells
+          // Colours come from the resolved style, which NepaliCalendar has
+          // already resolved against any ambient NepaliCalendarTheme. These
+          // were hard-coded to Colors.black87 and Colors.black54, so in a dark
+          // app the weekday row sat near-invisible above perfectly themed
+          // dates.
+          final primaryColor = style.headersStyle.weekHeaderStyle.color ??
+              style.cellsStyle.dateTextColor;
+          final secondaryColor = primaryColor.withValues(alpha: 0.7);
+
           cell = Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -87,9 +96,8 @@ class WeekdayHeader extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  color: isWeekend
-                      ? style.cellsStyle.weekDayColor
-                      : Colors.black87,
+                  color:
+                      isWeekend ? style.cellsStyle.weekDayColor : primaryColor,
                 ),
               ),
               const SizedBox(height: 2),
@@ -107,7 +115,7 @@ class WeekdayHeader extends StatelessWidget {
                   fontSize: 10,
                   color: isWeekend
                       ? style.cellsStyle.weekDayColor.withValues(alpha: 0.7)
-                      : Colors.black54,
+                      : secondaryColor,
                 ),
               ),
             ],
@@ -140,15 +148,15 @@ class WeekdayHeader extends StatelessWidget {
 
   /// Wraps a weekday cell with table-style borders (right and bottom only).
   Widget _wrapWithTableBorder(Widget child) {
+    // Themed, like the grid's own borders. This was hard-coded grey, which is
+    // a light-mode-only choice.
+    final borderColor = style.cellsStyle.borderColor.withValues(alpha: 0.3);
+
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border(
-          right: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.3),
-          ),
-          bottom: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.3),
-          ),
+          right: BorderSide(color: borderColor),
+          bottom: BorderSide(color: borderColor),
         ),
       ),
       child: child,

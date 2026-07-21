@@ -1007,29 +1007,26 @@ class EventWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Colours from the ColorScheme, not hard-coded. This card used to pin
+    // Colors.white with black text, so under a themed calendar in a dark app
+    // it stayed stubbornly light -- in the event list of the very tab that
+    // demonstrates theming.
+    final theme = Theme.of(context);
+    final accent =
+        event.isHoliday ? theme.colorScheme.error : theme.colorScheme.primary;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12.0),
         child: Row(
           children: [
             // Colored accent bar on the left
-            Container(
-              width: 4,
-              height: 100,
-              color: event.isHoliday ? Colors.red : Colors.blue,
-            ),
+            Container(width: 4, height: 100, color: accent),
 
             // Main content
             Expanded(
@@ -1044,9 +1041,8 @@ class EventWidget extends StatelessWidget {
                       children: [
                         Text(
                           _formatDate(event.date),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[600],
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.outline,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -1057,14 +1053,13 @@ class EventWidget extends StatelessWidget {
                               vertical: 4.0,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.red.shade50,
+                              color: accent.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4.0),
                             ),
                             child: Text(
                               'Holiday',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.red.shade700,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: accent,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -1077,10 +1072,8 @@ class EventWidget extends StatelessWidget {
                     // Event title
                     Text(
                       event.additionalInfo!.title,
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
                       ),
                     ),
 
@@ -1089,9 +1082,8 @@ class EventWidget extends StatelessWidget {
                     // Event description
                     Text(
                       event.additionalInfo!.description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
                         height: 1.4,
                       ),
                       maxLines: 2,
