@@ -26,7 +26,14 @@ void main() {
     view.resetDevicePixelRatio();
   });
 
-  const tabs = ['Calendar', 'Horizontal', 'Date Picker', 'Year View', 'Custom'];
+  const tabs = [
+    'Calendar',
+    'Horizontal',
+    'Date Picker',
+    'Year View',
+    'Custom',
+    'Event Index',
+  ];
 
   /// Opens a tab by name.
   ///
