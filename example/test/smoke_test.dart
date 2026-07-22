@@ -28,6 +28,20 @@ void main() {
 
   const tabs = ['Calendar', 'Horizontal', 'Date Picker', 'Year View', 'Custom'];
 
+  /// Opens a tab by name.
+  ///
+  /// The TabBar is scrollable and the later tabs start off the right edge of a
+  /// phone, where a plain `tap` lands outside the render tree and silently does
+  /// nothing -- leaving the test asserting against whichever tab it was already
+  /// on. Scrolling the tab into view first is what makes these tests mean
+  /// anything.
+  Future<void> openTab(WidgetTester tester, String tab) async {
+    await tester.ensureVisible(find.text(tab));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(tab));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('launches with every tab present', (tester) async {
     await tester.pumpWidget(const MainApp());
     await tester.pumpAndSettle();
@@ -43,8 +57,7 @@ void main() {
       await tester.pumpWidget(const MainApp());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(tab));
-      await tester.pumpAndSettle();
+      await openTab(tester, tab);
 
       expect(tester.takeException(), isNull, reason: '$tab tab threw');
     });
@@ -55,8 +68,7 @@ void main() {
     await tester.pumpAndSettle();
 
     for (final tab in tabs) {
-      await tester.tap(find.text(tab));
-      await tester.pumpAndSettle();
+      await openTab(tester, tab);
 
       await tester.tap(find.byTooltip('Toggle Light/Dark'));
       await tester.pumpAndSettle();
@@ -74,8 +86,7 @@ void main() {
     await tester.pumpWidget(const MainApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Date Picker'));
-    await tester.pumpAndSettle();
+    await openTab(tester, 'Date Picker');
 
     await tester.tap(find.text('मिति छान्नुहोस्').last);
     await tester.pumpAndSettle();
@@ -87,13 +98,35 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
   });
 
+  /// The segmented switcher swaps the whole CalendarBuilder, so a design that
+  /// overflows or throws only shows up once it is actually selected.
+  testWidgets('every custom design renders, in both themes', (tester) async {
+    await tester.pumpWidget(const MainApp());
+    await tester.pumpAndSettle();
+
+    await openTab(tester, 'Custom');
+
+    for (final design in ['Traditional', 'Premium']) {
+      await tester.tap(find.text(design));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: '$design threw');
+
+      await tester.tap(find.byTooltip('Toggle Light/Dark'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull,
+          reason: '$design broke in dark mode');
+
+      await tester.tap(find.byTooltip('Toggle Light/Dark'));
+      await tester.pumpAndSettle();
+    }
+  });
+
   testWidgets('every tab survives a language switch', (tester) async {
     await tester.pumpWidget(const MainApp());
     await tester.pumpAndSettle();
 
     for (final tab in tabs) {
-      await tester.tap(find.text(tab));
-      await tester.pumpAndSettle();
+      await openTab(tester, tab);
 
       await tester.tap(find.byTooltip('Toggle Language'));
       await tester.pumpAndSettle();

@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../nepali_calendar_plus.dart';
 
+/// Base height of the scrolling date strip at a text scale of 1.0.
+///
+/// Sized for Devanagari, which is noticeably taller than Latin at the same
+/// font size -- 56 is enough for "Sun / 12" but clips "आइत / १२".
+const double _dateStripBaseHeight = 64.0;
+const double _dateStripBaseWidth = 64.0;
+
 class HorizontalNepaliCalendar extends StatefulWidget {
   const HorizontalNepaliCalendar({
     super.key,
@@ -82,12 +89,6 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
     _selectedDate = widget.initialDate ?? _todayDate;
     _startDate = _selectedDate.subtract(Duration(days: 2));
   }
-
-  /// Base height of the scrolling date strip at a text scale of 1.0.
-  ///
-  /// Sized for Devanagari, which is noticeably taller than Latin at the same
-  /// font size -- 56 is enough for "Sun / 12" but clips "आइत / १२".
-  static const double _dateStripBaseHeight = 64.0;
 
   @override
   Widget build(BuildContext context) {
@@ -244,12 +245,10 @@ class CalendarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double width = MediaQuery.sizeOf(context).width;
-
     return InkWell(
       onTap: onDatePressed,
       child: Container(
-        width: (width / 7),
+        width: _dateStripBaseWidth,
         color: backgroundColor,
         alignment: Alignment.center,
         child: Column(
