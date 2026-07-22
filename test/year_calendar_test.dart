@@ -118,6 +118,65 @@ void main() {
       expect(find.text('M12'), findsOneWidget);
       expect(find.text('Baisakh'), findsNothing);
     });
+
+    testWidgets('each month is wrapped in a Card by default', (tester) async {
+      useTallViewport(tester);
+      await tester.pumpWidget(
+        host(NepaliYearCalendar(year: 2081, calendarStyle: englishStyle)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Card), findsNWidgets(12));
+    });
+
+    testWidgets('monthTileBuilder replaces the frame but keeps the month',
+        (tester) async {
+      useTallViewport(tester);
+      final months = <int>[];
+      await tester.pumpWidget(
+        host(
+          NepaliYearCalendar(
+            year: 2081,
+            calendarStyle: englishStyle,
+            monthTileBuilder: (context, year, month, child) {
+              months.add(month);
+              return ColoredBox(color: const Color(0xFF00FF00), child: child);
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(months, List.generate(12, (i) => i + 1));
+      // The default frame is gone, but the month it framed is not.
+      expect(find.byType(Card), findsNothing);
+      expect(find.text('Baisakh'), findsOneWidget);
+      expect(find.text('Chaitra'), findsOneWidget);
+    });
+
+    testWidgets('a custom tile still selects dates', (tester) async {
+      useTallViewport(tester);
+      NepaliDateTime? selected;
+      await tester.pumpWidget(
+        host(
+          NepaliYearCalendar(
+            year: 2081,
+            calendarStyle: englishStyle,
+            monthTileBuilder: (context, year, month, child) =>
+                Padding(padding: const EdgeInsets.all(4), child: child),
+            onDaySelected: (date) => selected = date,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('15').first);
+      await tester.pumpAndSettle();
+
+      expect(selected?.year, 2081);
+      expect(selected?.month, 1);
+      expect(selected?.day, 15);
+    });
   });
 
   group('every day of every month exists', () {
