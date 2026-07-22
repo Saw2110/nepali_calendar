@@ -77,6 +77,32 @@ class NepaliYearCalendar<T> extends StatefulWidget {
   /// Replaces a month's title.
   final Widget Function(int year, int month)? monthTitleBuilder;
 
+  /// Wraps each month tile in a frame of your own.
+  ///
+  /// [child] is the fully built month -- title, weekday row and dates -- so
+  /// selection, events and scrolling keep working; only the container around
+  /// it changes. Leave unset for the default [Card].
+  ///
+  /// ```dart
+  /// monthTileBuilder: (context, year, month, child) => Container(
+  ///   decoration: BoxDecoration(
+  ///     borderRadius: BorderRadius.circular(20),
+  ///     gradient: myGradient,
+  ///   ),
+  ///   clipBehavior: Clip.antiAlias,
+  ///   child: child,
+  /// ),
+  /// ```
+  ///
+  /// The tile fills its grid cell; the grid's own spacing separates the
+  /// months, so add padding only if you want more.
+  final Widget Function(
+    BuildContext context,
+    int year,
+    int month,
+    Widget child,
+  )? monthTileBuilder;
+
   const NepaliYearCalendar({
     super.key,
     this.year,
@@ -90,6 +116,7 @@ class NepaliYearCalendar<T> extends StatefulWidget {
     this.jumpToSelectedMonth = false,
     this.headerBuilder,
     this.monthTitleBuilder,
+    this.monthTileBuilder,
   }) : assert(monthsPerRow > 0, 'monthsPerRow must be at least 1');
 
   @override
@@ -211,8 +238,7 @@ class _NepaliYearCalendarState<T> extends State<NepaliYearCalendar<T>> {
                 itemCount: 12,
                 itemBuilder: (context, index) {
                   final month = index + 1;
-                  return _CompactMonth<T>(
-                    key: _monthKeys[index],
+                  final compactMonth = _CompactMonth<T>(
                     year: _year,
                     month: month,
                     selectedDate: _selectedDate,
@@ -223,12 +249,32 @@ class _NepaliYearCalendarState<T> extends State<NepaliYearCalendar<T>> {
                     onDaySelected: _handleDaySelected,
                     titleBuilder: widget.monthTitleBuilder,
                   );
+
+                  // Keyed on the outside so scrolling brings the whole tile
+                  // into view, custom frame included.
+                  return KeyedSubtree(
+                    key: _monthKeys[index],
+                    child: widget.monthTileBuilder
+                            ?.call(context, _year, month, compactMonth) ??
+                        _defaultTile(compactMonth),
+                  );
                 },
               );
             },
           ),
         ),
       ],
+    );
+  }
+
+  /// The frame used when no [NepaliYearCalendar.monthTileBuilder] is given.
+  Widget _defaultTile(Widget child) {
+    return Card(
+      // The grid already spaces the tiles apart; Card's own default margin
+      // would only shrink the month inside it.
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: child,
     );
   }
 
