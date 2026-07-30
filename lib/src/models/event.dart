@@ -6,21 +6,23 @@ import '../src.dart';
 /// Nepali calendar. It can include additional information and indicate whether
 /// the date is a holiday.
 ///
-/// Example usage: 1
+/// [additionalInfo] is yours to shape -- a string, a model, a map:
+///
 /// ```dart
-/// final event = CalendarEvent(
-///   date: NepaliDateTime(2080, 1, 1),
+/// final holiday = CalendarEvent<String>(
+///   date: NepaliDateTime(year: 2080, month: 1, day: 1),
 ///   isHoliday: true,
 ///   additionalInfo: 'New Year',
 /// );
-/// Example usage: 2
-/// ```dart
-/// final event = CalendarEvent(
-///   date: NepaliDateTime(2080, 1, 1),
-///   isHoliday: true,
-///   additionalInfo: {},
+///
+/// final meeting = CalendarEvent<Map<String, String>>(
+///   date: NepaliDateTime(year: 2080, month: 1, day: 2),
+///   additionalInfo: {'title': 'Standup', 'room': 'B2'},
 /// );
 /// ```
+///
+/// Note that [NepaliDateTime] takes named arguments only. Doc examples up to
+/// 0.0.7 showed `NepaliDateTime(2080, 1, 1)`, which does not compile.
 class CalendarEvent<T> {
   /// The date associated with this event in the Nepali calendar.
   ///
