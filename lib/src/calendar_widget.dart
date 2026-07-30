@@ -33,8 +33,12 @@ const double _minCellHeight = 32.0;
 /// overflowed it by however tall that thing was.
 const double _gridHeightFraction = 0.62;
 
-/// One weekday-header row plus six date rows.
-const int _totalRows = 7;
+/// One weekday-header row plus the most date rows a month can need.
+///
+/// Cells are sized against this rather than against the row count of the month
+/// on screen, so that swiping from a five-row month to a six-row one changes
+/// the calendar's height without also resizing every cell in it.
+const int _totalRows = 1 + CalendarUtils.maxWeekRowsInMonth;
 
 /// [CalendarMonthView] wraps itself in 8px of padding on every side.
 const double _monthViewPadding = 16.0;
@@ -246,6 +250,47 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
     }
   }
 
+  /// How many date rows are on screen right now, as a fraction.
+  ///
+  /// A Nepali month needs five or six rows depending on the weekday it starts
+  /// on. During a swipe both the outgoing and incoming month are visible, so
+  /// there is no single right answer -- this interpolates between the two by
+  /// how far the swipe has travelled, which is what lets the calendar's height
+  /// follow the drag rather than jump once it settles.
+  double _visibleWeekRows(NepaliCalendarStyle calendarStyle) {
+    final config = calendarStyle.effectiveConfig;
+    if (config.sixWeekMonthsEnforced) {
+      return CalendarUtils.maxWeekRowsInMonth.toDouble();
+    }
+
+    // `page` is only readable once the PageView has been laid out; before then
+    // the last settled index is the best available answer.
+    final fallback = _currentPageIndexNotifier.value.toDouble();
+    final page = _pageController.hasClients &&
+            _pageController.position.haveDimensions
+        ? (_pageController.page ?? fallback)
+        : fallback;
+
+    final lastPage = (CalendarUtils.nepaliYears.length * 12) - 1;
+    final from = page.floor().clamp(0, lastPage);
+    final to = page.ceil().clamp(0, lastPage);
+
+    final fromRows = _weekRowsForPage(from, config.weekStartType);
+    if (to == from) return fromRows.toDouble();
+
+    final toRows = _weekRowsForPage(to, config.weekStartType);
+    final t = (page - from).clamp(0.0, 1.0);
+    return fromRows + ((toRows - fromRows) * t);
+  }
+
+  /// The row count of the month a PageView index maps to.
+  int _weekRowsForPage(int index, WeekStartType weekStartType) =>
+      CalendarUtils.weekRowsInMonth(
+        CalendarUtils.calenderyearStart + (index ~/ 12),
+        (index % 12) + 1,
+        weekStartType,
+      );
+
   @override
   Widget build(BuildContext context) {
     // Explicit style > ambient NepaliCalendarTheme > pre-0.1.0 defaults.
@@ -331,13 +376,9 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                   // the header off the grid unless borders are drawn.
                   final rowSpacing =
                       calendarStyle.effectiveConfig.showBorder ? 0.0 : 10.0;
-                  final gridHeight = (cellHeight * _totalRows) +
-                      rowSpacing +
-                      _monthViewPadding;
+                  final chrome = rowSpacing + _monthViewPadding + cellHeight;
 
-                  return SizedBox(
-                    height: gridHeight,
-                    child: PageView.builder(
+                  final pageView = PageView.builder(
                       controller: _pageController,
                       itemCount: CalendarUtils.nepaliYears.length * 12,
                       // Add physics for smoother scrolling
@@ -385,12 +426,24 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                               opacity = 1.0 - (offset * 0.5).clamp(0.0, 0.5);
                             }
 
-                            return Center(
-                              child: Transform.scale(
-                                scale: scale,
-                                child: Opacity(
-                                  opacity: opacity,
-                                  child: child,
+                            // Mid-swipe the viewport is somewhere between the
+                            // outgoing and incoming months' heights, so a
+                            // six-row month can be handed less room than it
+                            // needs. Let it lay out at its natural height and
+                            // clip the surplus off the bottom -- constraining
+                            // it instead would make the month view's Column
+                            // report an overflow on every frame of the swipe.
+                            return ClipRect(
+                              child: OverflowBox(
+                                alignment: Alignment.topCenter,
+                                minHeight: 0,
+                                maxHeight: double.infinity,
+                                child: Transform.scale(
+                                  scale: scale,
+                                  child: Opacity(
+                                    opacity: opacity,
+                                    child: child,
+                                  ),
                                 ),
                               ),
                             );
@@ -422,7 +475,24 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                           ),
                         );
                       },
-                    ),
+                    );
+
+                  // The viewport tracks the height of the month on screen, and
+                  // interpolates between the two while a swipe is in flight --
+                  // reacting on onPageChanged instead would snap after the
+                  // page settled. The PageView is passed through as `child` so
+                  // that resizing does not rebuild it every frame.
+                  return AnimatedBuilder(
+                    animation: _pageController,
+                    child: pageView,
+                    builder: (context, child) {
+                      final gridHeight =
+                          chrome + (cellHeight * _visibleWeekRows(calendarStyle));
+
+                      return ClipRect(
+                        child: SizedBox(height: gridHeight, child: child),
+                      );
+                    },
                   );
                 },
               ),
@@ -439,6 +509,20 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                 duration: const Duration(seconds: 1),
                 switchInCurve: Curves.easeInOut,
                 switchOutCurve: Curves.easeInOut,
+                // AnimatedSwitcher.defaultLayoutBuilder centres its child, and
+                // the event list shrink-wraps its content: a month with one
+                // event ended up floating in the middle of the space left
+                // below the grid instead of sitting under it. Only months with
+                // enough events to fill the space looked right.
+                layoutBuilder: (currentChild, previousChildren) {
+                  return Stack(
+                    alignment: Alignment.topCenter,
+                    children: [
+                      ...previousChildren,
+                      if (currentChild != null) currentChild,
+                    ],
+                  );
+                },
                 transitionBuilder: (child, animation) {
                   return FadeTransition(
                     opacity: animation,

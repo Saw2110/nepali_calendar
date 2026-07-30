@@ -127,6 +127,29 @@ class WeekUtils {
     "S",
   ];
 
+  /// Converts a calendar weekday into its column index under [weekStartType].
+  ///
+  /// - [weekday]: The weekday number (0=Sunday, 1=Monday, ..., 6=Saturday).
+  /// - [weekStartType]: Which day the week starts on.
+  ///
+  /// Returns 0 for whichever day the week starts on, counting up to 6.
+  ///
+  /// Throws an [ArgumentError] if the weekday number is outside the valid range (0-6).
+  static int normalizeWeekday(int weekday, WeekStartType weekStartType) {
+    if (weekday < 0 || weekday > 6) {
+      throw ArgumentError('Weekday must be between 0 and 6.');
+    }
+
+    switch (weekStartType) {
+      case WeekStartType.sunday:
+        // Week starts on Sunday, so Sunday=0, Monday=1, etc.
+        return weekday;
+      case WeekStartType.monday:
+        // Week starts on Monday, so Monday=0, Tuesday=1, ..., Sunday=6
+        return weekday == 0 ? 6 : weekday - 1;
+    }
+  }
+
   /// Checks if the given weekday is a weekend based on the weekend type.
   ///
   /// - [weekday]: The weekday number (0=Sunday, 1=Monday, ..., 6=Saturday).

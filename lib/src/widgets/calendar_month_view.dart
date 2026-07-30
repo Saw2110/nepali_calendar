@@ -62,6 +62,10 @@ class CalendarMonthView<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final column = Column(
+      // Only as tall as its rows. The month view no longer always has six of
+      // them, and [NepaliCalendar] sizes its viewport to the month on screen,
+      // so a Column that stretched would fight that rather than follow it.
+      mainAxisSize: MainAxisSize.min,
       spacing: calendarStyle.effectiveConfig.showBorder ? 0 : 10,
       children: [
         // Display header row showing weekday names

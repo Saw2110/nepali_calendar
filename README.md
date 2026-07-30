@@ -276,6 +276,11 @@ NepaliCalendar(
       weekendType: WeekendType.saturday,
       weekStartType: WeekStartType.sunday,
       weekTitleType: TitleFormat.half,
+      // Months are drawn at the height they need -- five or six week rows
+      // depending on the weekday they start on -- and the calendar resizes as
+      // you swipe between them. Set this to pad every month out to six rows
+      // instead, so the calendar keeps a constant height.
+      sixWeekMonthsEnforced: false,
     ),
     cellsStyle: CellStyle(
       todayColor: Colors.green,

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(flutter analyze --no-pub 2>&1)",
+      "PowerShell(flutter pub get)",
+      "PowerShell(flutter test --reporter=failures-only 2>&1)",
+      "PowerShell(flutter test test/week_rows_test.dart 2>&1)",
+      "PowerShell(flutter test test/event_list_test.dart 2>&1)",
+      "PowerShell(flutter test test/event_list_test.dart --plain-name \"sits at the top\" 2>&1)"
+    ]
+  }
+}

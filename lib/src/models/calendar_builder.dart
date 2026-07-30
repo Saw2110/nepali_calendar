@@ -241,26 +241,3 @@ class WeekdayData {
     required this.style,
   });
 }
-
-/// Data class providing information for building an event list.
-class EventListData<T> {
-  /// The build context
-  final BuildContext context;
-
-  /// The list of events for the selected date
-  final List<CalendarEvent<T>> events;
-
-  /// The currently selected date
-  final NepaliDateTime selectedDate;
-
-  /// Optional default event builder function
-  final Widget? Function(BuildContext, int, CalendarEvent<T>)?
-      defaultEventBuilder;
-
-  const EventListData({
-    required this.context,
-    required this.events,
-    required this.selectedDate,
-    this.defaultEventBuilder,
-  });
-}

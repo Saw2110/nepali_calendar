@@ -69,9 +69,12 @@ class CalendarGrid<T> extends StatelessWidget {
     // Get the total number of days in the month
     final daysCountInMonth = _getDaysInMonth(year, month);
 
-    // Build the grid items with 6 rows (42 cells)
+    // Five or six rows, whichever this month actually needs -- unless the
+    // config asks for six unconditionally.
+    final cellCount = _rowCount * 7;
+
     final gridItems =
-        _buildCalendarGrid(weekdayOfFirstDay, daysCountInMonth, _index);
+        _buildCalendarGrid(weekdayOfFirstDay, daysCountInMonth, _index, cellCount);
 
     final gridView = GridView.builder(
       shrinkWrap: true,
@@ -81,7 +84,7 @@ class CalendarGrid<T> extends StatelessWidget {
         crossAxisCount: 7, // 7 columns for 7 days in a week
         childAspectRatio: cellAspectRatio,
       ),
-      itemCount: 42, // Always show 6 rows
+      itemCount: cellCount,
       itemBuilder: (context, index) {
         // Wrap each cell with table-style borders (right + bottom)
         if (calendarStyle.effectiveConfig.showBorder) {
@@ -95,11 +98,25 @@ class CalendarGrid<T> extends StatelessWidget {
     return gridView;
   }
 
-  // Method to build the complete calendar grid with 6 rows
+  /// How many week rows this month is drawn with.
+  ///
+  /// Up to 0.0.7 this was always six, which left five-row months showing a
+  /// whole trailing row of the next month's dates. See
+  /// [CalendarConfig.sixWeekMonthsEnforced].
+  int get _rowCount => calendarStyle.effectiveConfig.sixWeekMonthsEnforced
+      ? CalendarUtils.maxWeekRowsInMonth
+      : CalendarUtils.weekRowsInMonth(
+          year,
+          month,
+          calendarStyle.effectiveConfig.weekStartType,
+        );
+
+  // Method to build the complete calendar grid, padded out to [cellCount]
   List<Widget> _buildCalendarGrid(
     int weekdayOfFirstDay,
     int daysCountInMonth,
     CalendarEventIndex<T> index,
+    int cellCount,
   ) {
     final gridItems = <Widget>[];
 
@@ -147,8 +164,8 @@ class CalendarGrid<T> extends StatelessWidget {
       );
     }
 
-    // Add next month days to fill up to 42 cells (6 rows)
-    final remainingCells = 42 - gridItems.length;
+    // Add next month days to fill out the last row
+    final remainingCells = cellCount - gridItems.length;
     if (remainingCells > 0) {
       final nextMonth = month == 12 ? 1 : month + 1;
       final nextYear = month == 12 ? year + 1 : year;
@@ -188,17 +205,10 @@ class CalendarGrid<T> extends StatelessWidget {
   }
 
   // Method to normalize the weekday to a 0-based index based on week start type
-  int _normalizeWeekday(int weekday) {
-    // weekday is already in 0-based format: 0=Sunday, 1=Monday, ..., 6=Saturday
-    switch (calendarStyle.effectiveConfig.weekStartType) {
-      case WeekStartType.sunday:
-        // Week starts on Sunday, so Sunday=0, Monday=1, etc.
-        return weekday;
-      case WeekStartType.monday:
-        // Week starts on Monday, so Monday=0, Tuesday=1, ..., Sunday=6
-        return weekday == 0 ? 6 : weekday - 1;
-    }
-  }
+  int _normalizeWeekday(int weekday) => WeekUtils.normalizeWeekday(
+        weekday,
+        calendarStyle.effectiveConfig.weekStartType,
+      );
 
   /// Wraps a cell with table-style borders (right and bottom only).
   /// This creates a clean grid pattern when combined with the container's
