@@ -29,7 +29,7 @@ void main() {
       expect(
         find.byType(CalendarCell),
         findsNWidgets(42),
-        reason: 'always six rows of seven',
+        reason: 'Baisakh 2081 is one of the months that needs six rows',
       );
     });
 

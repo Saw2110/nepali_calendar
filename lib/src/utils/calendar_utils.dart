@@ -80,6 +80,36 @@ class CalendarUtils {
     return (year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0));
   }
 
+  /// The most week rows any Nepali month can ever need.
+  ///
+  /// Nepali months run 29-32 days and the leading offset is 0-6, so the worst
+  /// case is 32 + 6 = 38 cells, which is six rows.
+  static const int maxWeekRowsInMonth = 6;
+
+  /// How many week rows are needed to lay [month] of [year] out on a grid.
+  ///
+  /// Counts the leading days of the previous month plus the days of this one,
+  /// and rounds up to whole weeks. The answer is always 5 or 6: the shortest
+  /// possible month is 29 days, so even with no leading offset it cannot fit
+  /// in four rows, and the longest arrangement is 38 cells.
+  ///
+  /// [weekStartType] matters -- the same month can need five rows starting the
+  /// week on Sunday and six starting it on Monday.
+  ///
+  /// Falls back to [maxWeekRowsInMonth] for years outside the bundled data
+  /// rather than throwing, so a layout pass never brings the calendar down.
+  static int weekRowsInMonth(int year, int month, WeekStartType weekStartType) {
+    final daysInMonth = nepaliYears[year]?[month];
+    if (daysInMonth == null) return maxWeekRowsInMonth;
+
+    final leadingCells = WeekUtils.normalizeWeekday(
+      NepaliDateTime(year: year, month: month).weekday,
+      weekStartType,
+    );
+
+    return ((leadingCells + daysInMonth) / 7).ceil();
+  }
+
   /// Returns a list of days in each month for a non-leap English year.
   ///
   /// The list contains the number of days in each month from January to December.
