@@ -1,11 +1,20 @@
 name: nepali_calendar_plus
-description: "A feature-rich flutter package for implementing a Nepali calendar system in your applications." 
-version: 0.0.8
-homepage: https://github.com/Saw2110/nepali_calendar.git
+description: "A feature-rich flutter package for implementing a Nepali calendar system in your applications."
+version: 0.1.0
+homepage: https://github.com/Saw2110/nepali_calendar
+repository: https://github.com/Saw2110/nepali_calendar
+issue_tracker: https://github.com/Saw2110/nepali_calendar/issues
+
+topics:
+  - calendar
+  - nepali
+  - bikram-sambat
+  - date-picker
+  - localization
 
 environment:
   sdk: ^3.6.0
-  flutter: ">=1.17.0"
+  flutter: ">=3.27.0"
 
 dependencies:
   flutter:

@@ -28,7 +28,7 @@ const double _minCellHeight = 32.0;
 /// hands the grid this share of it, leaving the rest for the header above and
 /// the event list below.
 ///
-/// Measured, not assumed: up to 0.1.0 this was a fraction of the *screen*
+/// Measured, not assumed: up to 0.0.7 this was a fraction of the *screen*
 /// height, so putting anything above the calendar -- a toolbar, a filter row --
 /// overflowed it by however tall that thing was.
 const double _gridHeightFraction = 0.62;
@@ -77,7 +77,7 @@ class NepaliCalendar<T> extends StatefulWidget {
   /// Example:
   /// ```dart
   /// NepaliCalendar(
-  ///   calendarBuilder: NepaliCalendarBuilder(
+  ///   calendarBuilder: CalendarBuilder(
   ///     headerBuilder: (date, controller) => MyHeader(date),
   ///     cellBuilder: (data) => MyCell(data),
   ///     eventBuilder: (context, index, date, event) => MyEvent(event),
@@ -90,9 +90,9 @@ class NepaliCalendar<T> extends StatefulWidget {
   ///
   /// **Deprecated:** Use [calendarBuilder] with [CalendarBuilder.headerBuilder] instead.
   ///
-  /// This will be removed in a future version.
+  /// This will be removed in 1.0.0.
   @Deprecated(
-    'Use calendarBuilder.headerBuilder instead. This will be removed in a future version.',
+    'Use calendarBuilder.headerBuilder instead. Will be removed in 1.0.0.',
   )
   final Widget? Function(
     NepaliDateTime nepaliDateTime,
@@ -103,9 +103,9 @@ class NepaliCalendar<T> extends StatefulWidget {
   ///
   /// **Deprecated:** Use [calendarBuilder] with [CalendarBuilder.eventBuilder] instead.
   ///
-  /// This will be removed in a future version.
+  /// This will be removed in 1.0.0.
   @Deprecated(
-    'Use calendarBuilder.eventBuilder instead. This will be removed in a future version.',
+    'Use calendarBuilder.eventBuilder instead. Will be removed in 1.0.0.',
   )
   final Widget? Function(
     BuildContext context,
@@ -148,7 +148,7 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
   /// Date-keyed index over [NepaliCalendar.eventList].
   ///
   /// Built once per event-list change rather than per month page: the PageView
-  /// builds several months at a time, and each month asks after 42 dates.
+  /// builds several months at a time, and each month asks after 35 or 42 dates.
   late CalendarEventIndex<T> _eventIndex;
 
   @override
@@ -500,7 +500,9 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
           ),
         ),
 
-        // Event list for selected date (outside PageView with animation)
+        // Events for the selected date's *month* (outside PageView, animated).
+        // Keyed by year-month, so it re-runs the transition when the month
+        // changes rather than on every day tap.
         Expanded(
           child: ValueListenableBuilder<NepaliDateTime>(
             valueListenable: _selectedDateNotifier,

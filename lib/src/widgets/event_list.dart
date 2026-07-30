@@ -8,7 +8,12 @@ import 'package:flutter/material.dart';
 // Import custom source file containing calendar-related utilities
 import '../src.dart';
 
-// Widget to display a list of calendar events with generic type T
+/// Lists every event in the month of [selectedDate].
+///
+/// Despite the parameter name this is a **month** list, not a single-day one:
+/// selecting the 14th shows the whole month's events, with the selected date
+/// only deciding which month that is.
+///
 /// The event list is an implementation detail of [NepaliCalendar]. To build
 /// your own, query [CalendarEventIndex.eventsInMonth] and render it however
 /// you like.
@@ -29,7 +34,10 @@ class EventList<T> extends StatelessWidget {
   /// When null, one is built from [eventList] on each build.
   final CalendarEventIndex<T>? eventIndex;
 
-  // Currently selected date to filter events
+  /// The date whose **month** is listed.
+  ///
+  /// Only the year and month are read: the list shows every event in that
+  /// month, not only those on this exact day. The day component is ignored.
   final NepaliDateTime selectedDate;
   // Optional custom builder for event list items
   final Widget? Function(

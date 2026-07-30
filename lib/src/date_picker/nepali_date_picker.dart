@@ -23,7 +23,7 @@ const int _columns = 7;
 ///
 /// Always six. A month can span six weeks, and a grid that sizes to five
 /// silently never builds the sixth -- which is how the 30th and 31st became
-/// unselectable before 0.0.8.
+/// unselectable before 0.1.0.
 const int _rows = 6;
 
 /// Width the picker takes when there is room.
@@ -153,7 +153,7 @@ class _Layout {
 
   /// Measures the picker against the space on offer.
   ///
-  /// The picker sizes to its content. Up to 0.1.0 it was pinned to 420x480
+  /// The picker sizes to its content. Up to 0.0.7 it was pinned to 420x480
   /// whatever it held, so the rows floated apart in dead space -- which is
   /// what made it look bulky.
   factory _Layout.measure(
@@ -848,7 +848,7 @@ class _DayGrid extends StatelessWidget {
           // All six rows must fit the space on offer. A GridView only builds
           // what its viewport covers, so a row that does not fit is not
           // clipped -- it does not exist. That is how the 30th and 31st went
-          // missing before 0.0.8.
+          // missing before 0.1.0.
           final rowHeight =
               (constraints.maxHeight - (_cellGap * (_rows - 1))) / _rows;
           final needsScroll = rowHeight < _minCell;
