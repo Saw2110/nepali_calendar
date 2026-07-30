@@ -13,7 +13,7 @@ import '../src.dart';
 ///
 /// Example usage:
 /// ```dart
-/// final calendarBuilder = NepaliCalendarBuilder<MyEventType>(
+/// final calendarBuilder = CalendarBuilder<MyEventType>(
 ///   headerBuilder: (date, controller) => MyCustomHeader(date),
 ///   cellBuilder: (data) => MyCustomCell(data),
 ///   weekdayBuilder: (data) => MyCustomWeekday(data),

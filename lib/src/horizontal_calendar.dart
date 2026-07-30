@@ -1,3 +1,7 @@
+// The package deliberately uses its own deprecated members: back-compatible
+// code paths have to keep calling them until they are removed in 1.0.0.
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:flutter/material.dart';
 
 import '../nepali_calendar_plus.dart';
@@ -227,6 +231,14 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
   }
 }
 
+/// One date in [HorizontalNepaliCalendar]'s strip.
+///
+/// **Deprecated:** this was never intended as public API; it became so because
+/// the package exported every internal file. It will be removed in 1.0.0. If
+/// you depend on it, please open an issue describing your use case.
+@Deprecated(
+  'Internal implementation detail, not intended as public API. Will be removed in 1.0.0.',
+)
 class CalendarItem extends StatelessWidget {
   const CalendarItem({
     super.key,

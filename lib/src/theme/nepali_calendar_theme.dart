@@ -90,7 +90,7 @@ class NepaliCalendarThemeData {
     required this.yearHeaderStyle,
   });
 
-  /// The palette used by every version up to 0.0.8, when no theme was
+  /// The palette used by every version up to 0.0.7, when no theme was
   /// involved.
   ///
   /// Useful as a starting point for a custom light theme, or to opt a subtree
@@ -317,7 +317,7 @@ class NepaliCalendarThemeData {
 ///
 /// 1. an explicit `calendarStyle` passed to the widget;
 /// 2. the nearest enclosing [NepaliCalendarTheme];
-/// 3. the built-in defaults used by every version up to 0.0.8.
+/// 3. the built-in defaults used by every version up to 0.0.7.
 ///
 /// Theming is therefore opt-in and additive. A widget that already passes
 /// `calendarStyle` is untouched by a theme, and a widget with neither looks

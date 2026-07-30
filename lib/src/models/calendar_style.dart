@@ -41,7 +41,7 @@ class NepaliCalendarStyle {
   ///
   /// **Deprecated:** Use [config] with [CalendarConfig.showEnglishDate] instead.
   @Deprecated(
-    'Use config.showEnglishDate instead. This will be removed in a future version.',
+    'Use config.showEnglishDate instead. Will be removed in 1.0.0.',
   )
   final bool showEnglishDate;
 
@@ -52,7 +52,7 @@ class NepaliCalendarStyle {
   ///
   /// **Deprecated:** Use [config] with [CalendarConfig.showBorder] instead.
   @Deprecated(
-    'Use config.showBorder instead. This will be removed in a future version.',
+    'Use config.showBorder instead. Will be removed in 1.0.0.',
   )
   final bool showBorder;
 
@@ -62,7 +62,7 @@ class NepaliCalendarStyle {
   ///
   /// **Deprecated:** Use [config] with [CalendarConfig.language] instead.
   @Deprecated(
-    'Use config.language instead. This will be removed in a future version.',
+    'Use config.language instead. Will be removed in 1.0.0.',
   )
   final Language language;
 
@@ -119,9 +119,19 @@ class NepaliCalendarStyle {
   /// ```dart
   /// final newStyle = currentStyle.copyWith(
   ///   config: CalendarConfig(showEnglishDate: true),
-  ///   cellsStyle: CellStyle(...),
+  ///   cellsStyle: const CellStyle(dotColor: Colors.red),
   /// );
   /// ```
+  ///
+  /// [weekendType] and [weekStartType] are applied to [config], since that is
+  /// where they live -- there are no top-level properties for them.
+  ///
+  /// ## Bug fix in 0.1.0
+  ///
+  /// Up to 0.0.7 [weekendType] and [weekStartType] were accepted here and then
+  /// silently discarded, so `copyWith(weekStartType: ...)` returned a style
+  /// identical to the original. They now take effect. If you were passing
+  /// either one and relying on it doing nothing, remove it.
   NepaliCalendarStyle copyWith({
     CalendarConfig? config,
     bool? showEnglishDate,
@@ -132,8 +142,21 @@ class NepaliCalendarStyle {
     WeekendType? weekendType,
     WeekStartType? weekStartType,
   }) {
+    final baseConfig = config ?? this.config;
+
+    // Only reach for `effectiveConfig` when there is something to apply and no
+    // config to apply it to: it synthesises one from the deprecated top-level
+    // properties, which would otherwise turn a null config into a non-null one
+    // as a side effect of an unrelated copyWith.
+    final nextConfig = (weekendType == null && weekStartType == null)
+        ? baseConfig
+        : (baseConfig ?? effectiveConfig).copyWith(
+            weekendType: weekendType,
+            weekStartType: weekStartType,
+          );
+
     return NepaliCalendarStyle(
-      config: config ?? this.config,
+      config: nextConfig,
       showEnglishDate: showEnglishDate ?? this.showEnglishDate,
       showBorder: showBorder ?? this.showBorder,
       language: language ?? this.language,
@@ -276,7 +299,7 @@ class HeaderStyle {
   ///
   /// **Deprecated:** Use [config] with [CalendarConfig.weekTitleType] instead.
   @Deprecated(
-    'Use config.weekTitleType instead. This will be removed in a future version.',
+    'Use config.weekTitleType instead. Will be removed in 1.0.0.',
   )
   final TitleFormat weekTitleType;
 

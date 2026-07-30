@@ -70,7 +70,7 @@ class CalendarCell<T> extends StatelessWidget {
     final isToday = CalendarUtils.isToday(date.toDateTime());
     // Check if the current date is the selected date
     final isSelected = _isSelectedDate(date);
-    // A date is a holiday if *any* of its events is one. Up to 0.0.8 only the
+    // A date is a holiday if *any* of its events is one. Up to 0.0.7 only the
     // first event on a date was consulted, so a date carrying an ordinary
     // event ahead of a holiday did not read as a holiday.
     final isHoliday = cellEvents.any((event) => event.isHoliday);

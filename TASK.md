@@ -1,138 +1,435 @@
-## Prompt: Rework the Date Picker UI/UX
+# Comprehensive Analysis & Migration Prompt for Nepali Calendar Library
 
-Let's completely redesign and optimize the date picker experience across the application.
+## Context
 
-The current date picker feels bulky, visually inconsistent, and does not follow modern Material Design principles. Its spacing, hierarchy, interaction flow, and overall appearance make it feel disconnected from the rest of the application's UI. The goal is to replace it with a cleaner, native-feeling, Material Design date picker that provides a fast and intuitive user experience while remaining consistent with our project's design system.
+We are now in the **final stabilization phase** of the Nepali Calendar library.
 
-### Objective
+The primary goal is **NOT to add new features**, but to make the library:
 
-Implement a modern Material Design date picker that:
+* Stable
+* Consistent
+* Easy to maintain
+* Easy to migrate
+* Future-proof
+* Well documented
+* Free from unnecessary legacy APIs
+* Ready for long-term production use
 
-* Feels lightweight and native.
-* Matches our application's theme, typography, colors, spacing, border radius, and elevation.
-* Provides a clean, predictable, and accessible user experience.
-* Is reusable throughout the project from a single component.
+This library will be used by many Flutter developers in real production applications.
 
-### Reference
+Therefore, every recommendation must prioritize:
 
-I have attached a reference image.
+* Backward compatibility (when possible)
+* Clear migration paths
+* Developer Experience (DX)
+* API consistency
+* Long-term maintainability
 
-**Important:**
+---
 
-* The image is **only for UI/UX inspiration**.
-* **Do not copy it exactly.**
-* Analyze its layout, spacing, typography, hierarchy, navigation, and interaction patterns.
-* Recreate the experience while following **our project's existing design language and theme**.
+# Primary Objective
 
-### UI/UX Improvements
+Perform a **complete architecture and API analysis** of the entire package.
 
-#### Overall Design
+The analysis should identify:
 
-* Replace the current bulky dialog with a compact Material-style calendar.
-* Maintain proper padding and whitespace.
-* Improve visual hierarchy.
-* Use subtle elevation and rounded corners.
-* Remove unnecessary visual clutter.
+* Deprecated widgets
+* Deprecated APIs
+* Deprecated helper methods
+* Legacy implementations
+* Duplicate features
+* Inconsistent naming
+* Old design patterns
+* Newly introduced replacements
+* Missing migration guides
+* Documentation gaps
+* Breaking changes
 
-#### Header
+The final output should become the foundation for preparing the next stable release.
 
-* Clean month and year display.
-* Easy previous/next month navigation.
-* Clear indication of the currently displayed month.
-* Smooth month switching animation if supported.
+---
 
-#### Calendar Grid
+# Important Rules
 
-* Equal spacing between dates.
-* Consistent alignment.
-* Today's date should have a subtle indicator.
-* Selected date should use the project's primary color.
-* Disabled dates should be visually distinguishable.
-* Hover, focus, and pressed states should feel responsive.
+## DO NOT
 
-#### Typography
+* Do NOT write code.
+* Do NOT refactor immediately.
+* Do NOT rename anything without justification.
+* Do NOT remove APIs simply because they look old.
+* Do NOT assume developer intentions.
+* Do NOT introduce random improvements.
 
-* Use the project's typography scale.
-* Improve readability.
-* Proper font weights for:
+If any uncertainty exists,
 
-  * Month
-  * Year
-  * Weekday labels
-  * Date numbers
+**STOP and ASK FIRST.**
 
-#### Theme Integration
+Never guess.
 
-The date picker should automatically support:
+---
 
-* Light Theme
-* Dark Theme
+# Scope of Analysis
 
-using our existing color palette without introducing new design patterns.
+Analyze the **entire package**, including but not limited to:
 
-#### Interactions
+* NepaliCalendar
+* HorizontalCalendar
+* YearViewCalendar
+* DatePicker
+* Calendar Controllers
+* Calendar Models
+* Utility Classes
+* Extensions
+* Theme System
+* Builder APIs
+* Navigation APIs
+* Localization
+* Formatting Helpers
+* Event APIs
+* Selection APIs
+* Any other public API exposed by the package
 
-* Single tap to select a date.
-* Clear selected state.
-* Immediate visual feedback.
-* Proper keyboard navigation (where applicable).
-* Accessible focus states.
+Nothing should be skipped.
 
-#### Performance
+---
 
-* Keep the widget lightweight.
-* Avoid unnecessary rebuilds.
-* Optimize rendering.
-* Ensure smooth scrolling and month transitions.
+# Analysis Goals
 
-### Functional Requirements
+For every public API, determine:
 
-The new date picker must support:
+### 1. Is it still needed?
 
-* Single date selection
-* Minimum date
-* Maximum date
-* Initial selected date
-* Current date highlight
-* Cancel action
-* Confirm/Done action
-* Proper validation
-* Localization support
-* Future extensibility for date range selection
+* Yes
+* No
+* Partially
 
-### Reusability
+Explain why.
 
-Create a reusable component that can be used throughout the application.
+---
 
-The API should remain simple and configurable without duplicating code across screens.
+### 2. Is it deprecated?
 
-### Responsive Behavior
+If yes:
 
-Ensure the date picker works correctly on:
+* Why?
+* Since when?
+* What problem does it solve today?
+* Why should developers stop using it?
 
-* Small phones
-* Large phones
-* Tablets
-* Landscape orientation
+---
 
-### Accessibility
+### 3. What replaces it?
 
-Follow Material accessibility guidelines:
+Identify the modern replacement.
 
-* Proper touch targets (minimum 48dp)
-* High contrast
-* Screen reader compatibility
-* Keyboard accessibility
-* Semantic labels where applicable
+Explain:
 
-### Code Quality
+* Why the replacement is better
+* New capabilities
+* Better architecture
+* Performance improvements
+* Cleaner API
+* Reduced maintenance
 
-* Follow the existing project architecture.
-* Keep the implementation modular.
-* Avoid hardcoded values.
-* Centralize dimensions, colors, and typography.
-* Write clean, maintainable, and reusable code.
+---
 
-### Expected Result
+### 4. Migration Difficulty
 
-The final date picker should feel like a polished, native Material component that integrates seamlessly into our application. It should provide a significantly better user experience than the current implementation while maintaining consistency with our overall UI/UX and project theme. The attached image should serve only as inspiration for layout and interaction patterns, not as a direct visual copy.
+Classify migration:
+
+* No Change
+* Very Easy
+* Easy
+* Medium
+* Breaking
+
+Explain why.
+
+---
+
+### 5. Migration Example
+
+Provide migration examples such as:
+
+Old API
+
+↓
+
+New API
+
+Include only concise illustrative snippets when necessary (avoid full implementations).
+
+---
+
+# Required Deliverables
+
+---
+
+## 1. Deprecation Summary Table
+
+Use a standardized documentation table such as:
+
+| Deprecated API | Status | Recommended Replacement | Migration Difficulty | Compatibility | Notes |
+| -------------- | ------ | ----------------------- | -------------------- | ------------- | ----- |
+
+Every deprecated public API must appear here.
+
+Nothing should be omitted.
+
+---
+
+## 2. Migration Guide
+
+Create a section for every deprecated feature.
+
+Structure:
+
+### Old Feature
+
+Purpose
+
+Why it existed
+
+Problems
+
+---
+
+### New Feature
+
+Benefits
+
+Architecture improvements
+
+Performance improvements
+
+Cleaner API
+
+Future support
+
+---
+
+### Migration Steps
+
+Step-by-step instructions.
+
+---
+
+### Example
+
+Before
+
+↓
+
+After
+
+---
+
+### Breaking Changes
+
+Mention every breaking change explicitly.
+
+Never hide them.
+
+---
+
+## 3. Widget-by-Widget Analysis
+
+Analyze every major widget individually.
+
+Example structure:
+
+### NepaliCalendar
+
+Current Status
+
+Strengths
+
+Weaknesses
+
+Deprecated APIs
+
+Recommended APIs
+
+Migration Notes
+
+Future Recommendation
+
+---
+
+Repeat for:
+
+* NepaliCalendar
+* HorizontalCalendar
+* YearViewCalendar
+* DatePicker
+* Any other public widgets
+
+---
+
+## 4. Public API Review
+
+Review every exported API.
+
+Classify as:
+
+* Keep
+* Improve
+* Merge
+* Replace
+* Deprecate
+* Remove (major version only)
+
+Include reasoning for every decision.
+
+---
+
+## 5. Naming Consistency Review
+
+Identify inconsistent naming.
+
+Examples include:
+
+* Widget naming
+* Property naming
+* Builder naming
+* Callback naming
+* Controller naming
+* Theme naming
+* Utility naming
+
+Recommend a consistent naming convention.
+
+Do not rename anything without clear justification.
+
+---
+
+## 6. Developer Experience (DX) Review
+
+Evaluate:
+
+* API discoverability
+* Learning curve
+* Documentation quality
+* IDE autocomplete friendliness
+* Default behaviors
+* Error messages
+* Builder patterns
+* Configuration complexity
+
+Recommend improvements where justified.
+
+---
+
+## 7. Documentation Review
+
+Identify:
+
+* Missing examples
+* Missing migration guides
+* Missing widget documentation
+* Missing API documentation
+* Missing best practices
+* Missing common use cases
+* Missing FAQs
+* Missing troubleshooting notes
+
+---
+
+## 8. Breaking Change Report
+
+Produce a dedicated report listing:
+
+| Breaking Change | Impact | Migration Required | Severity | Recommendation |
+| --------------- | ------ | ------------------ | -------- | -------------- |
+
+No breaking change should be hidden inside other sections.
+
+---
+
+## 9. Stability Review
+
+Identify anything that may affect:
+
+* API stability
+* Long-term maintenance
+* Binary compatibility
+* Package evolution
+* Extensibility
+* Scalability
+
+Highlight risks.
+
+Provide recommendations.
+
+---
+
+## 10. Final Recommendations
+
+Summarize:
+
+### APIs to Keep
+
+Explain why.
+
+---
+
+### APIs to Deprecate
+
+Explain why.
+
+---
+
+### APIs to Replace
+
+Explain why.
+
+---
+
+### APIs to Remove (Next Major Version Only)
+
+Explain why.
+
+---
+
+### New Standard APIs
+
+Document the new recommended APIs that developers should adopt going forward.
+
+These become the official APIs for future development.
+
+---
+
+## Expected Deliverables
+
+The final analysis should include:
+
+* Executive Summary
+* Complete Package Audit
+* Widget-by-Widget Review
+* Public API Review
+* Deprecation Matrix
+* Migration Guide
+* Breaking Change Report
+* Naming Consistency Report
+* Developer Experience Review
+* Documentation Review
+* Stability Assessment
+* Final Recommendations
+* Release Readiness Checklist
+
+---
+
+# Expected Quality
+
+The analysis should resemble a professional audit performed before releasing a major open-source library version.
+
+Recommendations must be:
+
+* Objective
+* Evidence-based
+* Backward-compatible whenever possible
+* Easy for existing developers to adopt
+* Maintainable for future contributors
+* Suitable for long-term production support
+
+If any ambiguity, missing context, or uncertainty is encountered during the review, **stop and ask for clarification before making recommendations**. Do not make assumptions or introduce changes that are not justified by the current library architecture.

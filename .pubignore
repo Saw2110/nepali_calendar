@@ -1,0 +1,41 @@
+# Files excluded from the published package.
+#
+# NOTE: when this file exists, pub uses it INSTEAD of .gitignore to decide what
+# to publish. Everything .gitignore excludes therefore has to be repeated here,
+# or it would end up in the archive.
+
+# --- Internal, not for pub.dev -------------------------------------------
+# The pre-release audit and the task brief it was written from. Both describe
+# work in progress and are for contributors, not consumers. doc/MIGRATION.md is
+# deliberately NOT listed: that one ships.
+AUDIT.md
+TASK.md
+folder_structure.md
+
+# --- Mirrors .gitignore --------------------------------------------------
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Flutter/Dart/Pub related
+# Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
+/pubspec.lock
+**/doc/api/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/

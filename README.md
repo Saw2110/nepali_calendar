@@ -132,10 +132,11 @@ NepaliCalendar<String>(
 
 `checkIsHoliday` is deprecated and no longer required — it was never read.
 
-## Upgrading to 0.0.8
+## Upgrading to 0.1.0
 
-0.0.8 is a correctness release. It adds no features and removes no APIs, but it
-does fix behaviour you may have worked around. See the
+0.1.0 is a correctness release. It removes no APIs, but it does fix behaviour you
+may have worked around — which is why it is a minor bump rather than a patch. See
+the [migration guide](doc/MIGRATION.md) for step-by-step instructions, or the
 [CHANGELOG](CHANGELOG.md) for the full list.
 
 **Dates were wrong for users in Nepal.** `toNepaliDateTime()` added an extra
@@ -145,7 +146,7 @@ day whenever the device's timezone was exactly UTC+5:45 and the date fell after
 ```dart
 // 0.0.7, on a device in Nepal
 DateTime(2024, 4, 13).toNepaliDateTime(); // BS 2081-01-02  ✗
-// 0.0.8, on any device
+// 0.1.0, on any device
 DateTime(2024, 4, 13).toNepaliDateTime(); // BS 2081-01-01  ✓
 ```
 
@@ -228,7 +229,7 @@ NepaliCalendar(
 controller.jumpToToday();
 controller.nextMonth();
 controller.previousMonth();
-controller.jumpToDate(NepaliDateTime(2080, 1, 1));
+controller.jumpToDate(NepaliDateTime(year: 2080, month: 1, day: 1));
 ```
 
 ### Date Picker Dialog
@@ -309,7 +310,7 @@ class MyEvent {
 
 final events = [
   CalendarEvent<MyEvent>(
-    date: NepaliDateTime(2082, 9, 10),
+    date: NepaliDateTime(year: 2082, month: 9, day: 10),
     isHoliday: true,
     additionalInfo: MyEvent("Christmas", "Holiday"),
   ),

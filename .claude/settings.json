@@ -6,7 +6,13 @@
       "PowerShell(flutter test --reporter=failures-only 2>&1)",
       "PowerShell(flutter test test/week_rows_test.dart 2>&1)",
       "PowerShell(flutter test test/event_list_test.dart 2>&1)",
-      "PowerShell(flutter test test/event_list_test.dart --plain-name \"sits at the top\" 2>&1)"
+      "PowerShell(flutter test test/event_list_test.dart --plain-name \"sits at the top\" 2>&1)",
+      "PowerShell(flutter pub publish --dry-run 2>&1)",
+      "Bash(sed -i '232s/NepaliDateTime\\(2080, 1, 1\\)/NepaliDateTime\\(year: 2080, month: 1, day: 1\\)/' README.md)",
+      "Bash(sed -i '313s/NepaliDateTime\\(2082, 9, 10\\)/NepaliDateTime\\(year: 2082, month: 9, day: 10\\)/' README.md)",
+      "PowerShell(flutter test test/theme_test.dart --plain-name \"copyWith\" 2>&1)",
+      "Bash(git -c core.safecrlf=false diff --stat)",
+      "Bash(echo \"--- exit: $? ---\")"
     ]
   }
 }

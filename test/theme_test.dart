@@ -484,4 +484,85 @@ void main() {
       );
     });
   });
+
+  /// Up to 0.0.7 `weekendType` and `weekStartType` were accepted by copyWith and
+  /// then silently dropped, so the returned style was identical to the original.
+  group('NepaliCalendarStyle.copyWith', () {
+    test('applies weekendType and weekStartType to the config', () {
+      const original = NepaliCalendarStyle(
+        config: CalendarConfig(
+          weekendType: WeekendType.saturday,
+          weekStartType: WeekStartType.sunday,
+        ),
+      );
+
+      final updated = original.copyWith(
+        weekendType: WeekendType.fridayAndSaturday,
+        weekStartType: WeekStartType.monday,
+      );
+
+      expect(updated.effectiveConfig.weekendType, WeekendType.fridayAndSaturday);
+      expect(updated.effectiveConfig.weekStartType, WeekStartType.monday);
+    });
+
+    test('leaves the rest of the config alone', () {
+      const original = NepaliCalendarStyle(
+        config: CalendarConfig(
+          showEnglishDate: true,
+          language: Language.english,
+          sixWeekMonthsEnforced: true,
+        ),
+      );
+
+      final updated = original.copyWith(weekStartType: WeekStartType.monday);
+
+      expect(updated.effectiveConfig.showEnglishDate, isTrue);
+      expect(updated.effectiveConfig.language, Language.english);
+      expect(updated.effectiveConfig.sixWeekMonthsEnforced, isTrue);
+      expect(updated.effectiveConfig.weekStartType, WeekStartType.monday);
+    });
+
+    test('works when the original has no config, carrying the legacy '
+        'properties across', () {
+      // The deprecated top-level properties are the only source of config here,
+      // so they have to survive being folded into a synthesised one.
+      const original = NepaliCalendarStyle(
+        showEnglishDate: true,
+        language: Language.english,
+      );
+
+      final updated = original.copyWith(weekendType: WeekendType.sunday);
+
+      expect(updated.effectiveConfig.weekendType, WeekendType.sunday);
+      expect(updated.effectiveConfig.showEnglishDate, isTrue);
+      expect(updated.effectiveConfig.language, Language.english);
+    });
+
+    test('does not synthesise a config when neither is passed', () {
+      const original = NepaliCalendarStyle(showEnglishDate: true);
+
+      final updated = original.copyWith(showBorder: true);
+
+      expect(
+        updated.config,
+        isNull,
+        reason: 'an unrelated copyWith must not turn a null config non-null, '
+            'which would suppress theme resolution',
+      );
+      expect(updated.effectiveConfig.showEnglishDate, isTrue);
+      expect(updated.effectiveConfig.showBorder, isTrue);
+    });
+
+    test('an explicit config wins over the existing one', () {
+      const original = NepaliCalendarStyle(
+        config: CalendarConfig(weekendType: WeekendType.saturday),
+      );
+
+      final updated = original.copyWith(
+        config: const CalendarConfig(weekendType: WeekendType.sunday),
+      );
+
+      expect(updated.effectiveConfig.weekendType, WeekendType.sunday);
+    });
+  });
 }

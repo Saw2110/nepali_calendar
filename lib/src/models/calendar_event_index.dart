@@ -9,7 +9,7 @@ import '../src.dart';
 ///
 /// ## Why this exists
 ///
-/// Up to 0.0.8 each cell searched the whole event list with `firstWhere`,
+/// Up to 0.0.7 each cell searched the whole event list with `firstWhere`,
 /// catching the "not found" exception as control flow. A month view is 42
 /// cells, so drawing one month was O(42 x events) and rebuilding on every
 /// scroll frame. It also silently kept only the *first* event on a date, which
