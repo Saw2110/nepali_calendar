@@ -501,7 +501,8 @@ void main() {
         weekStartType: WeekStartType.monday,
       );
 
-      expect(updated.effectiveConfig.weekendType, WeekendType.fridayAndSaturday);
+      expect(
+          updated.effectiveConfig.weekendType, WeekendType.fridayAndSaturday);
       expect(updated.effectiveConfig.weekStartType, WeekStartType.monday);
     });
 
@@ -522,7 +523,8 @@ void main() {
       expect(updated.effectiveConfig.weekStartType, WeekStartType.monday);
     });
 
-    test('works when the original has no config, carrying the legacy '
+    test(
+        'works when the original has no config, carrying the legacy '
         'properties across', () {
       // The deprecated top-level properties are the only source of config here,
       // so they have to survive being folded into a synthesised one.
