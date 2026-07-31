@@ -104,6 +104,21 @@ Found and fixed while preparing 0.1.0:
 - Every month was padded to six week rows, so five-week months carried a full
   trailing row of the next month's dates. Now 5 or 6 as needed, with
   `CalendarConfig.sixWeekMonthsEnforced` as the opt-out.
+- **Table rules were painted under the cells, not over them.** Both
+  `_wrapWithTableBorder` helpers and the month view's outer frame used a
+  `DecoratedBox` at its default `DecorationPosition.background`, so each cell's
+  own background decoration painted over the lines. Today's cell, whose
+  background is fully opaque, erased its right and bottom rules outright;
+  selected cells tinted theirs; weekday header cells, having no background,
+  kept all of theirs. That asymmetry is what made the header row and the date
+  grid look like they were drawn to different rules. Measurement confirmed the
+  geometry itself was exact: header label centres matched date cell centres to
+  within 0.01px, and the header row height equalled the date row height.
+- **Cell size ignored the month view's own padding.** `cellWidth` came from the
+  full `LayoutBuilder` width, but the grid is laid out inside 8px of padding on
+  each side, so real cells were narrower and therefore shorter than the budget
+  assumed. At 400x800 the viewport was sized to 408px for 392px of content,
+  leaving a 16px dead strip at the bottom of every page.
 - The event list was centred in the space below the grid rather than
   top-aligned, so sparse months appeared to float. Caused by
   `AnimatedSwitcher.defaultLayoutBuilder` using `Alignment.center`.

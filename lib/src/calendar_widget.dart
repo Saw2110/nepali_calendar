@@ -266,10 +266,10 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
     // `page` is only readable once the PageView has been laid out; before then
     // the last settled index is the best available answer.
     final fallback = _currentPageIndexNotifier.value.toDouble();
-    final page = _pageController.hasClients &&
-            _pageController.position.haveDimensions
-        ? (_pageController.page ?? fallback)
-        : fallback;
+    final page =
+        _pageController.hasClients && _pageController.position.haveDimensions
+            ? (_pageController.page ?? fallback)
+            : fallback;
 
     final lastPage = (CalendarUtils.nepaliYears.length * 12) - 1;
     final from = page.floor().clamp(0, lastPage);
@@ -358,7 +358,16 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                   // -- it overflowed its parent. Cap the cell height instead,
                   // so cells grow sideways on wide viewports rather than the
                   // calendar growing without bound.
-                  final cellWidth = constraints.maxWidth / 7;
+                  //
+                  // Measure against the width the grid actually gets, which is
+                  // what is left after CalendarMonthView's own padding. Up to
+                  // 0.0.7 this divided the full width, so every row came out
+                  // narrower -- and therefore shorter -- than the budget
+                  // assumed, leaving a dead strip at the bottom of each page
+                  // worth roughly the padding itself.
+                  final gridWidth =
+                      math.max(0.0, constraints.maxWidth - _monthViewPadding);
+                  final cellWidth = gridWidth / 7;
 
                   // Square cells, but never taller than the cap, and never
                   // taller than the height budget allows -- the latter is what
@@ -370,7 +379,17 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                     _minCellHeight,
                     math.min(math.min(cellWidth, _maxCellHeight), heightBudget),
                   );
-                  final cellAspectRatio = cellWidth / cellHeight;
+                  // A viewport can be handed zero width -- a collapsed pane, a
+                  // page mid-transition, a parent that lays out before it has
+                  // measured itself -- and `SliverGridDelegateWithFixedCross
+                  // AxisCount` asserts on a ratio that is not positive and
+                  // finite. Fall back to square cells for those frames rather
+                  // than throwing; the next frame with real width corrects it.
+                  final rawAspectRatio = cellWidth / cellHeight;
+                  final cellAspectRatio =
+                      rawAspectRatio > 0 && rawAspectRatio.isFinite
+                          ? rawAspectRatio
+                          : 1.0;
 
                   // CalendarMonthView adds 8px padding all round, and spaces
                   // the header off the grid unless borders are drawn.
@@ -379,103 +398,102 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                   final chrome = rowSpacing + _monthViewPadding + cellHeight;
 
                   final pageView = PageView.builder(
-                      controller: _pageController,
-                      itemCount: CalendarUtils.nepaliYears.length * 12,
-                      // Add physics for smoother scrolling
-                      physics: const BouncingScrollPhysics(),
-                      onPageChanged: (index) {
-                        // Calculate year and month from page index
-                        final int year =
-                            CalendarUtils.calenderyearStart + (index ~/ 12);
-                        final int month = (index % 12) + 1;
+                    controller: _pageController,
+                    itemCount: CalendarUtils.nepaliYears.length * 12,
+                    // Add physics for smoother scrolling
+                    physics: const BouncingScrollPhysics(),
+                    onPageChanged: (index) {
+                      // Calculate year and month from page index
+                      final int year =
+                          CalendarUtils.calenderyearStart + (index ~/ 12);
+                      final int month = (index % 12) + 1;
 
-                        // Update page index notifier
-                        _currentPageIndexNotifier.value = index;
+                      // Update page index notifier
+                      _currentPageIndexNotifier.value = index;
 
-                        // Update current date and trigger callback
-                        _updateCurrentDate(
-                          year,
-                          month,
-                          _selectedDateNotifier.value.day,
-                        );
-                      },
-                      itemBuilder: (context, index) {
-                        // Calculate year and month for current page
-                        final year =
-                            CalendarUtils.calenderyearStart + (index ~/ 12);
-                        final month = (index % 12) + 1;
+                      // Update current date and trigger callback
+                      _updateCurrentDate(
+                        year,
+                        month,
+                        _selectedDateNotifier.value.day,
+                      );
+                    },
+                    itemBuilder: (context, index) {
+                      // Calculate year and month for current page
+                      final year =
+                          CalendarUtils.calenderyearStart + (index ~/ 12);
+                      final month = (index % 12) + 1;
 
-                        return AnimatedBuilder(
-                          animation: _pageController,
-                          builder: (context, child) {
-                            // Calculate page offset for smooth transitions
-                            double scale = 1.0;
-                            double opacity = 1.0;
+                      return AnimatedBuilder(
+                        animation: _pageController,
+                        builder: (context, child) {
+                          // Calculate page offset for smooth transitions
+                          double scale = 1.0;
+                          double opacity = 1.0;
 
-                            if (_pageController.position.haveDimensions) {
-                              final double page =
-                                  _pageController.page ?? index.toDouble();
-                              final double offset = (page - index).abs();
+                          if (_pageController.position.haveDimensions) {
+                            final double page =
+                                _pageController.page ?? index.toDouble();
+                            final double offset = (page - index).abs();
 
-                              // Smooth scale transition: 1.0 -> 0.85 (less dramatic)
-                              // Using a curve for smoother interpolation
-                              scale = 1.0 - (offset * 0.15).clamp(0.0, 0.15);
+                            // Smooth scale transition: 1.0 -> 0.85 (less dramatic)
+                            // Using a curve for smoother interpolation
+                            scale = 1.0 - (offset * 0.15).clamp(0.0, 0.15);
 
-                              // Smooth opacity transition: 1.0 -> 0.5
-                              // Faster fade to avoid "stuck" feeling
-                              opacity = 1.0 - (offset * 0.5).clamp(0.0, 0.5);
-                            }
+                            // Smooth opacity transition: 1.0 -> 0.5
+                            // Faster fade to avoid "stuck" feeling
+                            opacity = 1.0 - (offset * 0.5).clamp(0.0, 0.5);
+                          }
 
-                            // Mid-swipe the viewport is somewhere between the
-                            // outgoing and incoming months' heights, so a
-                            // six-row month can be handed less room than it
-                            // needs. Let it lay out at its natural height and
-                            // clip the surplus off the bottom -- constraining
-                            // it instead would make the month view's Column
-                            // report an overflow on every frame of the swipe.
-                            return ClipRect(
-                              child: OverflowBox(
-                                alignment: Alignment.topCenter,
-                                minHeight: 0,
-                                maxHeight: double.infinity,
-                                child: Transform.scale(
-                                  scale: scale,
-                                  child: Opacity(
-                                    opacity: opacity,
-                                    child: child,
-                                  ),
+                          // Mid-swipe the viewport is somewhere between the
+                          // outgoing and incoming months' heights, so a
+                          // six-row month can be handed less room than it
+                          // needs. Let it lay out at its natural height and
+                          // clip the surplus off the bottom -- constraining
+                          // it instead would make the month view's Column
+                          // report an overflow on every frame of the swipe.
+                          return ClipRect(
+                            child: OverflowBox(
+                              alignment: Alignment.topCenter,
+                              minHeight: 0,
+                              maxHeight: double.infinity,
+                              child: Transform.scale(
+                                scale: scale,
+                                child: Opacity(
+                                  opacity: opacity,
+                                  child: child,
                                 ),
                               ),
+                            ),
+                          );
+                        },
+                        child: ValueListenableBuilder<NepaliDateTime>(
+                          valueListenable: _selectedDateNotifier,
+                          builder: (context, selectedDate, _) {
+                            return CalendarMonthView<T>(
+                              year: year,
+                              month: month,
+                              selectedDate: selectedDate,
+                              eventList: widget.eventList,
+                              eventIndex: _eventIndex,
+                              calendarStyle: calendarStyle,
+                              cellAspectRatio: cellAspectRatio,
+                              cellBuilder: widget.calendarBuilder?.cellBuilder,
+                              weekdayBuilder:
+                                  widget.calendarBuilder?.weekdayBuilder,
+                              onDaySelected: (date) {
+                                _updateCurrentDate(
+                                  date.year,
+                                  date.month,
+                                  date.day,
+                                );
+                              },
                             );
                           },
-                          child: ValueListenableBuilder<NepaliDateTime>(
-                            valueListenable: _selectedDateNotifier,
-                            builder: (context, selectedDate, _) {
-                              return CalendarMonthView<T>(
-                                year: year,
-                                month: month,
-                                selectedDate: selectedDate,
-                                eventList: widget.eventList,
-                                eventIndex: _eventIndex,
-                                calendarStyle: calendarStyle,
-                                cellAspectRatio: cellAspectRatio,
-                                cellBuilder:
-                                    widget.calendarBuilder?.cellBuilder,
-                                weekdayBuilder:
-                                    widget.calendarBuilder?.weekdayBuilder,
-                                onDaySelected: (date) {
-                                  _updateCurrentDate(
-                                    date.year,
-                                    date.month,
-                                    date.day,
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    );
+                        ),
+                      );
+                    },
+                  );
 
                   // The viewport tracks the height of the month on screen, and
                   // interpolates between the two while a swipe is in flight --
@@ -486,8 +504,8 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                     animation: _pageController,
                     child: pageView,
                     builder: (context, child) {
-                      final gridHeight =
-                          chrome + (cellHeight * _visibleWeekRows(calendarStyle));
+                      final gridHeight = chrome +
+                          (cellHeight * _visibleWeekRows(calendarStyle));
 
                       return ClipRect(
                         child: SizedBox(height: gridHeight, child: child),

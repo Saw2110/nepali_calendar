@@ -31,6 +31,10 @@ class WeekdayHeader extends StatelessWidget {
   /// [CalendarGrid.cellAspectRatio].
   final double cellAspectRatio;
 
+  /// [cellAspectRatio], guarded against the values the grid delegate rejects.
+  double get _effectiveAspectRatio =>
+      cellAspectRatio > 0 && cellAspectRatio.isFinite ? cellAspectRatio : 1.0;
+
   const WeekdayHeader({
     super.key,
     required this.style,
@@ -49,7 +53,7 @@ class WeekdayHeader extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7, // 7 columns for 7 days in a week
-        childAspectRatio: cellAspectRatio,
+        childAspectRatio: _effectiveAspectRatio,
       ),
       itemCount: 7,
       itemBuilder: (context, index) {
@@ -153,6 +157,10 @@ class WeekdayHeader extends StatelessWidget {
     final borderColor = style.cellsStyle.borderColor.withValues(alpha: 0.3);
 
     return DecoratedBox(
+      // Over the cell, matching the date grid. The default header cells have
+      // no background so this makes no difference to them, but a custom
+      // weekdayBuilder that paints one would otherwise cover its own lines.
+      position: DecorationPosition.foreground,
       decoration: BoxDecoration(
         border: Border(
           right: BorderSide(color: borderColor),

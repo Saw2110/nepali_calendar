@@ -95,6 +95,10 @@ class CalendarMonthView<T> extends StatelessWidget {
 
     final content = calendarStyle.effectiveConfig.showBorder
         ? DecoratedBox(
+            // Over the grid, for the same reason the cells' own borders are:
+            // a today or selected cell in the first column would otherwise
+            // paint its opaque background across this left edge.
+            position: DecorationPosition.foreground,
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(color: borderColor),

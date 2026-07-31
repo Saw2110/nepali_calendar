@@ -47,6 +47,10 @@ class CalendarGrid<T> extends StatelessWidget {
   /// calendar as tall as the viewport is wide.
   final double cellAspectRatio;
 
+  /// [cellAspectRatio], guarded against the values the grid delegate rejects.
+  double get _effectiveAspectRatio =>
+      cellAspectRatio > 0 && cellAspectRatio.isFinite ? cellAspectRatio : 1.0;
+
   const CalendarGrid({
     super.key,
     required this.year,
@@ -67,7 +71,7 @@ class CalendarGrid<T> extends StatelessWidget {
     // Normalize the weekday of the first day based on week start type
     final weekdayOfFirstDay = _normalizeWeekday(firstDayOfMonth.weekday);
     // Get the total number of days in the month
-    final daysCountInMonth = _getDaysInMonth(year, month);
+    final daysCountInMonth = _daysInMonth(year, month) ?? 0;
 
     // Five or six rows, whichever this month actually needs -- unless the
     // config asks for six unconditionally.
@@ -82,7 +86,7 @@ class CalendarGrid<T> extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7, // 7 columns for 7 days in a week
-        childAspectRatio: cellAspectRatio,
+        childAspectRatio: _effectiveAspectRatio,
       ),
       itemCount: cellCount,
       itemBuilder: (context, index) {
@@ -124,9 +128,16 @@ class CalendarGrid<T> extends StatelessWidget {
     if (weekdayOfFirstDay > 0) {
       final prevMonth = month == 1 ? 12 : month - 1;
       final prevYear = month == 1 ? year - 1 : year;
-      final daysInPrevMonth = _getDaysInMonth(prevYear, prevMonth);
+      final daysInPrevMonth = _daysInMonth(prevYear, prevMonth);
 
       for (int i = weekdayOfFirstDay - 1; i >= 0; i--) {
+        // The month before the first supported one has no dates to show, so
+        // its cells are left blank rather than the page failing to build.
+        if (daysInPrevMonth == null) {
+          gridItems.add(const SizedBox.shrink());
+          continue;
+        }
+
         final day = daysInPrevMonth - i;
         final date = NepaliDateTime(year: prevYear, month: prevMonth, day: day);
         final events = index.eventsOn(date);
@@ -170,6 +181,15 @@ class CalendarGrid<T> extends StatelessWidget {
       final nextMonth = month == 12 ? 1 : month + 1;
       final nextYear = month == 12 ? year + 1 : year;
 
+      // Same at the other end of the range: the month after the last
+      // supported one cannot be dated, so fill the row with blanks.
+      if (_daysInMonth(nextYear, nextMonth) == null) {
+        gridItems.addAll(
+          List<Widget>.filled(remainingCells, const SizedBox.shrink()),
+        );
+        return gridItems;
+      }
+
       for (int day = 1; day <= remainingCells; day++) {
         final date = NepaliDateTime(year: nextYear, month: nextMonth, day: day);
         final events = index.eventsOn(date);
@@ -199,10 +219,14 @@ class CalendarGrid<T> extends StatelessWidget {
   CalendarEventIndex<T> get _index =>
       eventIndex ?? CalendarEventIndex<T>.fromList(eventList);
 
-  // Method to get the number of days in a specific month and year
-  int _getDaysInMonth(int year, int month) {
-    return CalendarUtils.nepaliYears[year]![month];
-  }
+  /// The number of days in a month, or null for a year outside the bundled
+  /// data.
+  ///
+  /// The first and last supported months spill their leading and trailing
+  /// cells into a year the package has no data for. Reading those through
+  /// `nepaliYears[year]!` brought the whole calendar down on those two pages.
+  int? _daysInMonth(int year, int month) =>
+      CalendarUtils.nepaliYears[year]?[month];
 
   // Method to normalize the weekday to a 0-based index based on week start type
   int _normalizeWeekday(int weekday) => WeekUtils.normalizeWeekday(
@@ -218,6 +242,14 @@ class CalendarGrid<T> extends StatelessWidget {
         calendarStyle.cellsStyle.borderColor.withValues(alpha: 0.3);
 
     return DecoratedBox(
+      // Drawn over the cell, not under it. A DecoratedBox paints its
+      // decoration behind its child by default, and every cell's own
+      // background fills the cell corner to corner -- so up to 0.1.0 an
+      // opaque background painted straight over the lines this draws, and
+      // today's cell erased its own right and bottom gridlines. Selected
+      // cells tinted theirs instead, which left them a different colour from
+      // every other line in the table.
+      position: DecorationPosition.foreground,
       decoration: BoxDecoration(
         border: Border(
           right: BorderSide(color: borderColor),
