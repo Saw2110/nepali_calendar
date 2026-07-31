@@ -77,8 +77,8 @@ class CalendarGrid<T> extends StatelessWidget {
     // config asks for six unconditionally.
     final cellCount = _rowCount * 7;
 
-    final gridItems =
-        _buildCalendarGrid(weekdayOfFirstDay, daysCountInMonth, _index, cellCount);
+    final gridItems = _buildCalendarGrid(
+        weekdayOfFirstDay, daysCountInMonth, _index, cellCount);
 
     final gridView = GridView.builder(
       shrinkWrap: true,
