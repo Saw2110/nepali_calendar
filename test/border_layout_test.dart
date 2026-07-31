@@ -68,7 +68,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        ruleBoxes(tester).every((b) => b.position == DecorationPosition.foreground),
+        ruleBoxes(tester)
+            .every((b) => b.position == DecorationPosition.foreground),
         isTrue,
       );
     });
