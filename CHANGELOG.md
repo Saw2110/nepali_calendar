@@ -75,6 +75,13 @@ See [doc/MIGRATION.md](doc/MIGRATION.md) for the full upgrade guide.
   had too few events to fill it; it now starts directly under the grid
 * `NepaliCalendarStyle.copyWith` accepted `weekendType` and `weekStartType` and
   silently discarded them; both now take effect via `config`
+* With `showBorder: true`, table rules were painted behind each cell, so an
+  opaque cell background covered them. Today's cell erased its own right and
+  bottom rules and a selected cell tinted them, while the weekday header row,
+  having no background, kept all of its. The rules now draw over the cells
+* Cell size was derived from the full width rather than the width left after
+  the month view's padding, so every row was slightly shorter than the layout
+  budget assumed and each month page ended with an unused strip
 * Horizontal calendar tap detection
 * Date picker missing last week of some months
 * Date picker overflow and responsive layout issues
