@@ -39,6 +39,7 @@ A feature-rich Flutter package for implementing Nepali (Bikram Sambat) calendar 
 - ✅ Full-year view — twelve months on one screen
 - ✅ Theming with light/dark mode, following your app's `ColorScheme`
 - ✅ Multiple events per date
+- ✅ Screen-reader labels, keyboard navigation and haptics out of the box
 
 ## Theming and dark mode
 
@@ -93,6 +94,43 @@ Theming is therefore opt-in: existing code that passes `calendarStyle`, or
 passes nothing at all, looks exactly as it did before. Prefer `copyWith` on the
 theme over passing a `calendarStyle`, since an explicit style replaces the
 theme rather than merging with it.
+
+## Accessibility and platform feel
+
+Every calendar is usable without sight or without a touchscreen, with no extra
+configuration.
+
+**Screen readers.** Each date announces itself in full, in the configured
+language, rather than as a bare number:
+
+```
+बैशाख, १५, २०८१, शनिबार, आज, बिदा, २ कार्यक्रम
+Baisakh, 15, 2081, Saturday, Today, Holiday, 2 events
+```
+
+The month title is exposed as a header, and the navigation chevrons are
+labelled. A custom `cellBuilder` replaces the default cell entirely, including
+its semantics — supply your own `Semantics` wrapper if you use one.
+
+**Keyboard.** Date cells take focus, so `Tab` reaches the grid, the arrow keys
+move between dates by position, and `Enter` or `Space` selects the focused
+date. This matters most on desktop and web, where the calendar was previously
+mouse-only.
+
+**Haptics.** Selecting a date fires the platform's selection tick. Turn it off
+for a calendar that is scrubbed rather than tapped:
+
+```dart
+NepaliCalendar(
+  calendarStyle: const NepaliCalendarStyle(
+    config: CalendarConfig(enableHapticFeedback: false),
+  ),
+)
+```
+
+**Text scaling.** Cell text follows the system font setting as far as the cell
+can hold it, then stops, so a user at 200% gets larger dates rather than a
+clipped grid.
 
 ## Year view
 

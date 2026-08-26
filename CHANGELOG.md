@@ -1,5 +1,58 @@
 # Changelog
 
+## 0.1.1
+
+Platform-native polish. Everything here is additive or a fix -- no API was
+removed or changed shape, so upgrading from 0.1.0 needs no code changes.
+
+### Added
+
+- **Screen-reader support across every calendar.** Date cells in
+  `NepaliCalendar`, `NepaliYearCalendar` and `HorizontalNepaliCalendar` now
+  announce the whole date and its state rather than a bare number. A cell that
+  read as "१५" now reads as "बैशाख, १५, २०८१, शनिबार, आज, बिदा, २ कार्यक्रम".
+  `NepaliDatePicker` already did this; the phrasing is now shared, so all four
+  announce a date identically.
+- **Ink feedback and keyboard support on date cells.** Day cells are now
+  `InkWell`s rather than bare `GestureDetector`s, which gives them the Android
+  ripple, a hover highlight on desktop and web, a focus ring, and a pointer
+  cursor. It also makes the grid keyboard-navigable: Tab reaches it, the arrow
+  keys traverse it by position, and Enter or Space selects the focused date.
+- **`CalendarConfig.enableHapticFeedback`** (default `true`). Selecting a date
+  fires `HapticFeedback.selectionClick`, matching the platform date pickers.
+  Set it to `false` to opt out.
+- **Tooltips and a semantic header on the month bar.** The chevrons carry
+  "Previous month" / "अघिल्लो महिना" labels -- they were previously unlabelled
+  buttons -- and the month and year read as a single header node.
+- **`debugFillProperties` on the public widgets**, so `NepaliCalendar`,
+  `NepaliYearCalendar`, `NepaliDatePicker` and `HorizontalNepaliCalendar` show
+  their configuration in the Flutter Inspector and in widget diagnostics.
+
+### Fixed
+
+- **A large system font no longer overflows the calendar.** At high text scale
+  the weekday header overflowed its row by up to 43px, and day numbers spilled
+  out of their cells. Cell text now follows the user's setting as far as the
+  cell can hold it and then stops, and the weekday names scale down to fit
+  rather than overflowing. Cell geometry is unchanged at normal text sizes.
+- **The picker's dialog buttons follow the app's localizations.** An English
+  picker now takes its OK and Cancel labels from `MaterialLocalizations`, so it
+  matches the app's other dialogs instead of hard-coding English. A Nepali
+  picker keeps its own labels, as Flutter ships no Nepali translations. Passing
+  `confirmText` or `cancelText` still overrides both.
+- **Adjacent-month dates announce themselves as such** in `NepaliDatePicker`,
+  which previously gave them the same label as in-month dates.
+
+### Performance
+
+- Each month page is now its own repaint boundary, so swiping re-composites a
+  cached raster instead of repainting 42 cells every frame.
+
+### Deprecations
+
+No change. The members deprecated in 0.1.0 still carry their original promise:
+they keep working until 1.0.0.
+
 ## 0.1.0
 
 > **Minor version, not a patch.** This release changes behaviour that existing
