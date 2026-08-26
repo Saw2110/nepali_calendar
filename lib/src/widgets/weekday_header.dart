@@ -8,6 +8,12 @@ import 'package:flutter/material.dart';
 // Import custom source file containing calendar utilities
 import '../src.dart';
 
+/// How far the weekday names follow the system font scale before they stop.
+///
+/// Lower than a day cell's number: this row stacks the Nepali and English
+/// names in the height of a single cell, so it runs out of room sooner.
+const double _maxWeekdayTextScale = 1.3;
+
 // Widget to display header row of weekday names
 /// The weekday header is an implementation detail of [NepaliCalendar]. To
 /// customise it, use `CalendarBuilder.weekdayBuilder`.
@@ -84,45 +90,61 @@ class WeekdayHeader extends StatelessWidget {
               style.cellsStyle.dateTextColor;
           final secondaryColor = primaryColor.withValues(alpha: 0.7);
 
-          cell = Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Nepali weekday name
-              Text(
-                WeekUtils.formattedWeekDay(
-                  day,
-                  Language.nepali,
-                  style.effectiveConfig.weekTitleType,
+          // Two stacked lines in a cell whose height comes from the viewport,
+          // not from its text. At a large system font setting they simply
+          // overflowed it -- 43px past the bottom at 3x. Follow the user's
+          // setting as far as the cell can take it, then scale the block down
+          // to fit rather than spilling out of it.
+          final headerScaler = MediaQuery.textScalerOf(
+            context,
+          ).clamp(maxScaleFactor: _maxWeekdayTextScale);
+
+          cell = FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Nepali weekday name
+                Text(
+                  WeekUtils.formattedWeekDay(
+                    day,
+                    Language.nepali,
+                    style.effectiveConfig.weekTitleType,
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  textScaler: headerScaler,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: isWeekend
+                        ? style.cellsStyle.weekDayColor
+                        : primaryColor,
+                  ),
                 ),
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color:
-                      isWeekend ? style.cellsStyle.weekDayColor : primaryColor,
+                const SizedBox(height: 2),
+                // English weekday name
+                Text(
+                  WeekUtils.formattedWeekDay(
+                    day,
+                    Language.english,
+                    style.effectiveConfig.weekTitleType,
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  textScaler: headerScaler,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isWeekend
+                        ? style.cellsStyle.weekDayColor.withValues(alpha: 0.7)
+                        : secondaryColor,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              // English weekday name
-              Text(
-                WeekUtils.formattedWeekDay(
-                  day,
-                  Language.english,
-                  style.effectiveConfig.weekTitleType,
-                ),
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isWeekend
-                      ? style.cellsStyle.weekDayColor.withValues(alpha: 0.7)
-                      : secondaryColor,
-                ),
-              ),
-            ],
+              ],
+            ),
           );
         }
 
