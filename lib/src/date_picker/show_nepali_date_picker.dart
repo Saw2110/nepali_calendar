@@ -169,15 +169,38 @@ class _NepaliDatePickerAlertState extends State<_NepaliDatePickerAlert> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-            widget.cancelText ?? (nepali ? 'रद्द गर्नुहोस्' : 'Cancel'),
-          ),
+          child: Text(widget.cancelText ?? _cancelLabel(context, nepali)),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(selected),
-          child: Text(widget.confirmText ?? (nepali ? 'ठीक छ' : 'OK')),
+          child: Text(widget.confirmText ?? _confirmLabel(context, nepali)),
         ),
       ],
     );
   }
+
+  /// The cancel label, preferring the app's own.
+  ///
+  /// An English picker inside a localized app should say what that app's other
+  /// dialogs say -- Flutter ships translations of these two labels for every
+  /// locale it supports, and borrowing them keeps the picker from being the
+  /// one dialog with hand-written buttons. A Nepali picker keeps its own
+  /// labels: Flutter has no Nepali `MaterialLocalizations`.
+  String _cancelLabel(BuildContext context, bool nepali) {
+    if (nepali) return 'रद्द गर्नुहोस्';
+    return _materialLocalizations(context)?.cancelButtonLabel ?? 'Cancel';
+  }
+
+  /// The confirm label, preferring the app's own. See [_cancelLabel].
+  String _confirmLabel(BuildContext context, bool nepali) {
+    if (nepali) return 'ठीक छ';
+    return _materialLocalizations(context)?.okButtonLabel ?? 'OK';
+  }
+
+  /// The ambient [MaterialLocalizations], or null outside a [MaterialApp].
+  ///
+  /// Looked up rather than required: the picker is usable under a bare
+  /// [WidgetsApp], and `MaterialLocalizations.of` would throw there.
+  MaterialLocalizations? _materialLocalizations(BuildContext context) =>
+      Localizations.of<MaterialLocalizations>(context, MaterialLocalizations);
 }
