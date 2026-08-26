@@ -18,9 +18,22 @@ removed or changed shape, so upgrading from 0.1.0 needs no code changes.
   ripple, a hover highlight on desktop and web, a focus ring, and a pointer
   cursor. It also makes the grid keyboard-navigable: Tab reaches it, the arrow
   keys traverse it by position, and Enter or Space selects the focused date.
-- **`CalendarConfig.enableHapticFeedback`** (default `true`). Selecting a date
-  fires `HapticFeedback.selectionClick`, matching the platform date pickers.
-  Set it to `false` to opt out.
+- **`CalendarConfig.hapticFeedback`**, taking a `CalendarHaptics` value
+  (default `CalendarHaptics.light`). Selecting a date answers the tap through
+  touch as well as sight, at a strength you choose: `none`, `selection`,
+  `light`, `medium` or `heavy`. `CalendarHaptics.perform()` is public, so a
+  custom `cellBuilder` can match the built-in cells.
+
+  The default is `light` rather than `selection` deliberately. On Android
+  `selection` maps to `HapticFeedbackConstants.CLOCK_TICK`, which is meant for
+  a picker wheel passing detents -- many phones render it too faintly to feel,
+  and some not at all. `light` maps to `VIRTUAL_KEY`, the tick the system
+  keyboard uses for a keypress, which is both reliably felt and the right
+  metaphor for a discrete action like choosing a date.
+
+  Only a physical phone can render any of this: desktop, web and the iOS
+  Simulator have no haptic hardware, and Android gates haptics behind the
+  system touch-feedback setting.
 - **Tooltips and a semantic header on the month bar.** The chevrons carry
   "Previous month" / "अघिल्लो महिना" labels -- they were previously unlabelled
   buttons -- and the month and year read as a single header node.

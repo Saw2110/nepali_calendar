@@ -15,6 +15,7 @@ import '../src.dart';
 ///   language: Language.nepali,
 ///   weekendType: WeekendType.saturdayAndSunday,
 ///   weekStartType: WeekStartType.monday,
+///   hapticFeedback: CalendarHaptics.light,
 /// );
 /// ```
 class CalendarConfig {
@@ -75,17 +76,20 @@ class CalendarConfig {
   /// tiles line up, the latter so the dialog does not resize while paging.
   final bool sixWeekMonthsEnforced;
 
-  /// Whether selecting a date fires a short haptic tick.
+  /// How firmly selecting a date answers back through touch.
   ///
-  /// Matches the platform date pickers, which acknowledge a selection through
-  /// touch as well as sight. Uses `HapticFeedback.selectionClick`, the
-  /// lightest of the system taps.
+  /// Defaults to [CalendarHaptics.light] -- the tick the system keyboard uses
+  /// for a keypress, which is what a discrete, deliberate action like picking
+  /// a date should feel like. Use [CalendarHaptics.none] for a calendar that
+  /// is scrubbed rather than tapped, where a tick per date becomes noise.
   ///
-  /// Defaults to `true`. Set it to `false` for a calendar that is scrubbed
-  /// rather than tapped, where a tick per date becomes noise. Platforms with
-  /// no haptic hardware ignore it, so this costs nothing on desktop or web.
+  /// Only a physical phone can render any of this. Desktop, web and the iOS
+  /// Simulator have no haptic hardware and ignore it, and Android gates it
+  /// behind the system touch-feedback setting. See [CalendarHaptics] for what
+  /// each value maps to on each platform.
   ///
-  final bool enableHapticFeedback;
+  /// Added in 0.1.1.
+  final CalendarHaptics hapticFeedback;
 
   /// Creates a [CalendarConfig] instance with customizable configuration options.
   ///
@@ -98,7 +102,7 @@ class CalendarConfig {
     this.weekStartType = WeekStartType.sunday,
     this.weekTitleType = TitleFormat.half,
     this.sixWeekMonthsEnforced = false,
-    this.enableHapticFeedback = true,
+    this.hapticFeedback = CalendarHaptics.light,
   });
 
   /// Creates a copy of this config with the given fields replaced with new values.
@@ -118,7 +122,7 @@ class CalendarConfig {
     WeekStartType? weekStartType,
     TitleFormat? weekTitleType,
     bool? sixWeekMonthsEnforced,
-    bool? enableHapticFeedback,
+    CalendarHaptics? hapticFeedback,
   }) {
     return CalendarConfig(
       showEnglishDate: showEnglishDate ?? this.showEnglishDate,
@@ -129,7 +133,7 @@ class CalendarConfig {
       weekTitleType: weekTitleType ?? this.weekTitleType,
       sixWeekMonthsEnforced:
           sixWeekMonthsEnforced ?? this.sixWeekMonthsEnforced,
-      enableHapticFeedback: enableHapticFeedback ?? this.enableHapticFeedback,
+      hapticFeedback: hapticFeedback ?? this.hapticFeedback,
     );
   }
 }

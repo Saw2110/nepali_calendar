@@ -402,6 +402,7 @@ class _NepaliCalendarExampleState extends State<NepaliCalendarExample> {
               // Config only -- no colours here, so the ambient
               // NepaliCalendarTheme supplies them and dark mode works.
               config: CalendarConfig(
+                hapticFeedback: CalendarHaptics.light,
                 showEnglishDate: true,
                 showBorder: true,
                 language: widget.language,

@@ -4,7 +4,6 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../nepali_calendar_plus.dart';
 import 'utils/calendar_semantics.dart';
@@ -286,7 +285,7 @@ class CalendarItem extends StatelessWidget {
       ),
       child: InkWell(
         onTap: () {
-          if (config.enableHapticFeedback) HapticFeedback.selectionClick();
+          config.hapticFeedback.perform();
           onDatePressed();
         },
         child: Container(

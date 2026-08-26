@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'src.dart';
 import 'utils/calendar_semantics.dart';
@@ -578,9 +577,9 @@ class _CompactDay<T> extends StatelessWidget {
     );
   }
 
-  /// Selects the date, with the platform's selection tick when enabled.
+  /// Selects the date, answering the tap through touch as well as sight.
   void _handleTap() {
-    if (config.enableHapticFeedback) HapticFeedback.selectionClick();
+    config.hapticFeedback.perform();
     onDaySelected(date);
   }
 

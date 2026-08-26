@@ -238,7 +238,7 @@ void main() {
   });
 
   group('haptics', () {
-    testWidgets('selecting a date fires a selection tick', (tester) async {
+    testWidgets('selecting a date fires the keypress tick', (tester) async {
       final haptics = captureHaptics(tester);
 
       await tester.pumpWidget(host(NepaliCalendar(initialDate: baisakh2081)));
@@ -247,10 +247,10 @@ void main() {
       await tester.tap(find.text('१५').first);
       await tester.pumpAndSettle();
 
-      expect(haptics, contains('HapticFeedbackType.selectionClick'));
+      expect(haptics, contains('HapticFeedbackType.lightImpact'));
     });
 
-    testWidgets('no tick when enableHapticFeedback is false', (tester) async {
+    testWidgets('no tick when haptics are off', (tester) async {
       final haptics = captureHaptics(tester);
 
       await tester.pumpWidget(
@@ -258,7 +258,7 @@ void main() {
           NepaliCalendar(
             initialDate: baisakh2081,
             calendarStyle: const NepaliCalendarStyle(
-              config: CalendarConfig(enableHapticFeedback: false),
+              config: CalendarConfig(hapticFeedback: CalendarHaptics.none),
             ),
           ),
         ),
@@ -282,7 +282,48 @@ void main() {
       await tester.tap(find.text('१५').first);
       await tester.pumpAndSettle();
 
-      expect(haptics, contains('HapticFeedbackType.selectionClick'));
+      expect(haptics, contains('HapticFeedbackType.lightImpact'));
+    });
+
+    testWidgets('the strength follows the configured value', (tester) async {
+      final haptics = captureHaptics(tester);
+
+      await tester.pumpWidget(
+        host(
+          NepaliCalendar(
+            initialDate: baisakh2081,
+            calendarStyle: const NepaliCalendarStyle(
+              config: CalendarConfig(hapticFeedback: CalendarHaptics.heavy),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('१५').first);
+      await tester.pumpAndSettle();
+
+      expect(haptics, contains('HapticFeedbackType.heavyImpact'));
+    });
+
+    testWidgets('every value maps to the platform call it names',
+        (tester) async {
+      final haptics = captureHaptics(tester);
+      // Pumped so there is a binding for the platform channel to run on.
+      await tester.pumpWidget(host(const SizedBox()));
+
+      for (final value in CalendarHaptics.values) {
+        await value.perform();
+      }
+      await tester.pump();
+
+      expect(haptics, [
+        // CalendarHaptics.none sends nothing at all.
+        'HapticFeedbackType.selectionClick',
+        'HapticFeedbackType.lightImpact',
+        'HapticFeedbackType.mediumImpact',
+        'HapticFeedbackType.heavyImpact',
+      ]);
     });
   });
 

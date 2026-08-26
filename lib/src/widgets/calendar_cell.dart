@@ -3,7 +3,6 @@
 // ignore_for_file: deprecated_member_use_from_same_package
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../src.dart';
 import '../utils/calendar_semantics.dart';
@@ -216,11 +215,9 @@ class CalendarCell<T> extends StatelessWidget {
     );
   }
 
-  /// Selects the date, with the platform's selection tick when enabled.
+  /// Selects the date, answering the tap through touch as well as sight.
   void _handleTap() {
-    if (calendarStyle.effectiveConfig.enableHapticFeedback) {
-      HapticFeedback.selectionClick();
-    }
+    calendarStyle.effectiveConfig.hapticFeedback.perform();
     onDaySelected(date);
   }
 

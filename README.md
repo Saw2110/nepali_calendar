@@ -117,16 +117,32 @@ move between dates by position, and `Enter` or `Space` selects the focused
 date. This matters most on desktop and web, where the calendar was previously
 mouse-only.
 
-**Haptics.** Selecting a date fires the platform's selection tick. Turn it off
-for a calendar that is scrubbed rather than tapped:
+**Haptics.** Selecting a date answers the tap through touch. Choose how firmly:
 
 ```dart
 NepaliCalendar(
   calendarStyle: const NepaliCalendarStyle(
-    config: CalendarConfig(enableHapticFeedback: false),
+    config: CalendarConfig(hapticFeedback: CalendarHaptics.medium),
   ),
 )
 ```
+
+| `CalendarHaptics` | Android | iOS |
+| --- | --- | --- |
+| `none` | nothing | nothing |
+| `selection` | `CLOCK_TICK` | selection generator |
+| `light` *(default)* | `VIRTUAL_KEY` | impact, light |
+| `medium` | `KEYBOARD_TAP` | impact, medium |
+| `heavy` | `CONTEXT_CLICK` | impact, heavy |
+
+> **Testing haptics?** Only a physical phone can render them. Desktop, web and
+> the **iOS Simulator** have no haptic hardware, so every value is silently a
+> no-op there. On Android they are also gated behind the system's
+> touch-feedback setting — if that is off, nothing reaches the user.
+>
+> `selection` is the subtlest value and on many Android phones cannot be felt
+> at all; it maps to the constant meant for a picker wheel passing detents.
+> Use `light` or firmer for taps.
 
 **Text scaling.** Cell text follows the system font setting as far as the cell
 can hold it, then stops, so a user at 200% gets larger dates rather than a

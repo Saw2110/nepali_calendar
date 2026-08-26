@@ -6,7 +6,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../src.dart';
 import '../utils/calendar_semantics.dart';
@@ -966,9 +965,7 @@ class _DayCell extends StatelessWidget {
         onTap: isDisabled || !isCurrentMonth
             ? null
             : () {
-                if (config.enableHapticFeedback) {
-                  HapticFeedback.selectionClick();
-                }
+                config.hapticFeedback.perform();
                 onTap();
               },
         containedInkWell: true,
