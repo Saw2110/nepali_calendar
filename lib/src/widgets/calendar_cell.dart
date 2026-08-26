@@ -3,8 +3,22 @@
 // ignore_for_file: deprecated_member_use_from_same_package
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../src.dart';
+import '../utils/calendar_semantics.dart';
+
+/// How far the day number follows the system font scale before it stops.
+///
+/// The cell's height comes from the viewport, so text that keeps growing past
+/// this simply spills out of it.
+const double _maxDayTextScale = 1.3;
+
+/// How far the English-date subscript follows the system font scale.
+///
+/// Lower than [_maxDayTextScale]: it is secondary information sharing a cell
+/// with the day number, which has first claim on the space.
+const double _maxSubscriptTextScale = 1.2;
 
 /// A calendar cell is an implementation detail of [NepaliCalendar]. To
 /// customise how a date looks, use `CalendarBuilder.cellBuilder`, which gets
@@ -90,7 +104,7 @@ class CalendarCell<T> extends StatelessWidget {
         // keep working.
         event: cellEvents.isEmpty ? null : cellEvents.first,
         events: cellEvents,
-        onTap: () => onDaySelected(date),
+        onTap: _handleTap,
         style: calendarStyle,
       );
       return cellBuilder!(cellData);
@@ -98,66 +112,116 @@ class CalendarCell<T> extends StatelessWidget {
 
     // Default cell implementation
     // Note: Borders are handled by the grid container, not individual cells
-    return GestureDetector(
-      onTap: () => onDaySelected(date),
+    final config = calendarStyle.effectiveConfig;
+    final borderRadius = config.showBorder ? null : BorderRadius.circular(8);
+
+    // A day cell is sized from the viewport width, not from its text, so it
+    // cannot grow to meet a large system font setting -- at 2x the day number
+    // simply overflowed the cell it sits in. Honour the user's setting up to
+    // the point the cell can still hold it, then stop. The English subscript
+    // stops sooner: it is decorative, and it shares the cell with the number.
+    final textScaler = MediaQuery.textScalerOf(context);
+    final dayScaler = textScaler.clamp(maxScaleFactor: _maxDayTextScale);
+    final subscriptScaler =
+        textScaler.clamp(maxScaleFactor: _maxSubscriptTextScale);
+
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      // The day number alone is meaningless out of context, so the cell
+      // announces the whole date and its state instead of its subtree.
+      excludeSemantics: true,
+      label: CalendarSemantics.dayLabel(
+        date,
+        language: config.language,
+        isToday: isToday,
+        isHoliday: isHoliday,
+        isOtherMonth: isDimmed,
+        eventCount: cellEvents.length,
+      ),
       child: DecoratedBox(
         decoration: BoxDecoration(
           // Set the background color of the cell based on today and selected state
           color: _getCellColor(isToday, isSelected),
           // Rounded corners only when borders are disabled
-          borderRadius: calendarStyle.effectiveConfig.showBorder
-              ? null
-              : BorderRadius.circular(8),
+          borderRadius: borderRadius,
         ),
-        child: Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            Center(
-              child: Text(
-                // Display the day in English or Nepali based on the calendar style
-                calendarStyle.effectiveConfig.language == Language.english
-                    ? "$day"
-                    : NepaliNumberConverter.englishToNepali(day.toString()),
-                style: calendarStyle.cellsStyle.dayStyle.copyWith(
-                  // Set the text color based on today, selected, and weekday
-                  color: _getCellTextColor(isToday, isSelected, date.weekday),
-                ),
-              ),
-            ),
-            // Show the English date if the calendar style specifies to show it
-            if (calendarStyle.effectiveConfig.showEnglishDate)
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Padding(
-                  padding: const EdgeInsets.all(5.0),
+        // Transparent, so the cell keeps the background painted above and
+        // only gains the ink surface a splash needs. Without a Material
+        // ancestor of its own the splash would be clipped by whatever
+        // Material happens to be further up the tree.
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: _handleTap,
+            borderRadius: borderRadius,
+            // InkWell is focusable by default, which is what makes the grid
+            // reachable by Tab and traversable with the arrow keys: Flutter's
+            // directional focus policy walks focusable widgets by position,
+            // which is exactly a calendar grid's layout. Enter and Space then
+            // activate the focused cell.
+            child: Stack(
+              alignment: Alignment.bottomCenter,
+              children: [
+                Center(
                   child: Text(
-                    "${date.toDateTime().day}",
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _getCellTextColor(
-                        isToday,
-                        isSelected,
-                        date.weekday,
-                        isBaseLine: true,
-                      ),
+                    // Display the day in English or Nepali based on the calendar style
+                    calendarStyle.effectiveConfig.language == Language.english
+                        ? "$day"
+                        : NepaliNumberConverter.englishToNepali(day.toString()),
+                    textScaler: dayScaler,
+                    style: calendarStyle.cellsStyle.dayStyle.copyWith(
+                      // Set the text color based on today, selected, and weekday
+                      color:
+                          _getCellTextColor(isToday, isSelected, date.weekday),
                     ),
                   ),
                 ),
-              ),
-            // Show an event indicator if there is an event
-            if (cellEvents.isNotEmpty)
-              Positioned(
-                bottom: 5.0,
-                child: Icon(
-                  Icons.circle,
-                  size: 5,
-                  color: _getEventColor(isHoliday, isToday, date.weekday),
-                ),
-              ),
-          ],
+                // Show the English date if the calendar style specifies to show it
+                if (calendarStyle.effectiveConfig.showEnglishDate)
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(5.0),
+                      child: Text(
+                        "${date.toDateTime().day}",
+                        textScaler: subscriptScaler,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: _getCellTextColor(
+                            isToday,
+                            isSelected,
+                            date.weekday,
+                            isBaseLine: true,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                // Show an event indicator if there is an event
+                if (cellEvents.isNotEmpty)
+                  Positioned(
+                    bottom: 5.0,
+                    child: Icon(
+                      Icons.circle,
+                      size: 5,
+                      color: _getEventColor(isHoliday, isToday, date.weekday),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  /// Selects the date, with the platform's selection tick when enabled.
+  void _handleTap() {
+    if (calendarStyle.effectiveConfig.enableHapticFeedback) {
+      HapticFeedback.selectionClick();
+    }
+    onDaySelected(date);
   }
 
   // Method to get the cell background color based on today and selected state

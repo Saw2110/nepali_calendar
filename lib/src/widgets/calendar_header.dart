@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 // Import custom source file
 import '../src.dart';
+import '../utils/calendar_semantics.dart';
 
 // Widget to display the calendar header with month/year and navigation buttons
 /// The header is an implementation detail of [NepaliCalendar]. To replace it,
@@ -33,6 +34,8 @@ class CalendarHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final language = calendarStyle.effectiveConfig.language;
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -41,6 +44,10 @@ class CalendarHeader extends StatelessWidget {
           // Left navigation button
           IconButton(
             icon: const Icon(Icons.chevron_left),
+            // Doubles as the screen-reader label and the desktop hover
+            // tooltip. Up to 0.1.0 both arrows announced themselves only as
+            // unlabelled buttons.
+            tooltip: CalendarSemantics.previousMonth(language),
             onPressed: () {
               // Check if controller is attached before navigating
               if (pageController.hasClients) {
@@ -53,38 +60,46 @@ class CalendarHeader extends StatelessWidget {
           ),
           // Center section containing month and year
           Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              spacing: 5.0,
-              children: [
-                // Month display
-                Flexible(
-                  child: Text(
-                    MonthUtils.formattedMonth(
-                      selectedDate.month,
-                      calendarStyle.effectiveConfig.language,
+            // A single header node reading "बैशाख २०८१", rather than two
+            // unrelated text nodes a screen reader announces separately.
+            child: Semantics(
+              header: true,
+              excludeSemantics: true,
+              label: CalendarSemantics.monthHeader(selectedDate, language),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                spacing: 5.0,
+                children: [
+                  // Month display
+                  Flexible(
+                    child: Text(
+                      MonthUtils.formattedMonth(
+                        selectedDate.month,
+                        calendarStyle.effectiveConfig.language,
+                      ),
+                      style: calendarStyle.headersStyle.monthHeaderStyle,
                     ),
-                    style: calendarStyle.headersStyle.monthHeaderStyle,
                   ),
-                ),
-                // Year display with language-specific formatting
-                Flexible(
-                  child: Text(
-                    calendarStyle.effectiveConfig.language == Language.english
-                        ? "${selectedDate.year}"
-                        : NepaliNumberConverter.englishToNepali(
-                            selectedDate.year.toString(),
-                          ),
-                    style: calendarStyle.headersStyle.yearHeaderStyle,
+                  // Year display with language-specific formatting
+                  Flexible(
+                    child: Text(
+                      calendarStyle.effectiveConfig.language == Language.english
+                          ? "${selectedDate.year}"
+                          : NepaliNumberConverter.englishToNepali(
+                              selectedDate.year.toString(),
+                            ),
+                      style: calendarStyle.headersStyle.yearHeaderStyle,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           // Right navigation button
           IconButton(
             icon: const Icon(Icons.chevron_right),
+            tooltip: CalendarSemantics.nextMonth(language),
             onPressed: () {
               // Check if controller is attached before navigating
               if (pageController.hasClients) {

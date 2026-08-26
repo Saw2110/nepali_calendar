@@ -1,8 +1,11 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'src.dart';
+import 'utils/calendar_semantics.dart';
 
 /// Largest a compact day cell is allowed to get.
 ///
@@ -101,8 +104,7 @@ class NepaliYearCalendar<T> extends StatefulWidget {
     int year,
     int month,
     Widget child,
-  )?
-  monthTileBuilder;
+  )? monthTileBuilder;
 
   const NepaliYearCalendar({
     super.key,
@@ -119,6 +121,16 @@ class NepaliYearCalendar<T> extends StatefulWidget {
     this.monthTitleBuilder,
     this.monthTileBuilder,
   }) : assert(monthsPerRow > 0, 'monthsPerRow must be at least 1');
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(IntProperty('year', year, defaultValue: null))
+      ..add(IntProperty('monthsPerRow', monthsPerRow))
+      ..add(IntProperty('events', eventList?.length, defaultValue: null))
+      ..add(FlagProperty('showHeader', value: showHeader, ifFalse: 'hidden'));
+  }
 
   @override
   State<NepaliYearCalendar<T>> createState() => _NepaliYearCalendarState<T>();
@@ -205,8 +217,7 @@ class _NepaliYearCalendarState<T> extends State<NepaliYearCalendar<T>> {
               const spacing = 12.0;
               const padding = 8.0;
 
-              final available =
-                  constraints.maxWidth -
+              final available = constraints.maxWidth -
                   (padding * 2) -
                   (spacing * (widget.monthsPerRow - 1));
               final tileWidth = available / widget.monthsPerRow;
@@ -256,8 +267,7 @@ class _NepaliYearCalendarState<T> extends State<NepaliYearCalendar<T>> {
                   // into view, custom frame included.
                   return KeyedSubtree(
                     key: _monthKeys[index],
-                    child:
-                        widget.monthTileBuilder?.call(
+                    child: widget.monthTileBuilder?.call(
                           context,
                           _year,
                           month,
@@ -494,57 +504,84 @@ class _CompactDay<T> extends StatelessWidget {
         ? '$day'
         : NepaliNumberConverter.englishToNepali('$day');
 
-    return GestureDetector(
-      onTap: () => onDaySelected(date),
-      // Transparent cells must still take a tap, or only the digits would.
-      behavior: HitTestBehavior.opaque,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      excludeSemantics: true,
+      label: CalendarSemantics.dayLabel(
+        date,
+        language: config.language,
+        isToday: isToday,
+        isHoliday: isHoliday,
+        eventCount: eventIndex.eventsOn(date).length,
+      ),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: _background(cells, isToday, isSelected),
           shape: BoxShape.circle,
         ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Center(
-              child: FittedBox(
-                // The cells are small and Devanagari digits are wide; scale
-                // down rather than overflow.
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: isToday || isSelected
-                        ? FontWeight.w700
-                        : FontWeight.w400,
-                    color: _foreground(
-                      cells,
-                      isToday: isToday,
-                      isSelected: isSelected,
-                      isWeekend: isWeekend,
-                      isHoliday: isHoliday,
+        // Transparent, so the circular splash is clipped to this cell rather
+        // than by whatever Material sits further up the tree.
+        child: Material(
+          type: MaterialType.transparency,
+          shape: const CircleBorder(),
+          child: InkResponse(
+            onTap: _handleTap,
+            // Transparent cells must still take a tap, or only the digits
+            // would.
+            containedInkWell: true,
+            customBorder: const CircleBorder(),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Center(
+                  child: FittedBox(
+                    // The cells are small and Devanagari digits are wide; scale
+                    // down rather than overflow.
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: isToday || isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                        color: _foreground(
+                          cells,
+                          isToday: isToday,
+                          isSelected: isSelected,
+                          isWeekend: isWeekend,
+                          isHoliday: isHoliday,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            if (hasEvents)
-              Positioned(
-                bottom: 0,
-                child: Container(
-                  width: 3,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _dotColour(cells, isToday, isSelected, isHoliday),
+                if (hasEvents)
+                  Positioned(
+                    bottom: 0,
+                    child: Container(
+                      width: 3,
+                      height: 3,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color:
+                            _dotColour(cells, isToday, isSelected, isHoliday),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  /// Selects the date, with the platform's selection tick when enabled.
+  void _handleTap() {
+    if (config.enableHapticFeedback) HapticFeedback.selectionClick();
+    onDaySelected(date);
   }
 
   Color _background(CellStyle cells, bool isToday, bool isSelected) {

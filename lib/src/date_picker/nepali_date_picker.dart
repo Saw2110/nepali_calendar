@@ -4,9 +4,12 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../src.dart';
+import '../utils/calendar_semantics.dart';
 
 // ---------------------------------------------------------------------------
 // Dimensions
@@ -285,6 +288,37 @@ class NepaliDatePicker extends StatefulWidget {
     this.cancelText,
     this.showActions = true,
   });
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(
+        DiagnosticsProperty<NepaliDateTime>(
+          'initialDate',
+          initialDate,
+          defaultValue: null,
+        ),
+      )
+      ..add(EnumProperty<NepaliDatePickerMode>('initialMode', initialMode))
+      ..add(
+        DiagnosticsProperty<NepaliDateTime>(
+          'minDate',
+          minDate,
+          defaultValue: null,
+        ),
+      )
+      ..add(
+        DiagnosticsProperty<NepaliDateTime>(
+          'maxDate',
+          maxDate,
+          defaultValue: null,
+        ),
+      )
+      ..add(
+        FlagProperty('showActions', value: showActions, ifFalse: 'no actions'),
+      );
+  }
 
   @override
   State<NepaliDatePicker> createState() => _NepaliDatePickerState();
@@ -929,7 +963,14 @@ class _DayCell extends StatelessWidget {
       excludeSemantics: true,
       child: InkResponse(
         // A disabled cell gets no callback, so it neither responds nor ripples.
-        onTap: isDisabled || !isCurrentMonth ? null : onTap,
+        onTap: isDisabled || !isCurrentMonth
+            ? null
+            : () {
+                if (config.enableHapticFeedback) {
+                  HapticFeedback.selectionClick();
+                }
+                onTap();
+              },
         containedInkWell: true,
         customBorder: const CircleBorder(),
         // The tap target is the whole cell; the disc is only decoration.
@@ -994,18 +1035,15 @@ class _DayCell extends StatelessWidget {
   /// What a screen reader announces.
   ///
   /// Spelled out: "15" alone tells a screen reader user nothing about which
-  /// month they are in.
-  String _semanticLabel(Language language) {
-    final nepali = language == Language.nepali;
-    return [
-      MonthUtils.formattedMonth(date.month, language),
-      NepaliNumberConverter.formattedNumber('${date.day}', language: language),
-      NepaliNumberConverter.formattedNumber('${date.year}', language: language),
-      WeekUtils.formattedWeekDay(date.weekday, language),
-      if (isToday) nepali ? 'आज' : 'Today',
-      if (isDisabled) nepali ? 'उपलब्ध छैन' : 'Unavailable',
-    ].join(', ');
-  }
+  /// month they are in. Shared with [NepaliCalendar] so the two announce a
+  /// date the same way.
+  String _semanticLabel(Language language) => CalendarSemantics.dayLabel(
+        date,
+        language: language,
+        isToday: isToday,
+        isDisabled: isDisabled,
+        isOtherMonth: !isCurrentMonth,
+      );
 }
 
 // ---------------------------------------------------------------------------

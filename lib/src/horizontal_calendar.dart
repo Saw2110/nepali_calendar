@@ -2,9 +2,12 @@
 // code paths have to keep calling them until they are removed in 1.0.0.
 // ignore_for_file: deprecated_member_use_from_same_package
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../nepali_calendar_plus.dart';
+import 'utils/calendar_semantics.dart';
 
 /// Base height of the scrolling date strip at a text scale of 1.0.
 ///
@@ -71,6 +74,20 @@ class HorizontalNepaliCalendar extends StatefulWidget {
     NepaliDateTime currentDateTime,
     NepaliDateTime selectedDateTime,
   )? headerBuilder;
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(
+        DiagnosticsProperty<NepaliDateTime>(
+          'initialDate',
+          initialDate,
+          defaultValue: null,
+        ),
+      )
+      ..add(FlagProperty('showMonth', value: showMonth, ifFalse: 'no month'));
+  }
 
   @override
   State<HorizontalNepaliCalendar> createState() => _HorizontalCalendarState();
@@ -257,40 +274,56 @@ class CalendarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onDatePressed,
-      child: Container(
-        width: _dateStripBaseWidth,
-        color: backgroundColor,
-        alignment: Alignment.center,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Display the weekday name
-            Text(
-              WeekUtils.formattedWeekDay(
-                date.weekday,
-                style.effectiveConfig.language,
-                style.effectiveConfig.weekTitleType,
+    final config = style.effectiveConfig;
+
+    return Semantics(
+      button: true,
+      excludeSemantics: true,
+      label: CalendarSemantics.dayLabel(
+        date,
+        language: config.language,
+        isToday: CalendarUtils.isToday(date.toDateTime()),
+      ),
+      child: InkWell(
+        onTap: () {
+          if (config.enableHapticFeedback) HapticFeedback.selectionClick();
+          onDatePressed();
+        },
+        child: Container(
+          width: _dateStripBaseWidth,
+          color: backgroundColor,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Display the weekday name
+              Text(
+                WeekUtils.formattedWeekDay(
+                  date.weekday,
+                  style.effectiveConfig.language,
+                  style.effectiveConfig.weekTitleType,
+                ),
+                style: style.headersStyle.weekHeaderStyle.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.normal,
+                  fontSize: 13.0,
+                ),
               ),
-              style: style.headersStyle.weekHeaderStyle.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.normal,
-                fontSize: 13.0,
+              // Display the day of the month
+              Text(
+                style.effectiveConfig.language == Language.english
+                    ? "${date.day}"
+                    : NepaliNumberConverter.englishToNepali(
+                        date.day.toString(),
+                      ),
+                style: style.cellsStyle.dayStyle.copyWith(
+                  color: textColor,
+                  fontSize: 16.0,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            // Display the day of the month
-            Text(
-              style.effectiveConfig.language == Language.english
-                  ? "${date.day}"
-                  : NepaliNumberConverter.englishToNepali(date.day.toString()),
-              style: style.cellsStyle.dayStyle.copyWith(
-                color: textColor,
-                fontSize: 16.0,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

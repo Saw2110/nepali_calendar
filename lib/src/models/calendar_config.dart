@@ -75,6 +75,18 @@ class CalendarConfig {
   /// tiles line up, the latter so the dialog does not resize while paging.
   final bool sixWeekMonthsEnforced;
 
+  /// Whether selecting a date fires a short haptic tick.
+  ///
+  /// Matches the platform date pickers, which acknowledge a selection through
+  /// touch as well as sight. Uses `HapticFeedback.selectionClick`, the
+  /// lightest of the system taps.
+  ///
+  /// Defaults to `true`. Set it to `false` for a calendar that is scrubbed
+  /// rather than tapped, where a tick per date becomes noise. Platforms with
+  /// no haptic hardware ignore it, so this costs nothing on desktop or web.
+  ///
+  final bool enableHapticFeedback;
+
   /// Creates a [CalendarConfig] instance with customizable configuration options.
   ///
   /// All parameters are optional and have default values.
@@ -86,6 +98,7 @@ class CalendarConfig {
     this.weekStartType = WeekStartType.sunday,
     this.weekTitleType = TitleFormat.half,
     this.sixWeekMonthsEnforced = false,
+    this.enableHapticFeedback = true,
   });
 
   /// Creates a copy of this config with the given fields replaced with new values.
@@ -105,6 +118,7 @@ class CalendarConfig {
     WeekStartType? weekStartType,
     TitleFormat? weekTitleType,
     bool? sixWeekMonthsEnforced,
+    bool? enableHapticFeedback,
   }) {
     return CalendarConfig(
       showEnglishDate: showEnglishDate ?? this.showEnglishDate,
@@ -115,6 +129,7 @@ class CalendarConfig {
       weekTitleType: weekTitleType ?? this.weekTitleType,
       sixWeekMonthsEnforced:
           sixWeekMonthsEnforced ?? this.sixWeekMonthsEnforced,
+      enableHapticFeedback: enableHapticFeedback ?? this.enableHapticFeedback,
     );
   }
 }
