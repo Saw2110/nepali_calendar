@@ -101,7 +101,8 @@ class NepaliYearCalendar<T> extends StatefulWidget {
     int year,
     int month,
     Widget child,
-  )? monthTileBuilder;
+  )?
+  monthTileBuilder;
 
   const NepaliYearCalendar({
     super.key,
@@ -204,7 +205,8 @@ class _NepaliYearCalendarState<T> extends State<NepaliYearCalendar<T>> {
               const spacing = 12.0;
               const padding = 8.0;
 
-              final available = constraints.maxWidth -
+              final available =
+                  constraints.maxWidth -
                   (padding * 2) -
                   (spacing * (widget.monthsPerRow - 1));
               final tileWidth = available / widget.monthsPerRow;
@@ -254,8 +256,13 @@ class _NepaliYearCalendarState<T> extends State<NepaliYearCalendar<T>> {
                   // into view, custom frame included.
                   return KeyedSubtree(
                     key: _monthKeys[index],
-                    child: widget.monthTileBuilder
-                            ?.call(context, _year, month, compactMonth) ??
+                    child:
+                        widget.monthTileBuilder?.call(
+                          context,
+                          _year,
+                          month,
+                          compactMonth,
+                        ) ??
                         _defaultTile(compactMonth),
                   );
                 },

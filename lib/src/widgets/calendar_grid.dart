@@ -78,7 +78,11 @@ class CalendarGrid<T> extends StatelessWidget {
     final cellCount = _rowCount * 7;
 
     final gridItems = _buildCalendarGrid(
-        weekdayOfFirstDay, daysCountInMonth, _index, cellCount);
+      weekdayOfFirstDay,
+      daysCountInMonth,
+      _index,
+      cellCount,
+    );
 
     final gridView = GridView.builder(
       shrinkWrap: true,

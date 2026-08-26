@@ -502,7 +502,9 @@ void main() {
       );
 
       expect(
-          updated.effectiveConfig.weekendType, WeekendType.fridayAndSaturday);
+        updated.effectiveConfig.weekendType,
+        WeekendType.fridayAndSaturday,
+      );
       expect(updated.effectiveConfig.weekStartType, WeekStartType.monday);
     });
 
