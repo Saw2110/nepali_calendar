@@ -5,6 +5,7 @@
 import 'dart:math' as math;
 
 // Import Flutter material package for UI components
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 // Import custom source file containing calendar utilities
@@ -132,6 +133,36 @@ class NepaliCalendar<T> extends StatefulWidget {
   // dropped. It forced callers to supply a callback whose result was never
   // read -- holidays come from CalendarEvent.isHoliday. Removing a constraint
   // cannot break a caller that satisfied it.
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(
+        DiagnosticsProperty<NepaliDateTime>(
+          'initialDate',
+          initialDate,
+          defaultValue: null,
+        ),
+      )
+      ..add(IntProperty('events', eventList?.length, defaultValue: null))
+      ..add(
+        FlagProperty(
+          'controller',
+          value: controller != null,
+          ifTrue: 'controlled',
+          ifFalse: 'uncontrolled',
+        ),
+      )
+      ..add(
+        FlagProperty(
+          'calendarBuilder',
+          value: calendarBuilder != null,
+          ifTrue: 'custom builders',
+          ifFalse: 'default builders',
+        ),
+      );
+  }
 
   @override
   State<NepaliCalendar> createState() => _NepaliCalendarState<T>();
@@ -467,29 +498,35 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                             ),
                           );
                         },
-                        child: ValueListenableBuilder<NepaliDateTime>(
-                          valueListenable: _selectedDateNotifier,
-                          builder: (context, selectedDate, _) {
-                            return CalendarMonthView<T>(
-                              year: year,
-                              month: month,
-                              selectedDate: selectedDate,
-                              eventList: widget.eventList,
-                              eventIndex: _eventIndex,
-                              calendarStyle: calendarStyle,
-                              cellAspectRatio: cellAspectRatio,
-                              cellBuilder: widget.calendarBuilder?.cellBuilder,
-                              weekdayBuilder:
-                                  widget.calendarBuilder?.weekdayBuilder,
-                              onDaySelected: (date) {
-                                _updateCurrentDate(
-                                  date.year,
-                                  date.month,
-                                  date.day,
-                                );
-                              },
-                            );
-                          },
+                        // Its own layer, so the scale and opacity animating
+                        // above it re-composite a raster instead of
+                        // repainting 42 cells on every frame of a swipe.
+                        child: RepaintBoundary(
+                          child: ValueListenableBuilder<NepaliDateTime>(
+                            valueListenable: _selectedDateNotifier,
+                            builder: (context, selectedDate, _) {
+                              return CalendarMonthView<T>(
+                                year: year,
+                                month: month,
+                                selectedDate: selectedDate,
+                                eventList: widget.eventList,
+                                eventIndex: _eventIndex,
+                                calendarStyle: calendarStyle,
+                                cellAspectRatio: cellAspectRatio,
+                                cellBuilder:
+                                    widget.calendarBuilder?.cellBuilder,
+                                weekdayBuilder:
+                                    widget.calendarBuilder?.weekdayBuilder,
+                                onDaySelected: (date) {
+                                  _updateCurrentDate(
+                                    date.year,
+                                    date.month,
+                                    date.day,
+                                  );
+                                },
+                              );
+                            },
+                          ),
                         ),
                       );
                     },
