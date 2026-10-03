@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../src.dart';
+import 'internal/picker_shared.dart';
 
 /// Shows a modal Nepali date picker dialog.
 ///
@@ -54,12 +55,17 @@ import '../src.dart';
 /// (BS 1970-2100), and an [initialDate] outside the range is pulled to the
 /// nearest date inside it rather than throwing.
 ///
-/// [confirmText] and [cancelText] override the action labels, which otherwise
-/// follow the configured [Language].
+/// By default ([autoConfirm]) tapping a date returns it straight away, and
+/// tapping outside the picker returns `null`. Set [autoConfirm] to false to
+/// keep the selection pending until the user presses OK; a Cancel / OK row
+/// then appears below the footer.
 ///
-/// The picker is shown as a plain [AlertDialog], so it inherits the app's
-/// `dialogTheme` and sits beside the app's other alerts rather than announcing
-/// itself as a special case.
+/// [confirmText] and [cancelText] override those action labels, which
+/// otherwise follow the configured [Language].
+///
+/// The picker is shown in a plain, untitled [AlertDialog], so it inherits the
+/// app's `dialogTheme` and sits beside the app's other alerts rather than
+/// announcing itself as a special case.
 Future<NepaliDateTime?> showNepaliDatePicker({
   required BuildContext context,
   NepaliDateTime? initialDate,
@@ -71,6 +77,7 @@ Future<NepaliDateTime?> showNepaliDatePicker({
   NepaliDateTime? maxDate,
   String? confirmText,
   String? cancelText,
+  bool autoConfirm = true,
 }) async {
   return showDialog<NepaliDateTime>(
     context: context,
@@ -85,6 +92,7 @@ Future<NepaliDateTime?> showNepaliDatePicker({
         maxDate: maxDate,
         confirmText: confirmText,
         cancelText: cancelText,
+        autoConfirm: autoConfirm,
       );
     },
   );
@@ -92,13 +100,12 @@ Future<NepaliDateTime?> showNepaliDatePicker({
 
 /// The picker's modal presentation.
 ///
-/// A plain [AlertDialog]: it brings no surface, radius or elevation of its
-/// own, so it picks up whatever `dialogTheme` the app already uses and sits
-/// beside the app's other alerts rather than announcing itself.
-///
-/// Stateful because the actions live outside the picker here -- the dialog has
-/// to hold the selection to hand back on confirm.
-class _NepaliDatePickerAlert extends StatefulWidget {
+/// A plain [AlertDialog] with no title and no action area of its own: it
+/// brings no surface, radius or elevation either, so it picks up whatever
+/// `dialogTheme` the app already uses. The picker draws its own footer and
+/// reports back through [NepaliDatePicker.onConfirm] and
+/// [NepaliDatePicker.onCancel], so the dialog does the popping.
+class _NepaliDatePickerAlert extends StatelessWidget {
   final NepaliDateTime? initialDate;
   final NepaliCalendarStyle calendarStyle;
   final NepaliDatePickerMode initialMode;
@@ -106,6 +113,7 @@ class _NepaliDatePickerAlert extends StatefulWidget {
   final NepaliDateTime? maxDate;
   final String? confirmText;
   final String? cancelText;
+  final bool autoConfirm;
 
   const _NepaliDatePickerAlert({
     this.initialDate,
@@ -115,32 +123,26 @@ class _NepaliDatePickerAlert extends StatefulWidget {
     this.maxDate,
     this.confirmText,
     this.cancelText,
+    required this.autoConfirm,
   });
 
   @override
-  State<_NepaliDatePickerAlert> createState() => _NepaliDatePickerAlertState();
-}
-
-class _NepaliDatePickerAlertState extends State<_NepaliDatePickerAlert> {
-  NepaliDateTime? _selected;
-
-  @override
   Widget build(BuildContext context) {
-    final style = NepaliCalendarTheme.resolve(context, widget.calendarStyle);
-    final language = style.effectiveConfig.language;
-    final nepali = language == Language.nepali;
-    final selected = _selected ?? widget.initialDate ?? NepaliDateTime.now();
+    final style = NepaliCalendarTheme.resolve(context, calendarStyle);
+    final nepali = style.effectiveConfig.language == Language.nepali;
 
     return AlertDialog(
-      // Deliberately no backgroundColor, shape or elevation: the point of this
-      // layout is that it looks like the app's other alerts.
-      title: Text(
-        nepali ? 'मिति छान्नुहोस्' : 'Select date',
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+      // Deliberately no backgroundColor or elevation: the point of this layout
+      // is that it looks like the app's other alerts. The shape is the one
+      // exception -- Material 3's default 28dp radius made the compact picker
+      // look like a bubble -- and it still defers to a dialogTheme shape.
+      shape: DialogTheme.of(context).shape ??
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(pickerDialogRadius),
+          ),
+      contentPadding: const EdgeInsets.only(top: 8, bottom: 4),
       // AlertDialog's default 40dp side insets leave a small phone only ~295dp
-      // of content, which is not enough for the header. Colours, shape and
+      // of content, which is not enough for the grid. Colours, shape and
       // elevation still come from the app's dialogTheme -- only the position
       // is nudged.
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -155,27 +157,19 @@ class _NepaliDatePickerAlertState extends State<_NepaliDatePickerAlert> {
           MediaQuery.sizeOf(context).width - 32,
         ),
         child: NepaliDatePicker(
-          initialDate: widget.initialDate,
-          calendarStyle: widget.calendarStyle,
-          initialMode: widget.initialMode,
-          minDate: widget.minDate,
-          maxDate: widget.maxDate,
-          // The AlertDialog owns the action area, so the picker does not draw
-          // one -- and therefore never touches the Navigator either.
-          showActions: false,
-          onDateSelected: (date) => setState(() => _selected = date),
+          initialDate: initialDate,
+          calendarStyle: calendarStyle,
+          initialMode: initialMode,
+          minDate: minDate,
+          maxDate: maxDate,
+          autoConfirm: autoConfirm,
+          confirmText: confirmText ?? _confirmLabel(context, nepali),
+          cancelText: cancelText ?? _cancelLabel(context, nepali),
+          onDateSelected: (_) {},
+          onConfirm: (date) => Navigator.of(context).pop(date),
+          onCancel: () => Navigator.of(context).pop(),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(widget.cancelText ?? _cancelLabel(context, nepali)),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(selected),
-          child: Text(widget.confirmText ?? _confirmLabel(context, nepali)),
-        ),
-      ],
     );
   }
 

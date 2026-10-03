@@ -9,14 +9,13 @@ A feature-rich Flutter package for implementing Nepali (Bikram Sambat) calendar 
 
 <table>
   <tr>
-    <td><img src="https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/1.jpg" width="200"/></td>
-    <td><img src="https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/2.jpg" width="200"/></td>
-    <td><img src="https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/3.jpg" width="200"/></td>
-    <td><img src="https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/4.jpg" width="200"/></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/1.png" width="200" alt="Month calendar with events"/><br/><sub>Month calendar</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/2.png" width="200" alt="Week strip"/><br/><sub>Week strip</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/3.png" width="200" alt="Year view"/><br/><sub>Year view</sub></td>
   </tr>
   <tr>
-    <td><img src="https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/5.jpg" width="200"/></td>
-    <td><img src="https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/6.png" width="200"/></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/4.png" width="200" alt="Date picker"/><br/><sub>Date picker</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Saw2110/nepali_calendar/refs/heads/main/assets/5.png" width="200" alt="Date range picker"/><br/><sub>Date range picker</sub></td>
   </tr>
 </table>
 
@@ -319,6 +318,30 @@ ElevatedButton(
 )
 ```
 
+### Date Range Picker
+
+Pick a start and an end date. On a phone the picker opens full screen with
+the months in one vertical list; on a tablet or desktop it is a dialog with two
+months side by side. The first tap sets the start, the second the end, and a
+third starts over. Save is enabled once both ends are set.
+
+```dart
+final range = await showNepaliDateRangePicker(
+  context: context,
+  minDate: NepaliDateTime(year: 2080, month: 1, day: 1),
+  maxDate: NepaliDateTime(year: 2090, month: 12, day: 30),
+  maxDays: 30, // optional: the longest range, both ends counted
+);
+
+if (range != null) {
+  print('${range.start} – ${range.end}: ${range.days} days');
+  final ad = range.toDateTimeRange(); // the same range as a DateTimeRange
+}
+```
+
+`NepaliDateRangePicker` is the widget on its own, for embedding in a page:
+pass `onConfirm` and `onCancel` and it leaves the `Navigator` alone.
+
 ### Customization
 
 ```dart
@@ -439,6 +462,9 @@ For detailed API documentation, visit [pub.dev documentation](https://pub.dev/do
 - **NepaliCalendar** - Main calendar widget with full month view
 - **HorizontalNepaliCalendar** - Horizontal scrolling date picker
 - **showNepaliDatePicker** - Modal date picker dialog
+- **showNepaliDateRangePicker** - Date range picker: full screen on phones,
+  a two-month dialog on wider screens
+- **NepaliDateTimeRange** - A start and end date, both included
 - **NepaliCalendarController** - Programmatic navigation control
 - **CalendarConfig** - Centralized configuration
 - **CalendarBuilder** - Custom component builders
