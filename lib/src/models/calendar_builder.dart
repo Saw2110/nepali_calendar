@@ -106,7 +106,7 @@ class CalendarBuilder<T> {
   /// ```dart
   /// eventBuilder: (context, index, date, event) {
   ///   return ListTile(
-  ///     title: Text(event.additionalInfo.title),
+  ///     title: Text('${event.additionalInfo}'),
   ///     subtitle: Text(event.date.toString()),
   ///     leading: Icon(
   ///       event.isHoliday ? Icons.celebration : Icons.event,
@@ -182,8 +182,7 @@ class CalendarCellData<T> {
 
   /// Every event on this date, in the order they were supplied.
   ///
-  /// Empty when the date has no events. Added in 0.1.0; before that only the
-  /// first event on a date was reachable.
+  /// Empty when the date has no events.
   final List<CalendarEvent<T>> events;
 
   /// Callback to invoke when the cell is tapped
@@ -223,7 +222,7 @@ class WeekdayData {
   /// Whether this weekday is considered a weekend
   final bool isWeekend;
 
-  /// The format for displaying the weekday name (full, half, short)
+  /// The format for displaying the weekday name (full or half)
   final TitleFormat format;
 
   /// The calendar style configuration

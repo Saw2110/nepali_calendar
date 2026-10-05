@@ -16,6 +16,7 @@ export 'models/calendar_builder.dart';
 export 'models/calendar_config.dart';
 export 'models/calendar_event_index.dart';
 export 'models/calendar_style.dart';
+export 'models/date_picker_builder.dart';
 export 'models/event.dart';
 export 'models/nepali_date_time.dart';
 export 'models/nepali_date_time_range.dart';

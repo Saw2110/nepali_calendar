@@ -15,7 +15,7 @@ import '../src.dart';
 ///   language: Language.nepali,
 ///   weekendType: WeekendType.saturdayAndSunday,
 ///   weekStartType: WeekStartType.monday,
-///   hapticFeedback: CalendarHaptics.light,
+///   hapticFeedback: CalendarHaptics.light, // opt in; off by default
 /// );
 /// ```
 class CalendarConfig {
@@ -66,11 +66,6 @@ class CalendarConfig {
   /// Set this to `true` if the calendar sits above other content that must not
   /// shift as the user pages through months.
   ///
-  /// ## Behaviour change in 0.1.0
-  ///
-  /// Up to 0.0.7 every month was drawn with six rows unconditionally. That is
-  /// now the opt-in behaviour rather than the only one.
-  ///
   /// Only [NepaliCalendar] honours this. [NepaliYearCalendar] and
   /// [NepaliDatePicker] always use six rows -- the former so its twelve month
   /// tiles line up, the latter so the dialog does not resize while paging.
@@ -78,17 +73,20 @@ class CalendarConfig {
 
   /// How firmly selecting a date answers back through touch.
   ///
-  /// Defaults to [CalendarHaptics.light] -- the tick the system keyboard uses
-  /// for a keypress, which is what a discrete, deliberate action like picking
-  /// a date should feel like. Use [CalendarHaptics.none] for a calendar that
-  /// is scrubbed rather than tapped, where a tick per date becomes noise.
+  /// Off by default ([CalendarHaptics.none]), so upgrading never makes an app
+  /// start vibrating. Opt in
+  /// with [CalendarHaptics.light] -- the tick the system keyboard uses for a
+  /// keypress, which is what a discrete, deliberate action like picking a date
+  /// should feel like:
+  ///
+  /// ```dart
+  /// const CalendarConfig(hapticFeedback: CalendarHaptics.light)
+  /// ```
   ///
   /// Only a physical phone can render any of this. Desktop, web and the iOS
   /// Simulator have no haptic hardware and ignore it, and Android gates it
   /// behind the system touch-feedback setting. See [CalendarHaptics] for what
   /// each value maps to on each platform.
-  ///
-  /// Added in 0.1.1.
   final CalendarHaptics hapticFeedback;
 
   /// Creates a [CalendarConfig] instance with customizable configuration options.
@@ -102,7 +100,7 @@ class CalendarConfig {
     this.weekStartType = WeekStartType.sunday,
     this.weekTitleType = TitleFormat.half,
     this.sixWeekMonthsEnforced = false,
-    this.hapticFeedback = CalendarHaptics.light,
+    this.hapticFeedback = CalendarHaptics.none,
   });
 
   /// Creates a copy of this config with the given fields replaced with new values.

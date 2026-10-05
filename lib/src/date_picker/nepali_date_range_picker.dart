@@ -1,5 +1,5 @@
 // Explicit values are kept where they state intent: `day: 1` for the first of
-// a month, and the grid's row gap beside its zero column gap.
+// a month.
 // ignore_for_file: avoid_redundant_argument_values
 
 import 'dart:math' as math;
@@ -16,16 +16,8 @@ import 'internal/range_selection.dart';
 // Dimensions
 // ---------------------------------------------------------------------------
 
-/// From this width up the picker shows two months side by side; below it,
-/// every month in one vertical list. Material's range picker switches at the
-/// same width.
-const double _wideBreakpoint = 600.0;
-
 /// Width the side-by-side layout takes when there is room.
 const double _wideWidth = 640.0;
-
-/// Horizontal padding inside the picker.
-const double _gutter = 12.0;
 
 /// Gap between the two months of the side-by-side layout.
 const double _monthGap = 24.0;
@@ -36,9 +28,6 @@ const double _wideRow = 40.0;
 /// Row height of a month grid in the vertical list, where a phone screen has
 /// the room for more comfortable rows.
 const double _listRow = 44.0;
-
-/// Gap between rows of a month grid.
-const double _rowGap = 2.0;
 
 /// Height of the month title above each month in the vertical list.
 const double _listMonthTitle = 44.0;
@@ -95,6 +84,9 @@ class NepaliDateRangePicker extends StatefulWidget {
   static const double preferredWideWidth = _wideWidth;
 
   /// The range to open with, if any.
+  ///
+  /// Ignored -- the picker opens with nothing selected -- when it falls
+  /// outside [minDate] / [maxDate] or is longer than [maxDays].
   final NepaliDateTimeRange? initialRange;
 
   /// Earliest selectable date. Clamped to the bundled calendar data.
@@ -132,6 +124,24 @@ class NepaliDateRangePicker extends StatefulWidget {
   /// Label for the cancel action. Defaults to "Cancel" / "रद्द गर्नुहोस्".
   final String? cancelText;
 
+  /// How the weekday names above the grid are written.
+  ///
+  /// Null (the default) shows initials -- `आ सो मं` / `S M T` -- which fit
+  /// any phone. [TitleFormat.half] and [TitleFormat.full] show longer names;
+  /// a name too wide for its column is scaled down to fit rather than cut
+  /// off. Independent of [CalendarConfig.weekTitleType], which the calendars
+  /// use.
+  final TitleFormat? weekdayFormat;
+
+  /// Custom designs for the picker's parts: day cells, weekday names, the
+  /// header and the footer. Each part left unset, or whose builder returns
+  /// null, keeps the default design.
+  ///
+  /// The phone layout has no header -- its months scroll -- and its footer is
+  /// the bar at the top, sized by the custom widget. A custom day draws its
+  /// own range band, from [PickerDayData.rangePosition].
+  final DatePickerBuilder? pickerBuilder;
+
   const NepaliDateRangePicker({
     super.key,
     this.initialRange,
@@ -144,6 +154,8 @@ class NepaliDateRangePicker extends StatefulWidget {
     this.onCancel,
     this.confirmText,
     this.cancelText,
+    this.weekdayFormat,
+    this.pickerBuilder,
   }) : assert(maxDays == null || maxDays > 0, 'maxDays must be positive');
 
   @override
@@ -171,7 +183,21 @@ class NepaliDateRangePicker extends StatefulWidget {
           defaultValue: null,
         ),
       )
-      ..add(IntProperty('maxDays', maxDays, defaultValue: null));
+      ..add(IntProperty('maxDays', maxDays, defaultValue: null))
+      ..add(
+        EnumProperty<TitleFormat>(
+          'weekdayFormat',
+          weekdayFormat,
+          defaultValue: null,
+        ),
+      )
+      ..add(
+        DiagnosticsProperty<DatePickerBuilder>(
+          'pickerBuilder',
+          pickerBuilder,
+          defaultValue: null,
+        ),
+      );
   }
 
   @override
@@ -184,25 +210,63 @@ class _NepaliDateRangePickerState extends State<NepaliDateRangePicker> {
   /// The left-hand month of the side-by-side layout.
   late NepaliDateTime _firstShown;
 
-  PickerBounds get _bounds =>
-      PickerBounds.from(min: widget.minDate, max: widget.maxDate);
+  /// The selectable range, built once rather than on every access -- the
+  /// grid consults it for each day cell. Rebuilt only when [widget]'s bounds
+  /// change.
+  late PickerBounds _bounds;
+
+  /// Every month in range, for the phone layout's list: some 3,400 of them
+  /// with the default bounds, so built with the bounds rather than per build.
+  late List<NepaliDateTime> _months;
+
+  void _setBounds() {
+    _bounds = PickerBounds.from(min: widget.minDate, max: widget.maxDate);
+    _months = _bounds.months;
+  }
 
   @override
   void initState() {
     super.initState();
+    _setBounds();
     final bounds = _bounds;
     final initial = widget.initialRange;
-    // A stored range drifts out of bounds easily; drop it rather than throw.
+    // A stored range drifts out of bounds easily, or outlives a tightened
+    // maxDays; drop it rather than throw, or open on a range Save would
+    // accept but the picker itself could never have produced.
+    final maxDays = widget.maxDays;
     _selection = initial != null &&
             bounds.contains(initial.start) &&
-            bounds.contains(initial.end)
+            bounds.contains(initial.end) &&
+            (maxDays == null || initial.days <= maxDays)
         ? RangeSelection.from(initial)
         : const RangeSelection();
-    final anchor = _selection.start ?? bounds.clamp(NepaliDateTime.now());
-    _firstShown = _firstOfMonth(anchor);
-    // Keep the right-hand month in range too.
-    if (_monthOffset(_firstShown, 1) == null) {
-      _firstShown = _monthOffset(_firstShown, -1) ?? _firstShown;
+    _showMonthOf(_selection.start ?? bounds.clamp(NepaliDateTime.now()));
+  }
+
+  /// Puts [date]'s month on the left of the side-by-side layout, stepping back
+  /// one if the month after it is out of range.
+  void _showMonthOf(NepaliDateTime date) {
+    _firstShown = _firstOfMonth(date);
+    if (_bounds.monthOffset(_firstShown, 1) == null) {
+      _firstShown = _bounds.monthOffset(_firstShown, -1) ?? _firstShown;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant NepaliDateRangePicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.minDate != oldWidget.minDate ||
+        widget.maxDate != oldWidget.maxDate) {
+      _setBounds();
+      // A selection the new range excludes is dropped, as an out-of-range
+      // initialRange is, and the months on show follow the range.
+      final start = _selection.start;
+      final end = _selection.end;
+      if ((start != null && !_bounds.contains(start)) ||
+          (end != null && !_bounds.contains(end))) {
+        _selection = const RangeSelection();
+      }
+      _showMonthOf(_bounds.clamp(_selection.start ?? _firstShown));
     }
   }
 
@@ -219,47 +283,24 @@ class _NepaliDateRangePickerState extends State<NepaliDateRangePicker> {
     final range = _selection.range;
     if (range == null) return;
     final onConfirm = widget.onConfirm;
-    if (onConfirm != null) {
-      onConfirm(range);
-      return;
-    }
+    if (onConfirm != null) return onConfirm(range);
     Navigator.of(context).pop(range);
   }
 
   void _cancel() {
     final onCancel = widget.onCancel;
-    if (onCancel != null) {
-      onCancel();
-      return;
-    }
+    if (onCancel != null) return onCancel();
     Navigator.of(context).pop();
   }
 
   void _step(int delta) {
-    final next = _monthOffset(_firstShown, delta);
-    if (next == null || _monthOffset(next, 1) == null) return;
-    setState(() => _firstShown = next);
+    if (!_canStep(delta)) return;
+    setState(() => _firstShown = _bounds.monthOffset(_firstShown, delta)!);
   }
 
   bool _canStep(int delta) {
-    final next = _monthOffset(_firstShown, delta);
-    return next != null && _monthOffset(next, 1) != null;
-  }
-
-  /// The month [delta] after [month], or null if none of it is selectable.
-  NepaliDateTime? _monthOffset(NepaliDateTime month, int delta) {
-    var year = month.year;
-    var m = month.month + delta;
-    while (m < 1) {
-      m += 12;
-      year -= 1;
-    }
-    while (m > 12) {
-      m -= 12;
-      year += 1;
-    }
-    if (!_bounds.containsAnyOf(year, m)) return null;
-    return NepaliDateTime(year: year, month: m, day: 1);
+    final next = _bounds.monthOffset(_firstShown, delta);
+    return next != null && _bounds.monthOffset(next, 1) != null;
   }
 
   static NepaliDateTime _firstOfMonth(NepaliDateTime date) =>
@@ -285,20 +326,19 @@ class _NepaliDateRangePickerState extends State<NepaliDateRangePicker> {
         final maxHeight = constraints.hasBoundedHeight
             ? constraints.maxHeight
             : MediaQuery.sizeOf(context).height;
-        return width >= _wideBreakpoint
+        return width >= pickerWideBreakpoint
             ? _buildWide(
-                context,
                 style,
                 math.min(width, _wideWidth),
                 maxHeight,
               )
-            : _buildList(context, style);
+            : _buildList(style);
       },
     );
   }
 
   /// The labels both layouts share.
-  _Labels _labels(BuildContext context, NepaliCalendarStyle style) {
+  _Labels _labels(NepaliCalendarStyle style) {
     final nepali = style.effectiveConfig.language == Language.nepali;
     return _Labels(
       nepali: nepali,
@@ -307,61 +347,90 @@ class _NepaliDateRangePickerState extends State<NepaliDateRangePicker> {
     );
   }
 
-  _RangeCell _cell(
+  /// A custom footer for the selection so far, or null for the default.
+  Widget? _customFooter(NepaliCalendarStyle style) {
+    return widget.pickerBuilder?.footerBuilder?.call(
+      PickerFooterData(
+        range: _selection.range,
+        rangeStart: _selection.start,
+        onToday: null,
+        onConfirm: _selection.isComplete ? _confirm : null,
+        onCancel: _cancel,
+        style: style,
+        language: style.effectiveConfig.language,
+      ),
+    );
+  }
+
+  /// [date]'s cell in [month]'s grid.
+  ///
+  /// Days of the neighbouring months are left blank, not dimmed: in a list
+  /// of months, or two side by side, they would show the same date twice.
+  Widget _cell(
     NepaliCalendarStyle style,
     NepaliDateTime date,
     NepaliDateTime month,
-    NepaliDateTime today, {
-    required bool showOtherMonths,
-  }) {
-    final inMonth = date.year == month.year && date.month == month.month;
+    NepaliDateTime today,
+  ) {
+    if (date.year != month.year || date.month != month.month) {
+      return const SizedBox.expand();
+    }
     return _RangeCell(
       style: style,
       date: date,
-      isCurrentMonth: inMonth,
-      showOtherMonths: showOtherMonths,
       isToday: date.isSameDayAs(today),
       isDisabled: !_selection.isSelectable(
         date,
         _bounds,
         maxDays: widget.maxDays,
       ),
-      position: inMonth ? _selection.positionOf(date) : RangePosition.none,
+      position: _selection.positionOf(date),
       onTap: () => _tap(date),
+      builder: widget.pickerBuilder,
     );
   }
 
   // --- vertical list (phones) ---------------------------------------------
 
-  Widget _buildList(BuildContext context, NepaliCalendarStyle style) {
-    final labels = _labels(context, style);
+  Widget _buildList(NepaliCalendarStyle style) {
+    final labels = _labels(style);
     final config = style.effectiveConfig;
-    final months = _bounds.months;
+    final months = _months;
     final today = NepaliDateTime.now();
 
     double extentOf(NepaliDateTime month) {
-      final weeks = pickerWeeksIn(month, config.weekStartType);
+      final weeks = CalendarUtils.weekRowsInMonth(
+        month.year,
+        month.month,
+        config.weekStartType,
+      );
       return _listMonthTitle +
           (weeks * _listRow) +
-          ((weeks - 1) * _rowGap) +
+          ((weeks - 1) * pickerCellGap) +
           _listMonthSpacing;
     }
 
     return Column(
       children: [
-        _ListHeader(
-          style: style,
-          labels: labels,
-          selection: _selection,
-          onClose: _cancel,
-          onSave: _selection.isComplete ? _confirm : null,
-        ),
+        _customFooter(style) ??
+            _ListHeader(
+              labels: labels,
+              selection: _selection,
+              onClose: _cancel,
+              onSave: _selection.isComplete ? _confirm : null,
+            ),
         const Divider(height: 1),
         SizedBox(
           height: _weekdayHeight + 8,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _gutter),
-            child: Center(child: PickerWeekdayRow(style: style)),
+            padding: const EdgeInsets.symmetric(horizontal: pickerGutter),
+            child: Center(
+              child: PickerWeekdayRow(
+                style: style,
+                format: widget.weekdayFormat,
+                builder: widget.pickerBuilder,
+              ),
+            ),
           ),
         ),
         const Divider(height: 1),
@@ -373,9 +442,13 @@ class _NepaliDateRangePickerState extends State<NepaliDateRangePicker> {
               _selection.start ?? _bounds.clamp(today),
             ),
             itemBuilder: (context, month) {
-              final weeks = pickerWeeksIn(month, config.weekStartType);
+              final weeks = CalendarUtils.weekRowsInMonth(
+                month.year,
+                month.month,
+                config.weekStartType,
+              );
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _gutter),
+                padding: const EdgeInsets.symmetric(horizontal: pickerGutter),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -396,22 +469,13 @@ class _NepaliDateRangePickerState extends State<NepaliDateRangePicker> {
                       ),
                     ),
                     SizedBox(
-                      height: (weeks * _listRow) + ((weeks - 1) * _rowGap),
+                      height:
+                          (weeks * _listRow) + ((weeks - 1) * pickerCellGap),
                       child: PickerMonthGrid(
                         dates: pickerMonthDates(month, config.weekStartType),
                         rows: weeks,
-                        rowGap: _rowGap,
                         columnGap: 0,
-                        // Blank, not dimmed: in a list of months, last
-                        // month's days repeated at the top of this one read
-                        // as a second copy of them.
-                        cellBuilder: (date) => _cell(
-                          style,
-                          date,
-                          month,
-                          today,
-                          showOtherMonths: false,
-                        ),
+                        cellBuilder: (date) => _cell(style, date, month, today),
                       ),
                     ),
                   ],
@@ -427,22 +491,34 @@ class _NepaliDateRangePickerState extends State<NepaliDateRangePicker> {
   // --- side by side (tablets, desktop) ------------------------------------
 
   Widget _buildWide(
-    BuildContext context,
     NepaliCalendarStyle style,
     double width,
     double maxHeight,
   ) {
-    final labels = _labels(context, style);
+    final labels = _labels(style);
     final config = style.effectiveConfig;
-    final second = _monthOffset(_firstShown, 1) ?? _firstShown;
+    final second = _bounds.monthOffset(_firstShown, 1) ?? _firstShown;
     final today = NepaliDateTime.now();
     const chrome = _headerHeight + _weekdayHeight + 4 + 8 + _footerHeight;
-    const gaps = (pickerRows - 1) * _rowGap;
+    const gaps = (pickerRows - 1) * pickerCellGap;
     // A short viewport -- a phone in landscape is wide enough for this layout
     // but not tall -- shrinks the rows rather than overflowing.
     final row = math.min(_wideRow, (maxHeight - chrome - gaps) / pickerRows);
     final gridHeight = math.max(0.0, (pickerRows * row) + gaps);
-    final monthWidth = (width - (_gutter * 2) - _monthGap) / 2;
+    final monthWidth = (width - (pickerGutter * 2) - _monthGap) / 2;
+    final onPrevious = _canStep(-1) ? () => _step(-1) : null;
+    final onNext = _canStep(1) ? () => _step(1) : null;
+    final header = widget.pickerBuilder?.headerBuilder?.call(
+      PickerHeaderData(
+        month: _firstShown,
+        secondMonth: second,
+        mode: NepaliDatePickerMode.day,
+        onPrevious: onPrevious,
+        onNext: onNext,
+        style: style,
+        language: config.language,
+      ),
+    );
 
     Widget month(NepaliDateTime month) => SizedBox(
           width: monthWidth,
@@ -450,24 +526,19 @@ class _NepaliDateRangePickerState extends State<NepaliDateRangePicker> {
             children: [
               SizedBox(
                 height: _weekdayHeight,
-                child: PickerWeekdayRow(style: style),
+                child: PickerWeekdayRow(
+                  style: style,
+                  format: widget.weekdayFormat,
+                  builder: widget.pickerBuilder,
+                ),
               ),
               const SizedBox(height: 4),
               SizedBox(
                 height: gridHeight,
                 child: PickerMonthGrid(
                   dates: pickerMonthDates(month, config.weekStartType),
-                  rowGap: _rowGap,
                   columnGap: 0,
-                  // Blank here too: with two months side by side, dimmed
-                  // repeats would show the same date twice at once.
-                  cellBuilder: (date) => _cell(
-                    style,
-                    date,
-                    month,
-                    today,
-                    showOtherMonths: false,
-                  ),
+                  cellBuilder: (date) => _cell(style, date, month, today),
                 ),
               ),
             ],
@@ -481,17 +552,18 @@ class _NepaliDateRangePickerState extends State<NepaliDateRangePicker> {
         children: [
           SizedBox(
             height: _headerHeight,
-            child: _WideHeader(
-              style: style,
-              labels: labels,
-              first: _firstShown,
-              second: second,
-              onPrevious: _canStep(-1) ? () => _step(-1) : null,
-              onNext: _canStep(1) ? () => _step(1) : null,
-            ),
+            child: header ??
+                _WideHeader(
+                  style: style,
+                  labels: labels,
+                  first: _firstShown,
+                  second: second,
+                  onPrevious: onPrevious,
+                  onNext: onNext,
+                ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _gutter),
+            padding: const EdgeInsets.symmetric(horizontal: pickerGutter),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -504,13 +576,13 @@ class _NepaliDateRangePickerState extends State<NepaliDateRangePicker> {
           const SizedBox(height: 8),
           SizedBox(
             height: _footerHeight,
-            child: _WideFooter(
-              style: style,
-              labels: labels,
-              selection: _selection,
-              onCancel: _cancel,
-              onSave: _selection.isComplete ? _confirm : null,
-            ),
+            child: _customFooter(style) ??
+                _WideFooter(
+                  labels: labels,
+                  selection: _selection,
+                  onCancel: _cancel,
+                  onSave: _selection.isComplete ? _confirm : null,
+                ),
           ),
         ],
       ),
@@ -590,14 +662,12 @@ class _Labels {
 
 /// Close and Save, then the title and the range as picked so far.
 class _ListHeader extends StatelessWidget {
-  final NepaliCalendarStyle style;
   final _Labels labels;
   final RangeSelection selection;
   final VoidCallback onClose;
   final VoidCallback? onSave;
 
   const _ListHeader({
-    required this.style,
     required this.labels,
     required this.selection,
     required this.onClose,
@@ -772,19 +842,17 @@ class _WideHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
         children: [
-          IconButton(
-            onPressed: onPrevious,
-            icon: const Icon(Icons.chevron_left_rounded, size: 22),
+          PickerNavButton(
+            icon: Icons.chevron_left_rounded,
             tooltip: labels.previous,
-            visualDensity: VisualDensity.compact,
+            onPressed: onPrevious,
           ),
           title(first),
           title(second),
-          IconButton(
-            onPressed: onNext,
-            icon: const Icon(Icons.chevron_right_rounded, size: 22),
+          PickerNavButton(
+            icon: Icons.chevron_right_rounded,
             tooltip: labels.next,
-            visualDensity: VisualDensity.compact,
+            onPressed: onNext,
           ),
         ],
       ),
@@ -794,14 +862,12 @@ class _WideHeader extends StatelessWidget {
 
 /// The range in AD and its length on the left; Cancel and Save on the right.
 class _WideFooter extends StatelessWidget {
-  final NepaliCalendarStyle style;
   final _Labels labels;
   final RangeSelection selection;
   final VoidCallback onCancel;
   final VoidCallback? onSave;
 
   const _WideFooter({
-    required this.style,
     required this.labels,
     required this.selection,
     required this.onCancel,
@@ -810,37 +876,11 @@ class _WideFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      children: [
-        const Divider(
-          height: 1,
-          thickness: 1,
-          indent: _gutter,
-          endIndent: _gutter,
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(left: _gutter, right: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    labels.adSummary(selection) ?? labels.bsRange(selection),
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                TextButton(onPressed: onCancel, child: Text(labels.cancel)),
-                TextButton(onPressed: onSave, child: Text(labels.confirm)),
-              ],
-            ),
-          ),
-        ),
+    return PickerFooter(
+      text: labels.adSummary(selection) ?? labels.bsRange(selection),
+      actions: [
+        TextButton(onPressed: onCancel, child: Text(labels.cancel)),
+        TextButton(onPressed: onSave, child: Text(labels.confirm)),
       ],
     );
   }
@@ -859,114 +899,95 @@ class _WideFooter extends StatelessWidget {
 class _RangeCell extends StatelessWidget {
   final NepaliCalendarStyle style;
   final NepaliDateTime date;
-  final bool isCurrentMonth;
-  final bool showOtherMonths;
   final bool isToday;
   final bool isDisabled;
-  final RangePosition position;
+  final PickerRangePosition position;
   final VoidCallback onTap;
+  final DatePickerBuilder? builder;
 
   const _RangeCell({
     required this.style,
     required this.date,
-    required this.isCurrentMonth,
-    required this.showOtherMonths,
     required this.isToday,
     required this.isDisabled,
     required this.position,
     required this.onTap,
+    required this.builder,
   });
 
   bool get _isEnd =>
-      position == RangePosition.start ||
-      position == RangePosition.end ||
-      position == RangePosition.single;
+      position == PickerRangePosition.start ||
+      position == PickerRangePosition.end ||
+      position == PickerRangePosition.single;
 
   @override
   Widget build(BuildContext context) {
-    if (!isCurrentMonth && !showOtherMonths) return const SizedBox.expand();
-
-    final cells = style.cellsStyle;
     final config = style.effectiveConfig;
-    final isWeekend = WeekUtils.isWeekend(date.weekday, config.weekendType);
-    final inert = isDisabled || !isCurrentMonth;
     final directionality = Directionality.of(context);
+    final tap = pickerDayTap(config, onTap, enabled: !isDisabled);
+    final custom = builder?.dayBuilder?.call(
+      PickerDayData(
+        date: date,
+        isToday: isToday,
+        isSelected: _isEnd,
+        isDisabled: isDisabled,
+        isOtherMonth: false,
+        isWeekend: WeekUtils.isWeekend(date.weekday, config.weekendType),
+        rangePosition: position,
+        onTap: tap,
+        style: style,
+        language: config.language,
+      ),
+    );
 
     return Semantics(
-      button: !inert,
-      enabled: !inert,
-      selected: position != RangePosition.none,
+      button: !isDisabled,
+      enabled: !isDisabled,
+      selected: position != PickerRangePosition.none,
       label: _semanticLabel(config.language),
       excludeSemantics: true,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final side = math.min(constraints.maxWidth, constraints.maxHeight);
-          final inset = (constraints.maxHeight - side) / 2;
-          final band = cells.selectedColor.withValues(alpha: _bandOpacity);
+      child: custom ??
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // The band runs at the square's height, centred like the square.
+              final side =
+                  math.min(constraints.maxWidth, constraints.maxHeight);
+              final inset = (constraints.maxHeight - side) / 2;
+              final band = style.cellsStyle.selectedColor
+                  .withValues(alpha: _bandOpacity);
 
-          return InkResponse(
-            onTap: inert
-                ? null
-                : () {
-                    config.hapticFeedback.perform();
-                    onTap();
-                  },
-            containedInkWell: true,
-            customBorder: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(pickerRadius),
-            ),
-            child: Stack(
-              children: [
-                if (_bandAlignment(directionality) case final alignment?)
-                  Positioned.fill(
-                    top: inset,
-                    bottom: inset,
-                    child: FractionallySizedBox(
-                      alignment: alignment,
-                      widthFactor: position == RangePosition.middle ? 1.0 : 0.5,
-                      child: ColoredBox(color: band),
-                    ),
-                  ),
-                Center(
-                  child: SizedBox.square(
-                    dimension: side,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: _isEnd ? cells.selectedColor : null,
-                        borderRadius: BorderRadius.circular(pickerRadius),
-                        border: isToday && !_isEnd
-                            ? Border.all(color: cells.todayColor, width: 1.5)
-                            : null,
-                      ),
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Padding(
-                            padding: const EdgeInsets.all(2),
-                            child: Text(
-                              NepaliNumberConverter.formattedNumber(
-                                '${date.day}',
-                                language: config.language,
-                              ),
-                              style: cells.dayStyle.copyWith(
-                                fontSize: 14,
-                                fontWeight: _isEnd || isToday
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                color: _foreground(cells, isWeekend),
-                              ),
-                            ),
-                          ),
+              return InkResponse(
+                onTap: tap,
+                containedInkWell: true,
+                customBorder: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(pickerRadius),
+                ),
+                child: Stack(
+                  children: [
+                    if (_bandAlignment(directionality) case final alignment?)
+                      Positioned.fill(
+                        top: inset,
+                        bottom: inset,
+                        child: FractionallySizedBox(
+                          alignment: alignment,
+                          widthFactor: position == PickerRangePosition.middle
+                              ? 1.0
+                              : 0.5,
+                          child: ColoredBox(color: band),
                         ),
                       ),
+                    PickerDaySquare(
+                      style: style,
+                      date: date,
+                      filled: _isEnd,
+                      isToday: isToday,
+                      isDisabled: isDisabled,
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+              );
+            },
+          ),
     );
   }
 
@@ -977,30 +998,16 @@ class _RangeCell extends StatelessWidget {
   Alignment? _bandAlignment(TextDirection direction) {
     final ltr = direction == TextDirection.ltr;
     switch (position) {
-      case RangePosition.middle:
+      case PickerRangePosition.middle:
         return Alignment.center;
-      case RangePosition.start:
+      case PickerRangePosition.start:
         return ltr ? Alignment.centerRight : Alignment.centerLeft;
-      case RangePosition.end:
+      case PickerRangePosition.end:
         return ltr ? Alignment.centerLeft : Alignment.centerRight;
-      case RangePosition.none:
-      case RangePosition.single:
+      case PickerRangePosition.none:
+      case PickerRangePosition.single:
         return null;
     }
-  }
-
-  Color _foreground(CellStyle cells, bool isWeekend) {
-    if (_isEnd) return cells.onHighlightColor;
-    if (!isCurrentMonth) {
-      return cells.dimmedDateTextColor.withValues(alpha: 0.4);
-    }
-    if (isDisabled) {
-      return (isWeekend ? cells.weekDayColor : cells.dateTextColor)
-          .withValues(alpha: 0.3);
-    }
-    if (isToday) return cells.todayColor;
-    if (isWeekend) return cells.weekDayColor;
-    return cells.dateTextColor;
   }
 
   /// The full date, as the single picker announces it, plus its part in the
@@ -1011,15 +1018,14 @@ class _RangeCell extends StatelessWidget {
       language: language,
       isToday: isToday,
       isDisabled: isDisabled,
-      isOtherMonth: !isCurrentMonth,
     );
     final nepali = language == Language.nepali;
     final role = switch (position) {
-      RangePosition.start => nepali ? 'सुरु मिति' : 'Start date',
-      RangePosition.end => nepali ? 'अन्तिम मिति' : 'End date',
-      RangePosition.single => nepali ? 'सुरु मिति' : 'Start date',
-      RangePosition.middle => nepali ? 'दायरामा' : 'In range',
-      RangePosition.none => null,
+      PickerRangePosition.start => nepali ? 'सुरु मिति' : 'Start date',
+      PickerRangePosition.end => nepali ? 'अन्तिम मिति' : 'End date',
+      PickerRangePosition.single => nepali ? 'सुरु मिति' : 'Start date',
+      PickerRangePosition.middle => nepali ? 'दायरामा' : 'In range',
+      PickerRangePosition.none => null,
     };
     return role == null ? base : '$base, $role';
   }

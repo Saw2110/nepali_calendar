@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nepali_calendar_plus/nepali_calendar_plus.dart';
 
+import 'picker_finders.dart';
+
 /// Covers the parameters added in 0.1.0: initialMode, minDate/maxDate,
 /// onConfirm/onCancel and the label overrides.
 void main() {
@@ -36,7 +38,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Baisakh 2081'), findsOneWidget);
+      expect(find.text('Baisakh'), findsOneWidget, reason: 'month field');
+      expect(outsideBand('2081'), findsOneWidget, reason: 'year field');
       expect(find.text('15'), findsOneWidget, reason: 'day grid is showing');
     });
 
@@ -47,9 +50,7 @@ void main() {
             initialDate: baisakh2081,
             calendarStyle: englishStyle,
             initialMode: NepaliDatePickerMode.year,
-            // Bounded so the whole window fits on screen: the year grid
-            // scrolls, and an unbounded window would leave later years
-            // unbuilt and unfindable.
+            // Bounded so the range fits one page.
             minDate: NepaliDateTime(year: 2080, month: 1, day: 1),
             maxDate: NepaliDateTime(year: 2085, month: 12, day: 30),
             onDateSelected: (_) {},
@@ -58,9 +59,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Select Year'), findsOneWidget);
-      expect(find.text('2081'), findsOneWidget, reason: 'a year tile');
-      expect(find.text('2085'), findsOneWidget, reason: 'neighbouring years');
+      expect(
+        outsideBand('2081'),
+        findsNWidgets(2),
+        reason: 'the year field and its tile',
+      );
+      expect(outsideBand('2085'), findsOneWidget, reason: 'neighbouring years');
     });
 
     testWidgets('month opens on the month grid', (tester) async {
@@ -76,6 +80,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // A 4x3 page: all twelve months at once.
       expect(find.text('Jestha'), findsOneWidget);
       expect(find.text('Chaitra'), findsOneWidget);
     });
@@ -89,7 +94,7 @@ void main() {
             initialDate: baisakh2081,
             calendarStyle: englishStyle,
             initialMode: NepaliDatePickerMode.year,
-            // Bounded so every year tile is laid out; see above.
+            // Bounded so every year tile is on one page; see above.
             minDate: NepaliDateTime(year: 2080, month: 1, day: 1),
             maxDate: NepaliDateTime(year: 2085, month: 12, day: 30),
             onDateSelected: (_) {},
@@ -99,7 +104,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('2085'));
+      await tester.tap(outsideBand('2085'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Jestha'));
       await tester.pumpAndSettle();
@@ -173,6 +178,8 @@ void main() {
             calendarStyle: englishStyle,
             minDate: NepaliDateTime(year: 2081, month: 1, day: 10),
             maxDate: NepaliDateTime(year: 2081, month: 1, day: 20),
+            // Two taps in a row: the first must not confirm and pop.
+            autoConfirm: false,
             onDateSelected: (date) => tapped = date,
           ),
         ),
@@ -206,10 +213,11 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(
-        find.text('Baisakh 2081'),
+        find.text('Baisakh'),
         findsOneWidget,
         reason: 'opens on the nearest legal date',
       );
+      expect(outsideBand('2081'), findsOneWidget);
     });
 
     testWidgets('month navigation will not leave the range', (tester) async {
@@ -226,17 +234,17 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.chevron_right_rounded));
+      await tester.tap(find.byTooltip('Next month'));
       await tester.pumpAndSettle();
       expect(
-        find.text('Baisakh 2081'),
+        find.text('Baisakh'),
         findsOneWidget,
         reason: 'next month is entirely outside the range',
       );
 
-      await tester.tap(find.byIcon(Icons.chevron_left_rounded));
+      await tester.tap(find.byTooltip('Previous month'));
       await tester.pumpAndSettle();
-      expect(find.text('Baisakh 2081'), findsOneWidget);
+      expect(find.text('Baisakh'), findsOneWidget);
 
       expect(tester.takeException(), isNull);
     });
@@ -256,11 +264,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('2080'), findsOneWidget);
-      expect(find.text('2081'), findsOneWidget);
-      expect(find.text('2082'), findsOneWidget);
-      expect(find.text('2079'), findsNothing, reason: 'before minDate');
-      expect(find.text('2083'), findsNothing, reason: 'after maxDate');
+      expect(outsideBand('2080'), findsOneWidget);
+      expect(outsideBand('2081'), findsWidgets, reason: 'field and tile');
+      expect(outsideBand('2082'), findsOneWidget);
+      expect(outsideBand('2079'), findsNothing, reason: 'before minDate');
+      expect(outsideBand('2083'), findsNothing, reason: 'after maxDate');
     });
 
     testWidgets('a range wider than the data is clamped to the data',
@@ -294,6 +302,40 @@ void main() {
         );
       }
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  /// The selection used to stay put when the bounds changed under it, so the
+  /// picker could hold a date it would refuse to let the user pick.
+  group('bounds that change while open', () {
+    testWidgets('a raised minDate pulls the selection into range',
+        (tester) async {
+      Widget picker(NepaliDateTime? min) => host(
+            NepaliDatePicker(
+              initialDate: baisakh2081,
+              calendarStyle: englishStyle,
+              minDate: min,
+              onDateSelected: (_) {},
+            ),
+          );
+
+      await tester.pumpWidget(picker(null));
+      await tester.pumpAndSettle();
+
+      final raised = NepaliDateTime(year: 2081, month: 1, day: 20);
+      await tester.pumpWidget(picker(raised));
+      await tester.pumpAndSettle();
+
+      // The footer shows the selected date in AD.
+      final ad = raised.toDateTime();
+      final months = MonthUtils.englishMonthsShort;
+      expect(
+        find.text(
+          '${ad.day.toString().padLeft(2, '0')} ${months[ad.month - 1]} '
+          '${ad.year}',
+        ),
+        findsOneWidget,
+      );
     });
   });
 
@@ -358,6 +400,7 @@ void main() {
                       body: NepaliDatePicker(
                         initialDate: baisakh2081,
                         calendarStyle: englishStyle,
+                        autoConfirm: false,
                         onDateSelected: (_) {},
                         onCancel: () => cancelled = true,
                       ),
@@ -384,8 +427,7 @@ void main() {
       );
     });
 
-    /// The back-compatible path: no callbacks means the old pop behaviour,
-    /// which showNepaliDatePicker depends on.
+    /// The back-compatible path: no callbacks means the old pop behaviour.
     testWidgets('without callbacks, still pops the route', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -398,6 +440,7 @@ void main() {
                       body: NepaliDatePicker(
                         initialDate: baisakh2081,
                         calendarStyle: englishStyle,
+                        autoConfirm: false,
                         onDateSelected: (_) {},
                       ),
                     ),
@@ -419,6 +462,119 @@ void main() {
     });
   });
 
+  group('autoConfirm', () {
+    testWidgets('with autoConfirm, a tap pops the route with the date',
+        (tester) async {
+      NepaliDateTime? result;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () async {
+                  result = await Navigator.of(context).push<NepaliDateTime>(
+                    MaterialPageRoute(
+                      builder: (_) => Scaffold(
+                        body: NepaliDatePicker(
+                          initialDate: baisakh2081,
+                          calendarStyle: englishStyle,
+                          autoConfirm: true,
+                          onDateSelected: (_) {},
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('push'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('push'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('OK'), findsNothing, reason: 'no actions row');
+      await tester.tap(find.text('15'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NepaliDatePicker), findsNothing);
+      expect(result?.day, 15);
+    });
+
+    /// The embeddable widget keeps the 0.1.0 flow unless asked otherwise: an
+    /// app that put the picker on a page and listened to onDateSelected must
+    /// not have that page popped by a tap.
+    testWidgets('off by default: a tap only selects until OK is pressed',
+        (tester) async {
+      NepaliDateTime? confirmed;
+
+      await tester.pumpWidget(
+        host(
+          NepaliDatePicker(
+            initialDate: baisakh2081,
+            calendarStyle: englishStyle,
+            onDateSelected: (_) {},
+            onConfirm: (date) => confirmed = date,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('15'));
+      await tester.pumpAndSettle();
+      expect(confirmed, isNull, reason: 'the tap must not confirm');
+
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(confirmed?.day, 15);
+    });
+
+    testWidgets('without the footer the picker never confirms itself',
+        (tester) async {
+      NepaliDateTime? tapped;
+      NepaliDateTime? confirmed;
+
+      await tester.pumpWidget(
+        host(
+          NepaliDatePicker(
+            initialDate: baisakh2081,
+            calendarStyle: englishStyle,
+            showActions: false,
+            onDateSelected: (date) => tapped = date,
+            onConfirm: (date) => confirmed = date,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('15'));
+      await tester.pumpAndSettle();
+
+      expect(tapped?.day, 15);
+      expect(confirmed, isNull, reason: 'the host owns confirmation');
+    });
+  });
+
+  group('footer', () {
+    testWidgets('shows the selected date in AD', (tester) async {
+      await tester.pumpWidget(
+        host(
+          NepaliDatePicker(
+            // BS 2083-06-16 is AD 2026-10-02.
+            initialDate: NepaliDateTime(year: 2083, month: 6, day: 16),
+            calendarStyle: englishStyle,
+            onDateSelected: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('02 Oct 2026'), findsOneWidget);
+    });
+  });
+
   group('label overrides', () {
     testWidgets('confirmText and cancelText replace the defaults',
         (tester) async {
@@ -429,6 +585,7 @@ void main() {
             calendarStyle: englishStyle,
             confirmText: 'Save',
             cancelText: 'Back',
+            autoConfirm: false,
             onDateSelected: (_) {},
           ),
         ),
@@ -446,6 +603,7 @@ void main() {
         host(
           NepaliDatePicker(
             initialDate: baisakh2081,
+            autoConfirm: false,
             onDateSelected: (_) {},
           ),
         ),
@@ -500,6 +658,38 @@ void main() {
         find.bySemanticsLabel(RegExp(r'Baisakh, 7, .*Unavailable')),
         findsOneWidget,
       );
+      handle.dispose();
+    });
+
+    /// A neighbouring month's day cannot be tapped, so a screen reader must
+    /// not offer it as an enabled button.
+    testWidgets('a day from a neighbouring month is not an enabled button',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        host(
+          NepaliDatePicker(
+            initialDate: baisakh2081,
+            calendarStyle: englishStyle,
+            onDateSelected: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Baisakh 2081 opens with the last days of Chaitra 2080.
+      final cell = tester.widget<Semantics>(
+        find
+            .byWidgetPredicate(
+              (w) =>
+                  w is Semantics &&
+                  (w.properties.label ?? '').startsWith('Chaitra, 30, '),
+            )
+            .first,
+      );
+      expect(cell.properties.button, isFalse);
+      expect(cell.properties.enabled, isFalse);
       handle.dispose();
     });
   });

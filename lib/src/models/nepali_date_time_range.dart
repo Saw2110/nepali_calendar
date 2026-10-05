@@ -17,7 +17,7 @@ import 'nepali_date_time.dart';
 /// ```
 ///
 /// Only the calendar date matters: the time of day on either end is ignored
-/// by [days] and [contains].
+/// by [days], [contains] and equality.
 @immutable
 class NepaliDateTimeRange {
   /// The first day of the range.
@@ -26,11 +26,17 @@ class NepaliDateTimeRange {
   /// The last day of the range. Never before [start].
   final NepaliDateTime end;
 
-  NepaliDateTimeRange({required this.start, required this.end})
-      : assert(
-          start.dateOnly.compareTo(end.dateOnly) <= 0,
-          'start ($start) must not be after end ($end)',
-        );
+  /// Throws an [ArgumentError] if [end] falls on an earlier day than [start]
+  /// -- in release builds too, not only as an assert.
+  NepaliDateTimeRange({required this.start, required this.end}) {
+    if (start.dateOnly.compareTo(end.dateOnly) > 0) {
+      throw ArgumentError.value(
+        end,
+        'end',
+        'must not be before start ($start)',
+      );
+    }
+  }
 
   /// How many days the range covers, both ends included: a range that starts
   /// and ends on the same day is one day long.
@@ -48,12 +54,23 @@ class NepaliDateTimeRange {
   DateTimeRange toDateTimeRange() =>
       DateTimeRange(start: start.toDateTime(), end: end.toDateTime());
 
+  /// Two ranges are equal when they cover the same days, whatever the time
+  /// of day on their ends.
   @override
   bool operator ==(Object other) =>
-      other is NepaliDateTimeRange && other.start == start && other.end == end;
+      other is NepaliDateTimeRange &&
+      other.start.isSameDayAs(start) &&
+      other.end.isSameDayAs(end);
 
   @override
-  int get hashCode => Object.hash(start, end);
+  int get hashCode => Object.hash(
+        start.year,
+        start.month,
+        start.day,
+        end.year,
+        end.month,
+        end.day,
+      );
 
   @override
   String toString() => 'NepaliDateTimeRange($start – $end)';

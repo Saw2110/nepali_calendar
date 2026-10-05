@@ -48,7 +48,7 @@ class NepaliNumberConverter {
     'छैटौँ',
     'सातौँ',
     'आठौँ',
-    'नौ',
+    'नवौँ',
   ];
 
   /// Converts a number to its Nepali ordinal representation.

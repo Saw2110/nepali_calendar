@@ -2,19 +2,18 @@
 // code paths have to keep calling them until they are removed in 1.0.0.
 // ignore_for_file: deprecated_member_use_from_same_package
 
-// Import Flutter material package for UI components
 import 'package:flutter/material.dart';
 
-// Import custom source file containing calendar utilities
 import '../src.dart';
+import '../utils/calendar_layout.dart';
 
 /// How far the weekday names follow the system font scale before they stop.
 ///
-/// Lower than a day cell's number: this row stacks the Nepali and English
-/// names in the height of a single cell, so it runs out of room sooner.
+/// The same limit as a day cell's number. This row stacks the Nepali and
+/// English names in the height of a single cell, so it must not grow past
+/// the cells beneath it.
 const double _maxWeekdayTextScale = 1.3;
 
-// Widget to display header row of weekday names
 /// The weekday header is an implementation detail of [NepaliCalendar]. To
 /// customise it, use `CalendarBuilder.weekdayBuilder`.
 ///
@@ -26,15 +25,12 @@ const double _maxWeekdayTextScale = 1.3;
   'Internal implementation detail, not intended as public API. Will be removed in 1.0.0.',
 )
 class WeekdayHeader extends StatelessWidget {
-  // Style configuration for the calendar
   final NepaliCalendarStyle style;
-  // Optional custom weekday builder
   final Widget Function(WeekdayData)? weekdayBuilder;
 
   /// Width-to-height ratio of each weekday cell.
   ///
-  /// Defaults to 1.0 (square), matching every version up to 0.0.7. See
-  /// [CalendarGrid.cellAspectRatio].
+  /// Defaults to 1.0 (square). See [CalendarGrid.cellAspectRatio].
   final double cellAspectRatio;
 
   /// [cellAspectRatio], guarded against the values the grid delegate rejects.
@@ -50,151 +46,89 @@ class WeekdayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get weekday indices based on week start configuration
-    final List<int> weekdays = _getWeekdayOrder();
+    // Everything below is the same for all seven cells, so it is worked out
+    // once here rather than per cell.
+    final config = style.effectiveConfig;
+    final weekdays = weekdayOrder(config.weekStartType);
 
-    final headerGrid = GridView.builder(
+    // Colours from the resolved style, which NepaliCalendar has already
+    // resolved against any ambient NepaliCalendarTheme -- so the row follows
+    // a dark theme like the dates beneath it.
+    final weekdayColor = style.headersStyle.weekHeaderStyle.color ??
+        style.cellsStyle.dateTextColor;
+    final weekendColor = style.cellsStyle.weekDayColor;
+
+    // Two stacked lines in a cell whose height comes from the viewport, not
+    // from its text. Follow the user's font size as far as the cell can take
+    // it, then scale the block down to fit rather than spilling out of it.
+    final scaler = MediaQuery.textScalerOf(
+      context,
+    ).clamp(maxScaleFactor: _maxWeekdayTextScale);
+
+    Widget name(
+      int day,
+      Language language,
+      double size,
+      FontWeight? weight,
+      Color color,
+    ) {
+      return Text(
+        WeekUtils.formattedWeekDay(day, language, config.weekTitleType),
+        textAlign: TextAlign.center,
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+        textScaler: scaler,
+        style: TextStyle(fontSize: size, fontWeight: weight, color: color),
+      );
+    }
+
+    return GridView.builder(
       shrinkWrap: true,
       padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 7, // 7 columns for 7 days in a week
+        crossAxisCount: 7,
         childAspectRatio: _effectiveAspectRatio,
       ),
       itemCount: 7,
       itemBuilder: (context, index) {
         final day = weekdays[index];
-        final isWeekend = _isWeekend(day);
+        final isWeekend = WeekUtils.isWeekend(day, config.weekendType);
+        final color = isWeekend ? weekendColor : weekdayColor;
 
-        Widget cell;
-
-        // If custom weekdayBuilder is provided, use it
-        if (weekdayBuilder != null) {
-          final weekdayData = WeekdayData(
-            weekday: day,
-            language: style.effectiveConfig.language,
-            isWeekend: isWeekend,
-            format: style.effectiveConfig.weekTitleType,
-            style: style,
-          );
-          cell = weekdayBuilder!(weekdayData);
-        } else {
-          // Default weekday header implementation
-          // Note: Borders are handled by grid wrapper, not individual cells
-          // Colours come from the resolved style, which NepaliCalendar has
-          // already resolved against any ambient NepaliCalendarTheme. These
-          // were hard-coded to Colors.black87 and Colors.black54, so in a dark
-          // app the weekday row sat near-invisible above perfectly themed
-          // dates.
-          final primaryColor = style.headersStyle.weekHeaderStyle.color ??
-              style.cellsStyle.dateTextColor;
-          final secondaryColor = primaryColor.withValues(alpha: 0.7);
-
-          // Two stacked lines in a cell whose height comes from the viewport,
-          // not from its text. At a large system font setting they simply
-          // overflowed it -- 43px past the bottom at 3x. Follow the user's
-          // setting as far as the cell can take it, then scale the block down
-          // to fit rather than spilling out of it.
-          final headerScaler = MediaQuery.textScalerOf(
-            context,
-          ).clamp(maxScaleFactor: _maxWeekdayTextScale);
-
-          cell = FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Nepali weekday name
-                Text(
-                  WeekUtils.formattedWeekDay(
-                    day,
-                    Language.nepali,
-                    style.effectiveConfig.weekTitleType,
-                  ),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  textScaler: headerScaler,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: isWeekend
-                        ? style.cellsStyle.weekDayColor
-                        : primaryColor,
-                  ),
+        final cell = weekdayBuilder != null
+            ? weekdayBuilder!(
+                WeekdayData(
+                  weekday: day,
+                  language: config.language,
+                  isWeekend: isWeekend,
+                  format: config.weekTitleType,
+                  style: style,
                 ),
-                const SizedBox(height: 2),
-                // English weekday name
-                Text(
-                  WeekUtils.formattedWeekDay(
-                    day,
-                    Language.english,
-                    style.effectiveConfig.weekTitleType,
-                  ),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  textScaler: headerScaler,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isWeekend
-                        ? style.cellsStyle.weekDayColor.withValues(alpha: 0.7)
-                        : secondaryColor,
-                  ),
+              )
+            : FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    name(day, Language.nepali, 12, FontWeight.bold, color),
+                    const SizedBox(height: 2),
+                    name(
+                      day,
+                      Language.english,
+                      10,
+                      null,
+                      color.withValues(alpha: 0.7),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        }
+              );
 
-        // Wrap with table-style borders if enabled
-        if (style.effectiveConfig.showBorder) {
-          return _wrapWithTableBorder(cell);
-        }
-        return cell;
+        // Right and bottom lines per cell; CalendarMonthView adds the outer
+        // top and left edge.
+        return config.showBorder ? tableBorder(cell, style) : cell;
       },
     );
-
-    // Don't add top/left border here - CalendarMonthView will handle it
-    return headerGrid;
-  }
-
-  // Get the order of weekdays based on week start type
-  List<int> _getWeekdayOrder() {
-    switch (style.effectiveConfig.weekStartType) {
-      case WeekStartType.sunday:
-        // Sunday (0) to Saturday (6)
-        return [0, 1, 2, 3, 4, 5, 6];
-      case WeekStartType.monday:
-        // Monday (1) to Sunday (0)
-        return [1, 2, 3, 4, 5, 6, 0];
-    }
-  }
-
-  /// Wraps a weekday cell with table-style borders (right and bottom only).
-  Widget _wrapWithTableBorder(Widget child) {
-    // Themed, like the grid's own borders. This was hard-coded grey, which is
-    // a light-mode-only choice.
-    final borderColor = style.cellsStyle.borderColor.withValues(alpha: 0.3);
-
-    return DecoratedBox(
-      // Over the cell, matching the date grid. The default header cells have
-      // no background so this makes no difference to them, but a custom
-      // weekdayBuilder that paints one would otherwise cover its own lines.
-      position: DecorationPosition.foreground,
-      decoration: BoxDecoration(
-        border: Border(
-          right: BorderSide(color: borderColor),
-          bottom: BorderSide(color: borderColor),
-        ),
-      ),
-      child: child,
-    );
-  }
-
-  // Method to check if a weekday is a weekend based on the weekend type
-  bool _isWeekend(int dayIndex) {
-    return WeekUtils.isWeekend(dayIndex, style.effectiveConfig.weekendType);
   }
 }

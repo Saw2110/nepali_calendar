@@ -6,12 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nepali_calendar_plus/nepali_calendar_plus.dart';
 
+import 'picker_finders.dart';
+
 void main() {
   Widget host(Widget child) => MaterialApp(home: Scaffold(body: child));
 
-  // Year selection is reached by tapping the month/year title, which carries a
-  // drop-down arrow. Up to 0.1.0 it hid behind an unlabelled edit-calendar
-  // icon.
+  // Year selection is reached by tapping the year field in the header. Up to
+  // 0.1.0 it hid behind an unlabelled edit-calendar icon.
 
   const englishStyle = NepaliCalendarStyle(
     config: CalendarConfig(language: Language.english),
@@ -32,7 +33,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Baisakh 2081'), findsOneWidget);
+      expect(find.text('Baisakh'), findsOneWidget);
+      expect(outsideBand('2081'), findsOneWidget);
     });
 
     /// Regression guard, and the most important test in this file.
@@ -55,6 +57,8 @@ void main() {
               key: ValueKey(month),
               initialDate: NepaliDateTime(year: 2081, month: month, day: 1),
               calendarStyle: englishStyle,
+              // Selection only: an auto-confirm would pop the test's route.
+              autoConfirm: false,
               onDateSelected: (date) => selected = date,
             ),
           ),
@@ -141,7 +145,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Open the year view.
-      await tester.tap(find.byIcon(Icons.arrow_drop_down_rounded));
+      await tester.tap(outsideBand('2099'));
       await tester.pumpAndSettle();
 
       final lastSupported = CalendarUtils.nepaliYears.keys.last;
@@ -168,7 +172,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.arrow_drop_down_rounded));
+      await tester.tap(outsideBand('1975'));
       await tester.pumpAndSettle();
 
       final firstSupported = CalendarUtils.nepaliYears.keys.first;
@@ -193,7 +197,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.arrow_drop_down_rounded));
+      await tester.tap(outsideBand('2099'));
       await tester.pumpAndSettle();
 
       // Whatever years are on offer near the end of the calendar, picking one
@@ -217,7 +221,7 @@ void main() {
         );
       }
 
-      await tester.tap(find.text('${offered.reduce(math.max)}').first);
+      await tester.tap(outsideBand('${offered.reduce(math.max)}').first);
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
@@ -275,7 +279,7 @@ void main() {
   });
 
   group('mode switching', () {
-    testWidgets('tapping the year opens the year grid, then month, then day',
+    testWidgets('the year field opens the year grid, then month, then day',
         (tester) async {
       await tester.pumpWidget(
         host(
@@ -289,12 +293,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Year view: neighbouring years become visible.
-      await tester.tap(find.byIcon(Icons.arrow_drop_down_rounded));
+      await tester.tap(outsideBand('2081'));
       await tester.pumpAndSettle();
-      expect(find.text('2085'), findsOneWidget);
+      expect(outsideBand('2085'), findsOneWidget);
 
       // Choosing a year moves to the month view.
-      await tester.tap(find.text('2085'));
+      await tester.tap(outsideBand('2085'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Jestha'), findsWidgets);
 
@@ -303,5 +307,181 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('15'), findsOneWidget);
     });
+  });
+
+  group('month page and year list', () {
+    testWidgets('the month field opens months, and closes them again',
+        (tester) async {
+      await tester.pumpWidget(
+        host(
+          NepaliDatePicker(
+            initialDate: baisakh2081,
+            calendarStyle: englishStyle,
+            onDateSelected: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Baisakh'));
+      await tester.pumpAndSettle();
+      expect(find.text('Jestha'), findsOneWidget);
+      expect(find.text('15'), findsNothing, reason: 'the days are swapped out');
+
+      // The field and the tile both read Baisakh; the field comes first.
+      await tester.tap(find.text('Baisakh').first);
+      await tester.pumpAndSettle();
+      expect(find.text('15'), findsOneWidget, reason: 'back on the days');
+    });
+
+    testWidgets('the year list opens on the selected year', (tester) async {
+      await tester.pumpWidget(
+        host(
+          NepaliDatePicker(
+            initialDate: baisakh2081,
+            calendarStyle: englishStyle,
+            initialMode: NepaliDatePickerMode.year,
+            onDateSelected: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The field and the highlighted tile.
+      expect(outsideBand('2081'), findsNWidgets(2));
+    });
+
+    testWidgets('the year list reaches every year in the data', (tester) async {
+      await tester.pumpWidget(
+        host(
+          NepaliDatePicker(
+            initialDate: baisakh2081,
+            calendarStyle: englishStyle,
+            initialMode: NepaliDatePickerMode.year,
+            onDateSelected: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final list = find.byType(Scrollable).last;
+      final first = CalendarUtils.nepaliYears.keys.first;
+      final last = CalendarUtils.nepaliYears.keys.last;
+
+      await tester.scrollUntilVisible(
+        find.text('$first'),
+        -200,
+        scrollable: list,
+      );
+      expect(find.text('$first'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('$last'),
+        200,
+        scrollable: list,
+      );
+      expect(find.text('$last'), findsOneWidget);
+    });
+
+    testWidgets('in the year view the arrows scroll, and stop at the ends',
+        (tester) async {
+      await tester.pumpWidget(
+        host(
+          NepaliDatePicker(
+            initialDate: baisakh2081,
+            calendarStyle: englishStyle,
+            initialMode: NepaliDatePickerMode.year,
+            onDateSelected: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // By tooltip: the month and the year each have a pair of arrows.
+      IconButton arrow(String tooltip) => tester.widget<IconButton>(
+            find.ancestor(
+              of: find.byTooltip(tooltip),
+              matching: find.byType(IconButton),
+            ),
+          );
+      double offset() => tester
+          .state<ScrollableState>(find.byType(Scrollable).last)
+          .position
+          .pixels;
+
+      final before = offset();
+      await tester.tap(find.byTooltip('Next page'));
+      await tester.pumpAndSettle();
+      expect(offset(), greaterThan(before));
+
+      // Keep going until the arrow gives out at the end of the list.
+      for (var i = 0; i < 100; i++) {
+        if (arrow('Next page').onPressed == null) break;
+        await tester.tap(find.byTooltip('Next page'));
+        await tester.pumpAndSettle();
+      }
+      expect(arrow('Next page').onPressed, isNull);
+      expect(
+        outsideBand('${CalendarUtils.nepaliYears.keys.last}'),
+        findsOneWidget,
+      );
+      expect(arrow('Previous page').onPressed, isNotNull);
+    });
+
+    testWidgets('in the month view the arrows step the year', (tester) async {
+      await tester.pumpWidget(
+        host(
+          NepaliDatePicker(
+            initialDate: baisakh2081,
+            calendarStyle: englishStyle,
+            initialMode: NepaliDatePickerMode.month,
+            minDate: NepaliDateTime(year: 2081, month: 1, day: 1),
+            maxDate: NepaliDateTime(year: 2082, month: 12, day: 30),
+            onDateSelected: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // By tooltip: the month and the year each have a pair of arrows.
+      IconButton arrow(String tooltip) => tester.widget<IconButton>(
+            find.ancestor(
+              of: find.byTooltip(tooltip),
+              matching: find.byType(IconButton),
+            ),
+          );
+
+      expect(arrow('Previous year').onPressed, isNull);
+
+      await tester.tap(find.byTooltip('Next year'));
+      await tester.pumpAndSettle();
+      expect(outsideBand('2082'), findsOneWidget, reason: 'the year field');
+      expect(find.text('Chaitra'), findsOneWidget, reason: 'still on months');
+      expect(
+        arrow('Next year').onPressed,
+        isNull,
+        reason: 'stops at maxDate',
+      );
+    });
+  });
+
+  testWidgets('opens on the first month of the data without throwing',
+      (tester) async {
+    // The grid's leading cells would fall before the data starts; they are
+    // left empty rather than computed.
+    final first = CalendarUtils.nepaliYears.keys.first;
+    await tester.pumpWidget(
+      host(
+        NepaliDatePicker(
+          initialDate: NepaliDateTime(year: first, month: 1, day: 1),
+          calendarStyle: englishStyle,
+          onDateSelected: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Baisakh'), findsOneWidget);
   });
 }

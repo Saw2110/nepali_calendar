@@ -3,8 +3,9 @@ import 'package:nepali_calendar_plus/nepali_calendar_plus.dart';
 
 import '../../widgets/bilingual.dart';
 import '../../widgets/demo_card.dart';
+import 'custom_picker_design.dart';
 
-/// Both pickers, one card each.
+/// Both pickers, one card each, and the date picker with a custom design.
 ///
 /// The calls below are the whole integration: `showNepaliDatePicker` and
 /// `showNepaliDateRangePicker` return the pick, or null if the user backs
@@ -22,6 +23,7 @@ class PickersExample extends StatefulWidget {
 class _PickersExampleState extends State<PickersExample> {
   NepaliDateTime? _date;
   NepaliDateTimeRange? _range;
+  NepaliDateTime? _customDate;
 
   Language get _language => widget.language;
 
@@ -39,8 +41,22 @@ class _PickersExampleState extends State<PickersExample> {
       calendarStyle: _style,
       minDate: _minDate,
       maxDate: _maxDate,
+      autoConfirm: false,
     );
     if (date != null) setState(() => _date = date);
+  }
+
+  Future<void> _pickCustom() async {
+    final date = await showNepaliDatePicker(
+      context: context,
+      initialDate: _customDate,
+      calendarStyle: _style,
+      minDate: _minDate,
+      maxDate: _maxDate,
+      autoConfirm: false,
+      pickerBuilder: customPickerDesign(context, _language),
+    );
+    if (date != null) setState(() => _customDate = date);
   }
 
   Future<void> _pickRange() async {
@@ -98,6 +114,22 @@ class _PickersExampleState extends State<PickersExample> {
           actionLabel: _language.pick('Choose range', 'दायरा छान्नुहोस्'),
           onAction: _pickRange,
           onClear: () => setState(() => _range = null),
+        ),
+        const SizedBox(height: 16),
+        DemoCard(
+          icon: Icons.palette_outlined,
+          title: _language.pick('Custom design', 'आफ्नै डिजाइन'),
+          description: _language.pick(
+            'The same picker, redrawn with a DatePickerBuilder.',
+            'उही चयनकर्ता, DatePickerBuilder ले नयाँ रूपमा।',
+          ),
+          placeholder:
+              _language.pick('No date selected', 'कुनै मिति चयन गरिएको छैन'),
+          value: _customDate == null ? null : _language.date(_customDate!),
+          detail: _customDate == null ? null : adDate(_customDate!),
+          actionLabel: _language.pick('Try custom design', 'डिजाइन हेर्नुहोस्'),
+          onAction: _pickCustom,
+          onClear: () => setState(() => _customDate = null),
         ),
       ],
     );

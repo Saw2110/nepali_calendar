@@ -2,10 +2,8 @@
 // code paths have to keep calling them until they are removed in 1.0.0.
 // ignore_for_file: deprecated_member_use_from_same_package
 
-// Import Flutter material package for UI components
 import 'package:flutter/material.dart';
 
-// Import custom source file containing calendar-related utilities
 import '../src.dart';
 
 /// Lists every event in the month of [selectedDate].
@@ -26,7 +24,6 @@ import '../src.dart';
   'Internal implementation detail, not intended as public API. Will be removed in 1.0.0.',
 )
 class EventList<T> extends StatelessWidget {
-  // Optional list of calendar events
   final List<CalendarEvent<T>>? eventList;
 
   /// A prebuilt index over [eventList].
@@ -39,14 +36,12 @@ class EventList<T> extends StatelessWidget {
   /// Only the year and month are read: the list shows every event in that
   /// month, not only those on this exact day. The day component is ignored.
   final NepaliDateTime selectedDate;
-  // Optional custom builder for event list items
   final Widget? Function(
     BuildContext context,
     int index,
     CalendarEvent<T> event,
   )? itemBuilder;
 
-  // Constructor with required and optional parameters
   const EventList({
     super.key,
     required this.eventList,
@@ -57,29 +52,23 @@ class EventList<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Return empty widget if no events
     if (eventList == null && eventIndex == null) {
       return const SizedBox.shrink();
     }
 
-    // Events for the selected month. This used to be a linear `where` over the
-    // whole list, re-scanned on each build and re-walked by `elementAt` for
-    // every row -- quadratic in the number of events in the month.
+    // Events for the selected month, from the index rather than by scanning
+    // the whole list on every build.
     final index = eventIndex ?? CalendarEventIndex<T>.fromList(eventList);
     final eventsForMonth =
         index.eventsInMonth(selectedDate.year, selectedDate.month);
 
-    // Build scrollable list of events
     return ListView.builder(
       shrinkWrap: true,
       itemCount: eventsForMonth.length,
       itemBuilder: (context, index) {
-        // Get event at current index
         final event = eventsForMonth[index];
-        // Check if event is marked as holiday
         final isHoliday = event.isHoliday;
 
-        // Use custom item builder if provided, otherwise use default ListTile
         return itemBuilder?.call(context, index, event) ??
             ListTile(
               title: Text(event.date.toString()),

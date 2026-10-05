@@ -410,13 +410,25 @@ class NepaliCalendarTheme extends InheritedTheme {
     // one that merely defaulted.
     final hasCustomAppearance =
         !identical(effective.cellsStyle, const CellStyle()) ||
-            !identical(effective.headersStyle, const HeaderStyle());
+            _hasCustomHeaderAppearance(effective.headersStyle);
     if (hasCustomAppearance) return effective;
 
     // `effectiveConfig` rather than `config`, so the deprecated top-level
     // properties (showEnglishDate, showBorder, language) survive the switch to
     // a themed style. Reading `config` alone would silently drop them.
     return theme.toStyle(config: effective.effectiveConfig);
+  }
+
+  /// Whether [header] changes how the header looks.
+  ///
+  /// Compares the three text styles, not the object: [HeaderStyle] also
+  /// carries the deprecated `weekTitleType`, which is configuration: setting
+  /// it must not count as a custom appearance and switch the theme off.
+  static bool _hasCustomHeaderAppearance(HeaderStyle header) {
+    const defaults = HeaderStyle();
+    return header.weekHeaderStyle != defaults.weekHeaderStyle ||
+        header.monthHeaderStyle != defaults.monthHeaderStyle ||
+        header.yearHeaderStyle != defaults.yearHeaderStyle;
   }
 
   @override

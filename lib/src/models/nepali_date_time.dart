@@ -1,7 +1,17 @@
 import '../src.dart';
 
+/// The AD date of BS 1969-01-01, the first day of the bundled calendar data.
+///
+/// Mirrored in `date_extensions.dart`, which converts the other way; the two
+/// must agree or dates stop round-tripping.
+final DateTime _dataStartAd = DateTime.utc(1912, 4, 12);
+
+/// BS 1969-01-01, built once: [NepaliDateTime.toDateTime] counts from it for
+/// every date the calendars draw.
+final NepaliDateTime _dataStart =
+    NepaliDateTime(year: CalendarUtils.calenderyearStart);
+
 /// Represents a date and time in the Nepali calendar system (BS - Bikram Sambat)
-// class NepaliDateTime implements DateTime {
 class NepaliDateTime implements Comparable<NepaliDateTime> {
   /// Constructs a NepaliDateTime instance
   NepaliDateTime({
@@ -17,14 +27,36 @@ class NepaliDateTime implements Comparable<NepaliDateTime> {
     _validateInput();
   }
 
-  /// Validates input parameters
+  /// Rejects a date the calendar cannot represent.
+  ///
+  /// Throws a [RangeError] -- an [ArgumentError] -- naming the field and its
+  /// valid range. The day is checked against the real length of that month,
+  /// not just 1-32: Jestha 2083 has 31 days, so day 32 is rejected. These
+  /// are checks, not asserts, so they hold in release builds too.
   void _validateInput() {
-    assert(year >= 1969 && year <= 2250, 'Supported year is 1970-2250');
-    assert(month >= 1 && month <= 12, 'Month must be between 1 and 12');
-    assert(day >= 1 && day <= 32, 'Day must be between 1 and 32');
-    assert(hour >= 0 && hour < 24, 'Hour must be between 0 and 23');
-    assert(minute >= 0 && minute < 60, 'Minute must be between 0 and 59');
-    assert(second >= 0 && second < 60, 'Second must be between 0 and 59');
+    const years = CalendarUtils.nepaliYears;
+    RangeError.checkValueInInterval(
+      year,
+      years.keys.first,
+      years.keys.last,
+      'year',
+      'The calendar has data for BS ${years.keys.first} to '
+          'BS ${years.keys.last}',
+    );
+    RangeError.checkValueInInterval(month, 1, 12, 'month');
+    final daysInMonth = years[year]![month];
+    RangeError.checkValueInInterval(
+      day,
+      1,
+      daysInMonth,
+      'day',
+      'BS $year-$month has $daysInMonth days',
+    );
+    RangeError.checkValueInInterval(hour, 0, 23, 'hour');
+    RangeError.checkValueInInterval(minute, 0, 59, 'minute');
+    RangeError.checkValueInInterval(second, 0, 59, 'second');
+    RangeError.checkValueInInterval(millisecond, 0, 999, 'millisecond');
+    RangeError.checkValueInInterval(microsecond, 0, 999, 'microsecond');
   }
 
   /// Nepal Standard Time's fixed offset from UTC. Nepal does not observe
@@ -44,42 +76,21 @@ class NepaliDateTime implements Comparable<NepaliDateTime> {
     return nepalNow.toNepaliDateTime();
   }
 
+  /// This date in the Gregorian (AD) calendar, as a local [DateTime] with the
+  /// same time of day.
+  ///
+  /// Counts the days since the first day of the bundled data, BS 1969-01-01
+  /// (AD 1912-04-12), and adds them in UTC, where every day is exactly 24
+  /// hours.
   DateTime toDateTime() {
-    // Setting english reference to 1913/1/1, which converts to 1969/9/18
-    var englishYear = 1913;
-    var englishMonth = 1;
-    var englishDay = 1;
-
-    var difference = CalendarUtils.nepaliDateDifference(
-      NepaliDateTime(year: year, month: month, day: day),
-      NepaliDateTime(year: 1969, month: 9, day: 18),
-    );
-
-    // Getting english year until the difference remains less than 365
-    while (difference >= (CalendarUtils.isLeapYear(englishYear) ? 366 : 365)) {
-      difference =
-          difference - (CalendarUtils.isLeapYear(englishYear) ? 366 : 365);
-      englishYear++;
-    }
-
-    // Getting english month until the difference remains less than 31
-    final monthDays = CalendarUtils.isLeapYear(englishYear)
-        ? CalendarUtils.englishLeapMonths
-        : CalendarUtils.englishMonths;
-    var i = 0;
-    while (difference >= monthDays[i]) {
-      englishMonth++;
-      difference -= monthDays[i];
-      i++;
-    }
-
-    // Remaining days is the nepaliDateTime;
-    englishDay += difference;
+    // The difference reads only year, month and day, so `this` will do.
+    final daysSinceStart = CalendarUtils.nepaliDateDifference(this, _dataStart);
+    final ad = _dataStartAd.add(Duration(days: daysSinceStart));
 
     return DateTime(
-      englishYear,
-      englishMonth,
-      englishDay,
+      ad.year,
+      ad.month,
+      ad.day,
       hour,
       minute,
       second,
@@ -199,18 +210,8 @@ class NepaliDateTime implements Comparable<NepaliDateTime> {
 
   /// Value equality across every component, including time.
   ///
-  /// ## Behaviour change in 0.1.0
-  ///
-  /// Up to 0.0.7 this class inherited identity equality, so two separately
-  /// constructed instances of the same date compared unequal:
-  ///
-  /// ```dart
-  /// NepaliDateTime(year: 2081, month: 1, day: 1) ==
-  ///     NepaliDateTime(year: 2081, month: 1, day: 1); // was false, now true
-  /// ```
-  ///
-  /// That also made [NepaliDateTime] unusable as a `Map` key or in a `Set`.
-  /// If you relied on identity comparison, switch to `identical(a, b)`.
+  /// Two instances holding the same date and time are equal; use
+  /// `identical(a, b)` for identity.
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -236,14 +237,4 @@ class NepaliDateTime implements Comparable<NepaliDateTime> {
         millisecond,
         microsecond,
       );
-
-  // int get getDaysInMonth => getDaysInMonth();
-  // int getDaysInMonth() {
-  //   assert(year >= 1969 && year <= 2250, 'Supported year is 1970-2250');
-  //   assert(month >= 1 && month <= 12, 'Month must be between 1 and 12');
-
-  //   // The list for each year contains days of months, with the first element being the total days in the year
-  //   // The subsequent elements represent days in each month, so we can access the month's days directly
-  //   return CalendarUtils.nepaliYears[year]![month];
-  // }
 }

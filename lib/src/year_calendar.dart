@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'src.dart';
+import 'utils/calendar_layout.dart';
 import 'utils/calendar_semantics.dart';
 
 /// Largest a compact day cell is allowed to get.
@@ -295,9 +296,10 @@ class _NepaliYearCalendarState<T> extends State<NepaliYearCalendar<T>> {
   }
 
   Widget _buildHeader(NepaliCalendarStyle style, CalendarConfig config) {
-    final yearText = config.language == Language.english
-        ? '$_year'
-        : NepaliNumberConverter.englishToNepali('$_year');
+    final yearText = NepaliNumberConverter.formattedNumber(
+      '$_year',
+      language: config.language,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -386,7 +388,7 @@ class _CompactMonth<T> extends StatelessWidget {
 
   Widget _buildWeekdays(CalendarConfig config) {
     return Row(
-      children: _weekdayOrder(config).map((weekday) {
+      children: weekdayOrder(config.weekStartType).map((weekday) {
         final isWeekend = WeekUtils.isWeekend(weekday, config.weekendType);
         return Expanded(
           child: Center(
@@ -408,7 +410,10 @@ class _CompactMonth<T> extends StatelessWidget {
   }
 
   Widget _buildDays(CalendarConfig config) {
-    final leading = _leadingBlanks(config);
+    final leading = WeekUtils.normalizeWeekday(
+      NepaliDateTime(year: year, month: month).weekday,
+      config.weekStartType,
+    );
     final daysInMonth = CalendarUtils.nepaliYears[year]![month];
 
     return LayoutBuilder(
@@ -434,7 +439,6 @@ class _CompactMonth<T> extends StatelessWidget {
 
             return _CompactDay<T>(
               date: NepaliDateTime(year: year, month: month, day: day),
-              day: day,
               selectedDate: selectedDate,
               eventIndex: eventIndex,
               style: style,
@@ -446,32 +450,11 @@ class _CompactMonth<T> extends StatelessWidget {
       },
     );
   }
-
-  /// Blank cells before the 1st, honouring the configured week start.
-  int _leadingBlanks(CalendarConfig config) {
-    final weekday = NepaliDateTime(year: year, month: month).weekday;
-    switch (config.weekStartType) {
-      case WeekStartType.sunday:
-        return weekday;
-      case WeekStartType.monday:
-        return weekday == 0 ? 6 : weekday - 1;
-    }
-  }
-
-  List<int> _weekdayOrder(CalendarConfig config) {
-    switch (config.weekStartType) {
-      case WeekStartType.sunday:
-        return const [0, 1, 2, 3, 4, 5, 6];
-      case WeekStartType.monday:
-        return const [1, 2, 3, 4, 5, 6, 0];
-    }
-  }
 }
 
 /// A single date in a compact month.
 class _CompactDay<T> extends StatelessWidget {
   final NepaliDateTime date;
-  final int day;
   final NepaliDateTime? selectedDate;
   final CalendarEventIndex<T> eventIndex;
   final NepaliCalendarStyle style;
@@ -480,7 +463,6 @@ class _CompactDay<T> extends StatelessWidget {
 
   const _CompactDay({
     required this.date,
-    required this.day,
     required this.selectedDate,
     required this.eventIndex,
     required this.style,
@@ -499,9 +481,10 @@ class _CompactDay<T> extends StatelessWidget {
     // Any event on the date, not just the first.
     final isHoliday = eventIndex.isHoliday(date);
 
-    final label = config.language == Language.english
-        ? '$day'
-        : NepaliNumberConverter.englishToNepali('$day');
+    final label = NepaliNumberConverter.formattedNumber(
+      '${date.day}',
+      language: config.language,
+    );
 
     return Semantics(
       button: true,
@@ -548,7 +531,6 @@ class _CompactDay<T> extends StatelessWidget {
                         color: _foreground(
                           cells,
                           isToday: isToday,
-                          isSelected: isSelected,
                           isWeekend: isWeekend,
                           isHoliday: isHoliday,
                         ),
@@ -564,8 +546,7 @@ class _CompactDay<T> extends StatelessWidget {
                       height: 3,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color:
-                            _dotColour(cells, isToday, isSelected, isHoliday),
+                        color: _dotColour(cells, isToday, isHoliday),
                       ),
                     ),
                   ),
@@ -592,7 +573,6 @@ class _CompactDay<T> extends StatelessWidget {
   Color _foreground(
     CellStyle cells, {
     required bool isToday,
-    required bool isSelected,
     required bool isWeekend,
     required bool isHoliday,
   }) {
@@ -602,12 +582,7 @@ class _CompactDay<T> extends StatelessWidget {
     return cells.dateTextColor;
   }
 
-  Color _dotColour(
-    CellStyle cells,
-    bool isToday,
-    bool isSelected,
-    bool isHoliday,
-  ) {
+  Color _dotColour(CellStyle cells, bool isToday, bool isHoliday) {
     if (isToday) return cells.onHighlightColor;
     if (isHoliday) return cells.weekDayColor;
     return cells.dotColor;

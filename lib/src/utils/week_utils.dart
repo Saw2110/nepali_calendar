@@ -62,7 +62,7 @@ class WeekUtils {
   }
 
   /// List of full Nepali weekday names.
-  static final List<String> _nepaliWeeks = [
+  static const List<String> _nepaliWeeks = [
     "आइतबार",
     "सोमबार",
     "मंगलबार",
@@ -73,7 +73,7 @@ class WeekUtils {
   ];
 
   /// List of half Nepali weekday names (abbreviated).
-  static final List<String> _nepaliHalfWeeks = [
+  static const List<String> _nepaliHalfWeeks = [
     "आइत",
     "सोम",
     "मंगल",
@@ -84,7 +84,7 @@ class WeekUtils {
   ];
 
   /// List of short Nepali weekday names (single or double characters).
-  static final List<String> _nepaliWeeksShort = [
+  static const List<String> _nepaliWeeksShort = [
     "आ",
     "सो",
     "मं",
@@ -95,7 +95,7 @@ class WeekUtils {
   ];
 
   /// List of full English weekday names.
-  static final List<String> _englishWeeks = [
+  static const List<String> _englishWeeks = [
     "Sunday",
     "Monday",
     "Tuesday",
@@ -106,7 +106,7 @@ class WeekUtils {
   ];
 
   /// List of half English weekday names (abbreviated).
-  static final List<String> _englishHalfWeeks = [
+  static const List<String> _englishHalfWeeks = [
     "Sun",
     "Mon",
     "Tue",
@@ -117,7 +117,7 @@ class WeekUtils {
   ];
 
   /// List of short English weekday names (single character).
-  static final List<String> _englishWeeksShort = [
+  static const List<String> _englishWeeksShort = [
     "S",
     "M",
     "T",

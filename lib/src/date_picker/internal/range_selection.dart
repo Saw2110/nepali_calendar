@@ -4,27 +4,10 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import '../../models/date_picker_builder.dart';
 import '../../models/nepali_date_time.dart';
 import '../../models/nepali_date_time_range.dart';
 import 'picker_shared.dart';
-
-/// Where a day sits in the range, for painting.
-enum RangePosition {
-  /// Not in the range.
-  none,
-
-  /// The first day of a range longer than one day.
-  start,
-
-  /// Strictly between the ends.
-  middle,
-
-  /// The last day of a range longer than one day.
-  end,
-
-  /// The only day: a start with no end yet, or a one-day range.
-  single,
-}
 
 /// A range under construction: nothing, a start, or a start and an end.
 ///
@@ -89,21 +72,23 @@ class RangeSelection {
   }
 
   /// Where [date] sits in the selection.
-  RangePosition positionOf(NepaliDateTime date) {
+  PickerRangePosition positionOf(NepaliDateTime date) {
     final start = this.start;
-    if (start == null) return RangePosition.none;
+    if (start == null) return PickerRangePosition.none;
     final day = date.dateOnly;
     final end = this.end;
 
     if (end == null || start.isSameDayAs(end)) {
-      return day.isSameDayAs(start) ? RangePosition.single : RangePosition.none;
+      return day.isSameDayAs(start)
+          ? PickerRangePosition.single
+          : PickerRangePosition.none;
     }
-    if (day.isSameDayAs(start)) return RangePosition.start;
-    if (day.isSameDayAs(end)) return RangePosition.end;
+    if (day.isSameDayAs(start)) return PickerRangePosition.start;
+    if (day.isSameDayAs(end)) return PickerRangePosition.end;
     if (day.compareTo(start) > 0 && day.compareTo(end) < 0) {
-      return RangePosition.middle;
+      return PickerRangePosition.middle;
     }
-    return RangePosition.none;
+    return PickerRangePosition.none;
   }
 
   @override

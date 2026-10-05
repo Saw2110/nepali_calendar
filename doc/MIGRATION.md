@@ -1,6 +1,8 @@
 # Migration Guide
 
-How to move to `nepali_calendar_plus` **0.1.0** from 0.0.7 or earlier.
+How to move to `nepali_calendar_plus` **0.1.0** from 0.0.7 or earlier, and what
+has changed since. If you are already on 0.1.0, start at
+[Changes since 0.1.0](#changes-since-010).
 
 **Nothing has been removed.** Every deprecated API still works in 0.1.0 and will
 keep working for the whole 0.x series. You will see analyzer warnings, not
@@ -115,11 +117,63 @@ Assigning to it is a compile error rather than a silent corruption. It was never
 safe to assign  doing so broke every date calculation and page index in the
 package at once. Remove any assignment.
 
+### `NepaliCalendarStyle.copyWith` applies `weekendType` and `weekStartType`
+
+Up to 0.0.7 both were accepted and then silently discarded, so
+`copyWith(weekStartType: ...)` returned a style identical to the original. They
+now take effect. If you were passing either one and relying on it doing nothing,
+remove it.
+
 ### `EventListData` has been removed
 
 This class was declared and exported but never used by any widget or builder in
 the package. If you referenced it, delete the reference  there was nothing it
 could do. Use `CalendarBuilder.eventBuilder` to render event rows.
+
+---
+
+## Changes since 0.1.0
+
+No API was removed or changed shape, so these need no code changes -- but each
+changes behaviour you may have relied on.
+
+### Invalid dates throw, in release builds too
+
+`NepaliDateTime` checked its fields with `assert`s, which release builds strip.
+A released app could build day 32 of a 31-day month -- it converted as the 1st
+of the next month -- and a year outside the data failed later with an unhelpful
+null-check error. Construction now throws a `RangeError` naming the field, and
+the day is checked against the real length of its month. `NepaliDateTimeRange`
+likewise throws an `ArgumentError` when its end is before its start.
+
+**What to do:** if your app builds dates from arithmetic (day + 1, a stored day
+number moved to another month), clamp the day to the month first:
+`CalendarUtils.nepaliYears[year]![month]` is its length.
+
+### `CalendarUtils.nepaliYears` is read-only
+
+It is now a `const` map. Reading it is unchanged; writing to it, or to one of
+its lists, throws `UnsupportedError`. Writing to it was never safe -- it broke
+every date calculation in the package at once.
+
+### `showNepaliDatePicker` returns on tap
+
+Tapping a date now closes the dialog and returns it, and tapping outside returns
+`null`; the Cancel / OK row is gone. Pass `autoConfirm: false` for the old flow.
+The `NepaliDatePicker` widget itself is unchanged: placed on a page, it still
+waits for OK unless you pass `autoConfirm: true`.
+
+### Haptics are opt-in
+
+`CalendarConfig.hapticFeedback` is new and defaults to `CalendarHaptics.none`,
+so nothing changes unless you ask for it. `CalendarHaptics.light` is the
+recommended value for date taps.
+
+### BS 1969 and BS 2200 convert correctly
+
+AD dates for most of BS 1969 were wrong, and BS 2200 was a placeholder year
+that pushed every AD date after it a week late. See
+[Supported date range](#supported-date-range).
 
 ---
 
@@ -475,7 +529,19 @@ Every deprecated member reports its replacement in the warning text.
 
 ## Supported date range
 
-The bundled calendar data covers **BS 1970 to BS 2100**, which is roughly
-**AD 1913-04-13 to AD 2044**. Dates outside this range throw an `ArgumentError`
-from `toNepaliDateTime()`, and `NepaliDatePicker` clamps `minDate` / `maxDate`
-into it rather than throwing.
+The bundled calendar data covers **BS 1969 to BS 2250**, which is
+**AD 1912-04-12 to AD 2194-04-15**. Dates outside this range throw an `ArgumentError`
+from `toNepaliDateTime()`, and `NepaliDatePicker` and `NepaliDateRangePicker`
+clamp `minDate` / `maxDate` into it rather than throwing.
+
+Up to 0.1.0, BS 1969 itself did not convert correctly: `toDateTime()` counted
+from BS 1969-09-18 with an absolute difference, so most of the year came out
+mirrored onto the wrong side of it (BS 1969-01-01 gave AD 1913-09-22; it is
+AD 1912-04-12), and AD -> BS rejected the whole year. Both directions now work
+for every day in the range.
+
+BS 2200 was listed as 372 days with every month 31 -- a placeholder inherited
+from upstream data -- which pushed every AD date after it a week late. It is now
+a 366-day year, so AD dates for BS 2201-2250 are six days earlier than in 0.1.0.
+No published calendar reaches that far: years past about BS 2100 are
+projections.

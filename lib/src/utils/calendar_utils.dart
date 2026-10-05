@@ -14,15 +14,12 @@ class CalendarUtils {
   /// "Today" is resolved against Nepal Standard Time (UTC+5:45), matching
   /// [NepaliDateTime.now], so the whole package agrees on which day is today
   /// no matter where the device is.
-  ///
-  /// ## Behaviour change in 0.1.0
-  ///
-  /// Up to 0.0.7 this compared against the device's local date while
-  /// [NepaliDateTime.now] used Nepal time. The two disagreed for part of each
-  /// day outside Nepal, so a calendar could highlight one day while `.now()`
-  /// reported another. Users inside Nepal are unaffected.
   static bool isToday(DateTime date) {
-    final DateTime today = NepaliDateTime.now().toDateTime();
+    // Today's date on Nepal's wall clock. No round trip through BS: it runs
+    // once per cell on every build, and converting there and back again
+    // changes nothing.
+    final today =
+        DateTime.now().toUtc().add(NepaliDateTime.nepalTimeZoneOffset);
     return date.year == today.year &&
         date.month == today.month &&
         date.day == today.day;
@@ -127,21 +124,17 @@ class CalendarUtils {
   /// This is a property of the bundled data, not a setting. It is the key of
   /// the first entry in [nepaliYears], and page indexes throughout the package
   /// are computed relative to it.
-  ///
-  /// ## Behaviour change in 0.1.0
-  ///
-  /// This used to be a mutable static. Assigning to it corrupted every date
-  /// calculation in the package at once -- page indexes would point at the
-  /// wrong months and lookups would miss the data map entirely -- so there was
-  /// never a working reason to. It is now `const`; assigning to it is a
-  /// compile error rather than a silent corruption.
   static const int calenderyearStart = 1969;
 
   /// Predefined Nepali calendar year data.
   ///
   /// This map contains the total number of days in each Nepali year and the
   /// number of days in each month for that year.
-  static final Map<int, List<int>> nepaliYears = {
+  ///
+  /// Read-only. Every date calculation in the package reads from it, so a
+  /// write anywhere would silently corrupt all of them; it is a compile-time
+  /// constant, and an attempt to modify it throws [UnsupportedError].
+  static const Map<int, List<int>> nepaliYears = {
     calenderyearStart: [366, 31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
     1970: [365, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
     1971: [365, 31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
@@ -373,7 +366,13 @@ class CalendarUtils {
     2197: [366, 31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
     2198: [365, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
     2199: [365, 31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
-    2200: [372, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31],
+    // Projected. This entry used to be a placeholder -- 372 days, every month
+    // 31 -- inherited from upstream data, which pushed every AD date after it
+    // a week late (BS New Year jumped from 16 to 22 April). No official or
+    // computed table reaches BS 2200, so it now takes the layout 51 other
+    // 366-day years in this table share, which keeps New Year on the same AD
+    // date as its neighbours.
+    2200: [366, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
     2201: [365, 30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
     2202: [365, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
     2203: [365, 31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],

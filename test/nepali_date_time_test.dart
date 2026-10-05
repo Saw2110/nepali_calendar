@@ -158,4 +158,80 @@ void main() {
       );
     });
   });
+
+  /// Validation runs in every build mode: these used to be asserts, which
+  /// release builds strip.
+  group('validation', () {
+    test('a day past the end of its month is rejected', () {
+      // Jestha 2083 has 31 days.
+      expect(
+        () => NepaliDateTime(year: 2083, month: 2, day: 32),
+        throwsRangeError,
+      );
+      expect(NepaliDateTime(year: 2083, month: 2, day: 31).day, 31);
+    });
+
+    test('a year outside the data is rejected', () {
+      final years = CalendarUtils.nepaliYears.keys;
+      expect(() => NepaliDateTime(year: years.first - 1), throwsRangeError);
+      expect(() => NepaliDateTime(year: years.last + 1), throwsRangeError);
+    });
+
+    test('the first and last days of the data are accepted', () {
+      const years = CalendarUtils.nepaliYears;
+      final last = years.keys.last;
+      expect(NepaliDateTime(year: years.keys.first).year, years.keys.first);
+      expect(
+        NepaliDateTime(year: last, month: 12, day: years[last]![12]).year,
+        last,
+      );
+    });
+
+    test('out-of-range fields are rejected', () {
+      expect(() => NepaliDateTime(year: 2081, month: 13), throwsRangeError);
+      expect(() => NepaliDateTime(year: 2081, day: 0), throwsRangeError);
+      expect(() => NepaliDateTime(year: 2081, hour: 24), throwsRangeError);
+      expect(() => NepaliDateTime(year: 2081, minute: 60), throwsRangeError);
+      expect(
+        () => NepaliDateTime(year: 2081, millisecond: 1000),
+        throwsRangeError,
+      );
+    });
+
+    test('the error names the field and the month length', () {
+      expect(
+        () => NepaliDateTime(year: 2083, month: 2, day: 32),
+        throwsA(
+          isA<RangeError>()
+              .having((e) => e.name, 'name', 'day')
+              .having((e) => e.message, 'message', contains('31 days')),
+        ),
+      );
+    });
+  });
+
+  group('NepaliDateTimeRange', () {
+    test('equality ignores the time of day', () {
+      final morning = NepaliDateTimeRange(
+        start: NepaliDateTime(year: 2081, month: 1, day: 10, hour: 9),
+        end: NepaliDateTime(year: 2081, month: 1, day: 12, hour: 9),
+      );
+      final evening = NepaliDateTimeRange(
+        start: NepaliDateTime(year: 2081, month: 1, day: 10, hour: 18),
+        end: NepaliDateTime(year: 2081, month: 1, day: 12, hour: 18),
+      );
+      expect(morning, evening);
+      expect(morning.hashCode, evening.hashCode);
+    });
+
+    test('an end before the start is rejected in every build mode', () {
+      expect(
+        () => NepaliDateTimeRange(
+          start: NepaliDateTime(year: 2081, month: 1, day: 12),
+          end: NepaliDateTime(year: 2081, month: 1, day: 10),
+        ),
+        throwsArgumentError,
+      );
+    });
+  });
 }

@@ -8,18 +8,19 @@
 /// only because Dart privacy is per file, and two picker files need them.
 library;
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../src.dart';
+import '../../utils/calendar_layout.dart';
 
 /// Columns in a month grid: one per weekday.
 const int pickerColumns = 7;
 
 /// Rows in a month grid.
 ///
-/// Always six. A month can span six weeks, and a grid that sizes to five
-/// silently never builds the sixth -- which is how the 30th and 31st became
-/// unselectable before 0.1.0.
+/// Always six: a month can span six weeks.
 const int pickerRows = 6;
 
 /// Gap between day cells.
@@ -34,6 +35,17 @@ const double pickerRadius = 6.0;
 /// Corner radius of the pickers' dialogs, unless the app's `dialogTheme` sets
 /// a shape of its own.
 const double pickerDialogRadius = 12.0;
+
+/// Horizontal padding inside both pickers.
+const double pickerGutter = 12.0;
+
+/// Minimum touch target for the pickers' header arrows.
+const double pickerNavButtonSize = 44.0;
+
+/// From this width up, the range picker shows two months side by side; below
+/// it, every month in one vertical list. Material's range picker switches at
+/// the same width.
+const double pickerWideBreakpoint = 600.0;
 
 // ---------------------------------------------------------------------------
 // Selectable range
@@ -52,7 +64,7 @@ class PickerBounds {
   const PickerBounds._(this.min, this.max);
 
   factory PickerBounds.from({NepaliDateTime? min, NepaliDateTime? max}) {
-    final years = CalendarUtils.nepaliYears;
+    const years = CalendarUtils.nepaliYears;
     final firstYear = years.keys.first;
     final lastYear = years.keys.last;
 
@@ -95,6 +107,14 @@ class PickerBounds {
     return end.compareTo(min) >= 0 && start.compareTo(max) <= 0;
   }
 
+  /// The 1st of the month [delta] months after [month], or null if none of
+  /// that month is selectable.
+  NepaliDateTime? monthOffset(NepaliDateTime month, int delta) {
+    final (year, m) = shiftMonth(month.year, month.month, delta);
+    if (!containsAnyOf(year, m)) return null;
+    return NepaliDateTime(year: year, month: m, day: 1);
+  }
+
   /// Every month in range, earliest first, as the first day of each.
   List<NepaliDateTime> get months {
     return [
@@ -118,25 +138,12 @@ int pickerDaysBetween(NepaliDateTime a, NepaliDateTime b) {
 // Month layout
 // ---------------------------------------------------------------------------
 
-/// Weekday indices (0 = Sunday) in the order the grid shows them.
-List<int> pickerWeekdayOrder(WeekStartType start) {
-  switch (start) {
-    case WeekStartType.sunday:
-      return const [0, 1, 2, 3, 4, 5, 6];
-    case WeekStartType.monday:
-      return const [1, 2, 3, 4, 5, 6, 0];
-  }
-}
-
 /// How many cells come before the 1st of [month] in its grid.
-int _leadingCells(NepaliDateTime month, WeekStartType weekStart) {
-  final weekday =
-      NepaliDateTime(year: month.year, month: month.month, day: 1).weekday;
-  return switch (weekStart) {
-    WeekStartType.sunday => weekday,
-    WeekStartType.monday => weekday == 0 ? 6 : weekday - 1,
-  };
-}
+int _leadingCells(NepaliDateTime month, WeekStartType weekStart) =>
+    WeekUtils.normalizeWeekday(
+      NepaliDateTime(year: month.year, month: month.month, day: 1).weekday,
+      weekStart,
+    );
 
 /// The date each of the 42 cells of [month]'s grid shows, running from the
 /// trailing days of the previous month to the leading days of the next.
@@ -149,7 +156,7 @@ List<NepaliDateTime?> pickerMonthDates(
   NepaliDateTime month,
   WeekStartType weekStart,
 ) {
-  final years = CalendarUtils.nepaliYears;
+  const years = CalendarUtils.nepaliYears;
   final year = month.year;
   final m = month.month;
   final length = years[year]![m];
@@ -186,12 +193,11 @@ List<NepaliDateTime?> pickerMonthDates(
 
 /// Six fixed rows of seven cells.
 ///
-/// Rows and columns, not a GridView. A GridView only builds what its viewport
-/// covers, so a row that did not fit was not clipped -- it did not exist,
-/// which is how the 30th and 31st went missing before 0.1.0 -- and it
-/// scrolled whenever rounding left it a fraction short. Here every row is
-/// always built and the rows share out exactly the height on offer, so the
-/// grid is fixed: it never scrolls and never shifts.
+/// Rows and columns, not a GridView. A GridView only builds the rows its
+/// viewport covers -- a row that does not fit is not clipped, it does not
+/// exist, so the month's last days can vanish -- and it scrolls when rounding
+/// leaves it a fraction short. Here every row is always built and the rows
+/// share out exactly the height on offer, so the grid never scrolls.
 ///
 /// [rowGap] separates rows; cells within a row always sit [pickerCellGap]
 /// apart unless [columnGap] says otherwise -- a range band wants none, so it
@@ -239,18 +245,23 @@ class PickerMonthGrid extends StatelessWidget {
       date == null ? const SizedBox.shrink() : cellBuilder(date);
 }
 
-/// How many weeks [month] spans in its grid: usually five, sometimes six,
-/// rarely four.
-int pickerWeeksIn(NepaliDateTime month, WeekStartType weekStart) {
-  final length = CalendarUtils.nepaliYears[month.year]![month.month];
-  return (_leadingCells(month, weekStart) + length - 1) ~/ pickerColumns + 1;
-}
-
 /// Weekday labels above a grid.
 class PickerWeekdayRow extends StatelessWidget {
   final NepaliCalendarStyle style;
 
-  const PickerWeekdayRow({super.key, required this.style});
+  /// Null for initials; otherwise the longer form. See
+  /// [NepaliDatePicker.weekdayFormat].
+  final TitleFormat? format;
+
+  /// Custom designs; its [DatePickerBuilder.weekdayBuilder] draws the labels.
+  final DatePickerBuilder? builder;
+
+  const PickerWeekdayRow({
+    super.key,
+    required this.style,
+    this.format,
+    this.builder,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -258,24 +269,38 @@ class PickerWeekdayRow extends StatelessWidget {
     final headerStyle = style.headersStyle.weekHeaderStyle;
 
     return Row(
-      children: pickerWeekdayOrder(config.weekStartType).map((weekday) {
+      children: weekdayOrder(config.weekStartType).map((weekday) {
         final isWeekend = WeekUtils.isWeekend(weekday, config.weekendType);
+        final label = format == null
+            ? WeekUtils.formattedShortWeekDay(weekday, config.language)
+            : WeekUtils.formattedWeekDay(weekday, config.language, format!);
+        final custom = builder?.weekdayBuilder?.call(
+          PickerWeekdayData(
+            weekday: weekday,
+            label: label,
+            isWeekend: isWeekend,
+            style: style,
+            language: config.language,
+          ),
+        );
+        if (custom != null) return Expanded(child: custom);
+
         return Expanded(
           child: Center(
-            child: Text(
-              WeekUtils.formattedWeekDay(
-                weekday,
-                config.language,
-                config.weekTitleType,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-              style: headerStyle.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isWeekend
-                    ? style.cellsStyle.weekDayColor
-                    : headerStyle.color,
+            // Scaled down rather than cut off when a long name is wider than
+            // its column; initials always fit and are never scaled.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: headerStyle.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isWeekend
+                      ? style.cellsStyle.weekDayColor
+                      : headerStyle.color,
+                ),
               ),
             ),
           ),
@@ -331,3 +356,230 @@ String pickerBsLabel(NepaliDateTime date, Language language) {
 /// [WidgetsApp], and `MaterialLocalizations.of` would throw there.
 MaterialLocalizations? pickerMaterialLocalizations(BuildContext context) =>
     Localizations.of<MaterialLocalizations>(context, MaterialLocalizations);
+
+// ---------------------------------------------------------------------------
+// Shared widgets
+// ---------------------------------------------------------------------------
+
+/// A day's number on its square: filled for a selection, ringed for today.
+///
+/// Both pickers' day cells draw this; the cell around it decides the tap,
+/// the semantics and, in the range picker, the band behind it.
+class PickerDaySquare extends StatelessWidget {
+  final NepaliCalendarStyle style;
+  final NepaliDateTime date;
+
+  /// Painted in the selection colour: the selected date, or a range end.
+  final bool filled;
+  final bool isToday;
+
+  /// Outside the selectable range: drawn faintly.
+  final bool isDisabled;
+
+  /// A neighbouring month's day: drawn fainter still than [isDisabled], so
+  /// "not this month" and "not allowed" stay tellable apart.
+  final bool isDimmed;
+
+  const PickerDaySquare({
+    super.key,
+    required this.style,
+    required this.date,
+    required this.filled,
+    required this.isToday,
+    required this.isDisabled,
+    this.isDimmed = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cells = style.cellsStyle;
+    final config = style.effectiveConfig;
+    final isWeekend = WeekUtils.isWeekend(date.weekday, config.weekendType);
+
+    return Center(
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: filled ? cells.selectedColor : null,
+            borderRadius: BorderRadius.circular(pickerRadius),
+            border: isToday && !filled
+                ? Border.all(color: cells.todayColor, width: 1.5)
+                : null,
+          ),
+          child: Center(
+            child: FittedBox(
+              // Devanagari digits run wider than Latin at the same size.
+              fit: BoxFit.scaleDown,
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: Text(
+                  NepaliNumberConverter.formattedNumber(
+                    '${date.day}',
+                    language: config.language,
+                  ),
+                  style: cells.dayStyle.copyWith(
+                    fontSize: 14,
+                    fontWeight:
+                        filled || isToday ? FontWeight.w700 : FontWeight.w500,
+                    color: _foreground(cells, isWeekend),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _foreground(CellStyle cells, bool isWeekend) {
+    if (filled) return cells.onHighlightColor;
+    if (isDimmed) return cells.dimmedDateTextColor.withValues(alpha: 0.4);
+    if (isDisabled) {
+      return (isWeekend ? cells.weekDayColor : cells.dateTextColor)
+          .withValues(alpha: 0.3);
+    }
+    if (isToday) return cells.todayColor;
+    if (isWeekend) return cells.weekDayColor;
+    return cells.dateTextColor;
+  }
+}
+
+/// A day cell's tap: the configured haptic, then [onTap]. Null when the cell
+/// is inert, so it neither responds nor ripples.
+VoidCallback? pickerDayTap(
+  CalendarConfig config,
+  VoidCallback onTap, {
+  required bool enabled,
+}) {
+  if (!enabled) return null;
+  return () {
+    config.hapticFeedback.perform();
+    onTap();
+  };
+}
+
+/// A picker header arrow. A null [onPressed] shows it disabled rather than
+/// hiding it, so the header does not reflow at the ends of the range.
+class PickerNavButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  const PickerNavButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 22),
+      tooltip: tooltip,
+      constraints: const BoxConstraints(
+        minWidth: pickerNavButtonSize,
+        minHeight: pickerNavButtonSize,
+      ),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+/// A picker footer: a divider, then [text] on the left and [actions] on the
+/// right.
+class PickerFooter extends StatelessWidget {
+  final String text;
+  final List<Widget> actions;
+
+  const PickerFooter({super.key, required this.text, required this.actions});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      children: [
+        const Divider(
+          height: 1,
+          thickness: 1,
+          indent: pickerGutter,
+          endIndent: pickerGutter,
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(left: pickerGutter, right: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    text,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                ...actions,
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Space [showPickerDialog] keeps between its dialog and the screen edges.
+///
+/// AlertDialog's default 40dp side insets leave a small phone too little room
+/// for the grid; only the position is nudged.
+const EdgeInsets pickerDialogInsets =
+    EdgeInsets.symmetric(horizontal: 16, vertical: 24);
+
+/// Shows [builder]'s picker in a plain [AlertDialog].
+///
+/// No background colour or elevation of its own, so it looks like the app's
+/// other alerts. The shape is the one exception -- Material 3's default 28dp
+/// radius made a compact picker look like a bubble -- and it still defers to
+/// a `dialogTheme` shape.
+///
+/// [contentPadding] defaults to a little space above and below the picker; a
+/// picker whose top is a coloured band passes zero, and the dialog clips the
+/// band to its rounded corners.
+Future<T?> showPickerDialog<T>({
+  required BuildContext context,
+  required double preferredWidth,
+  required bool barrierDismissible,
+  required Color? barrierColor,
+  required WidgetBuilder builder,
+  EdgeInsets contentPadding = const EdgeInsets.only(top: 8, bottom: 4),
+}) {
+  return showDialog<T>(
+    context: context,
+    barrierDismissible: barrierDismissible,
+    barrierColor: barrierColor ?? Colors.black.withValues(alpha: 0.5),
+    builder: (context) => AlertDialog(
+      shape: DialogTheme.of(context).shape ??
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(pickerDialogRadius),
+          ),
+      contentPadding: contentPadding,
+      clipBehavior: Clip.antiAlias,
+      insetPadding: pickerDialogInsets,
+      // A tight width, on purpose: AlertDialog measures its content's
+      // intrinsic width, which the pickers' LayoutBuilder cannot report.
+      content: SizedBox(
+        width: math.min(
+          preferredWidth,
+          MediaQuery.sizeOf(context).width - pickerDialogInsets.horizontal,
+        ),
+        child: Builder(builder: builder),
+      ),
+    ),
+  );
+}

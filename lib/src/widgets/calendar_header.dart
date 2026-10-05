@@ -1,11 +1,8 @@
-// Import required Flutter material package
 import 'package:flutter/material.dart';
 
-// Import custom source file
 import '../src.dart';
 import '../utils/calendar_semantics.dart';
 
-// Widget to display the calendar header with month/year and navigation buttons
 /// The header is an implementation detail of [NepaliCalendar]. To replace it,
 /// use `CalendarBuilder.headerBuilder`.
 ///
@@ -17,14 +14,10 @@ import '../utils/calendar_semantics.dart';
   'Internal implementation detail, not intended as public API. Will be removed in 1.0.0.',
 )
 class CalendarHeader extends StatelessWidget {
-  // Selected date to display in header
   final NepaliDateTime selectedDate;
-  // Controller for handling page transitions
   final PageController pageController;
-  // Style configuration for the calendar
   final NepaliCalendarStyle calendarStyle;
 
-  // Constructor with required parameters
   const CalendarHeader({
     super.key,
     required this.selectedDate,
@@ -41,24 +34,13 @@ class CalendarHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left navigation button
           IconButton(
             icon: const Icon(Icons.chevron_left),
             // Doubles as the screen-reader label and the desktop hover
-            // tooltip. Up to 0.1.0 both arrows announced themselves only as
-            // unlabelled buttons.
+            // tooltip, so neither arrow is an unlabelled button.
             tooltip: CalendarSemantics.previousMonth(language),
-            onPressed: () {
-              // Check if controller is attached before navigating
-              if (pageController.hasClients) {
-                pageController.previousPage(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeInOutCubic,
-                );
-              }
-            },
+            onPressed: () => _step(previous: true),
           ),
-          // Center section containing month and year
           Expanded(
             // A single header node reading "बैशाख २०८१", rather than two
             // unrelated text nodes a screen reader announces separately.
@@ -71,24 +53,21 @@ class CalendarHeader extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 spacing: 5.0,
                 children: [
-                  // Month display
                   Flexible(
                     child: Text(
                       MonthUtils.formattedMonth(
                         selectedDate.month,
-                        calendarStyle.effectiveConfig.language,
+                        language,
                       ),
                       style: calendarStyle.headersStyle.monthHeaderStyle,
                     ),
                   ),
-                  // Year display with language-specific formatting
                   Flexible(
                     child: Text(
-                      calendarStyle.effectiveConfig.language == Language.english
-                          ? "${selectedDate.year}"
-                          : NepaliNumberConverter.englishToNepali(
-                              selectedDate.year.toString(),
-                            ),
+                      NepaliNumberConverter.formattedNumber(
+                        '${selectedDate.year}',
+                        language: language,
+                      ),
                       style: calendarStyle.headersStyle.yearHeaderStyle,
                     ),
                   ),
@@ -96,22 +75,23 @@ class CalendarHeader extends StatelessWidget {
               ),
             ),
           ),
-          // Right navigation button
           IconButton(
             icon: const Icon(Icons.chevron_right),
             tooltip: CalendarSemantics.nextMonth(language),
-            onPressed: () {
-              // Check if controller is attached before navigating
-              if (pageController.hasClients) {
-                pageController.nextPage(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeInOutCubic,
-                );
-              }
-            },
+            onPressed: () => _step(previous: false),
           ),
         ],
       ),
     );
+  }
+
+  /// Pages one month back or forward, once the PageView is attached.
+  void _step({required bool previous}) {
+    if (!pageController.hasClients) return;
+    const duration = Duration(milliseconds: 400);
+    const curve = Curves.easeInOutCubic;
+    previous
+        ? pageController.previousPage(duration: duration, curve: curve)
+        : pageController.nextPage(duration: duration, curve: curve);
   }
 }

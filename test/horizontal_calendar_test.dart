@@ -384,4 +384,35 @@ void main() {
       expect(box.color, Colors.amber);
     });
   });
+
+  /// Screen readers were never told which date in the strip is selected.
+  testWidgets('the selected date is announced as selected', (tester) async {
+    final handle = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: HorizontalNepaliCalendar(
+            initialDate: NepaliDateTime(year: 2081, month: 1, day: 15),
+            calendarStyle: const NepaliCalendarStyle(
+              config: CalendarConfig(language: Language.english),
+            ),
+            onDateSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Semantics cellFor(String prefix) => tester.widget<Semantics>(
+          find.byWidgetPredicate(
+            (w) =>
+                w is Semantics && (w.properties.label ?? '').startsWith(prefix),
+          ),
+        );
+
+    expect(cellFor('Baisakh, 15, ').properties.selected, isTrue);
+    expect(cellFor('Baisakh, 14, ').properties.selected, isFalse);
+    handle.dispose();
+  });
 }

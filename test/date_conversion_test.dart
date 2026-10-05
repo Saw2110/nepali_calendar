@@ -53,6 +53,140 @@ void main() {
     });
   });
 
+  /// The first year of the data. Up to 0.1.0, BS -> AD counted from BS
+  /// 1969-09-18 using an absolute difference, so earlier dates were mirrored
+  /// onto the wrong side of it, and AD -> BS rejected all of BS 1969. The
+  /// pickers offer BS 1969, so it has to convert like any other year.
+  group('BS 1969, the start of the data', () {
+    test('BS 1969-01-01 is AD 1912-04-12, and back', () {
+      expect(
+        NepaliDateTime(year: 1969, month: 1, day: 1).toDateTime(),
+        DateTime(1912, 4, 12),
+      );
+      expect(
+        DateTime(1912, 4, 12).toNepaliDateTime().toDateFormat(),
+        '1969-01-01',
+      );
+    });
+
+    test('BS 1969-09-18 is AD 1913-01-01', () {
+      expect(
+        NepaliDateTime(year: 1969, month: 9, day: 18).toDateTime(),
+        DateTime(1913, 1, 1),
+      );
+    });
+
+    test('the days either side of 1969-09-18 are distinct', () {
+      // Both used to convert to AD 1913-01-02.
+      expect(
+        NepaliDateTime(year: 1969, month: 9, day: 17).toDateTime(),
+        DateTime(1912, 12, 31),
+      );
+      expect(
+        NepaliDateTime(year: 1969, month: 9, day: 19).toDateTime(),
+        DateTime(1913, 1, 2),
+      );
+    });
+
+    test('a date before the data still throws', () {
+      expect(
+        () => DateTime(1912, 4, 11).toNepaliDateTime(),
+        throwsArgumentError,
+      );
+    });
+  });
+
+  /// Every day the package has data for, not a sample: the sampled tests
+  /// below started at BS 1970, which is how BS 1969 went unnoticed.
+  group('the whole bundled range, day by day', () {
+    test('every BS day maps to the next AD day and round-trips', () {
+      const years = CalendarUtils.nepaliYears;
+      DateTime? previous;
+      final failures = <String>[];
+
+      for (final year in years.keys) {
+        for (var month = 1; month <= 12; month++) {
+          for (var day = 1; day <= years[year]![month]; day++) {
+            final bs = NepaliDateTime(year: year, month: month, day: day);
+            final ad = bs.toDateTime();
+
+            if (previous != null &&
+                DateTime.utc(ad.year, ad.month, ad.day)
+                        .difference(
+                          DateTime.utc(
+                            previous.year,
+                            previous.month,
+                            previous.day,
+                          ),
+                        )
+                        .inDays !=
+                    1) {
+              failures.add('BS ${bs.toDateFormat()} -> AD $ad after $previous');
+            }
+            previous = ad;
+
+            final back = ad.toNepaliDateTime();
+            if (back.year != year || back.month != month || back.day != day) {
+              failures.add(
+                'BS ${bs.toDateFormat()} -> AD $ad -> BS ${back.toDateFormat()}',
+              );
+            }
+          }
+        }
+      }
+
+      expect(
+        failures,
+        isEmpty,
+        reason: '${failures.length} failures. '
+            'First few: ${failures.take(5).join(" | ")}',
+      );
+    });
+
+    /// A BS year is solar: 365 or 366 days, never anything else. BS 2200 was
+    /// once listed at 372 -- a placeholder that the totals check alone cannot
+    /// catch, because its months did add up to 372.
+    test('every year is 365 or 366 days long', () {
+      for (final entry in CalendarUtils.nepaliYears.entries) {
+        expect(
+          entry.value.first,
+          anyOf(365, 366),
+          reason: 'BS ${entry.key} is ${entry.value.first} days',
+        );
+      }
+    });
+
+    /// BS New Year tracks the solar year, so its AD date may move by a day
+    /// between consecutive years but never jump. The 372-day placeholder for
+    /// BS 2200 moved it six days at once.
+    test('BS New Year never jumps more than a day year to year', () {
+      DateTime? previous;
+      for (final year in CalendarUtils.nepaliYears.keys) {
+        final ad = NepaliDateTime(year: year, month: 1, day: 1).toDateTime();
+        final thisYear = DateTime.utc(2000, ad.month, ad.day);
+        if (previous != null) {
+          expect(
+            thisYear.difference(previous).inDays.abs(),
+            lessThanOrEqualTo(1),
+            reason: 'BS $year New Year is AD $ad',
+          );
+        }
+        previous = thisYear;
+      }
+    });
+
+    test('each year total matches its months', () {
+      for (final entry in CalendarUtils.nepaliYears.entries) {
+        final months = entry.value.skip(1).fold<int>(0, (a, b) => a + b);
+        expect(
+          months,
+          entry.value.first,
+          reason: 'BS ${entry.key}: months add up to $months',
+        );
+      }
+    });
+  });
+
   group('round-trip', () {
     test('BS -> AD -> BS is identity across the supported range', () {
       final failures = <String>[];

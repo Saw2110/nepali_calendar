@@ -125,13 +125,6 @@ class NepaliCalendarStyle {
   ///
   /// [weekendType] and [weekStartType] are applied to [config], since that is
   /// where they live -- there are no top-level properties for them.
-  ///
-  /// ## Bug fix in 0.1.0
-  ///
-  /// Up to 0.0.7 [weekendType] and [weekStartType] were accepted here and then
-  /// silently discarded, so `copyWith(weekStartType: ...)` returned a style
-  /// identical to the original. They now take effect. If you were passing
-  /// either one and relying on it doing nothing, remove it.
   NepaliCalendarStyle copyWith({
     CalendarConfig? config,
     bool? showEnglishDate,
@@ -185,7 +178,8 @@ class CellStyle {
   /// This dot indicates that the date has associated events.
   final Color dotColor;
 
-  /// Color for the English date text that appears when [showEnglishDate] is `true`.
+  /// Color for the English date text that appears when
+  /// [CalendarConfig.showEnglishDate] is `true`.
   ///
   /// This affects the small English date number shown below the Nepali date.
   final Color baseLineDateColor;
@@ -207,25 +201,18 @@ class CellStyle {
 
   /// Text color for ordinary dates.
   ///
-  /// Added in 0.1.0. This colour was previously hard-coded to [Colors.black]
-  /// inside the cell, which made a dark theme impossible. The default is
-  /// unchanged, so existing calendars look exactly as before.
+  /// A style field rather than a colour fixed in the cell, so a dark theme can
+  /// change it.
   final Color dateTextColor;
 
   /// Text color used on top of the [todayColor] and [selectedColor]
   /// highlights.
-  ///
-  /// Added in 0.1.0; previously hard-coded to [Colors.white].
   final Color onHighlightColor;
 
   /// Text color for dates belonging to the previous or next month.
-  ///
-  /// Added in 0.1.0; previously hard-coded to [Colors.grey] at 40% opacity.
   final Color dimmedDateTextColor;
 
   /// Colour of the cell borders drawn when `showBorder` is enabled.
-  ///
-  /// Added in 0.1.0; previously hard-coded to [Colors.grey] at 30% opacity.
   final Color borderColor;
 
   /// Creates a [CellStyle] instance with customizable styling options.
@@ -297,7 +284,8 @@ class HeaderStyle {
   ///
   /// Determines whether to show the full weekday name or an abbreviated version.
   ///
-  /// **Deprecated:** Use [config] with [CalendarConfig.weekTitleType] instead.
+  /// **Deprecated:** Use [NepaliCalendarStyle.config] with
+  /// [CalendarConfig.weekTitleType] instead.
   @Deprecated(
     'Use config.weekTitleType instead. Will be removed in 1.0.0.',
   )

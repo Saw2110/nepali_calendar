@@ -93,7 +93,6 @@ class HorizontalNepaliCalendar extends StatefulWidget {
 }
 
 class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
-  late NepaliDateTime _todayDate;
   late NepaliDateTime _selectedDate;
   late NepaliDateTime _startDate;
 
@@ -105,25 +104,22 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
   @override
   void initState() {
     super.initState();
-    _todayDate = NepaliDateTime.now();
-    _selectedDate = widget.initialDate ?? _todayDate;
+    _selectedDate = widget.initialDate ?? NepaliDateTime.now();
     _startDate = _selectedDate.subtract(Duration(days: 2));
   }
 
   @override
   Widget build(BuildContext context) {
-    // Explicit style > ambient NepaliCalendarTheme > pre-0.1.0 defaults.
+    // Explicit style > ambient NepaliCalendarTheme > the built-in defaults.
     _style = NepaliCalendarTheme.resolve(context, widget.calendarStyle);
 
     // Scale with the user's text size preference so the strip does not clip
     // for anyone relying on larger system text.
     final stripHeight =
         MediaQuery.textScalerOf(context).scale(_dateStripBaseHeight);
-    // The widget sizes itself to its content. Up to 0.0.7 it was pinned to 8%
-    // of the viewport height, which on a phone left too little room for the
-    // month title and the date strip together: the strip was painted outside
-    // the fixed box, and because Flutter does not hit-test children painted
-    // outside their parent's bounds, taps were silently swallowed.
+    // Sized to its content, not to a share of the viewport: a box too small
+    // for the title and the strip paints the strip outside it, where Flutter
+    // does not hit-test it, so taps would be silently swallowed.
     return ColoredBox(
       color: widget.backgroundColor ?? Colors.transparent,
       child: Column(
@@ -133,7 +129,8 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
           if (widget.showMonth)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: widget.headerBuilder?.call(_todayDate, _selectedDate) ??
+              child: widget.headerBuilder
+                      ?.call(NepaliDateTime.now(), _selectedDate) ??
                   _buildMonthTitle(),
             ),
           SizedBox(
@@ -150,11 +147,10 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
       _selectedDate.month,
       _style.effectiveConfig.language,
     );
-    final year = _style.effectiveConfig.language == Language.english
-        ? "${_selectedDate.year}"
-        : NepaliNumberConverter.englishToNepali(
-            _selectedDate.year.toString(),
-          );
+    final year = NepaliNumberConverter.formattedNumber(
+      '${_selectedDate.year}',
+      language: _style.effectiveConfig.language,
+    );
 
     ///
     return Text(
@@ -165,18 +161,22 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
   }
 
   Widget _buildDateList() {
+    // Read at build time, not once in initState: an app left open past
+    // midnight would otherwise keep highlighting yesterday.
+    final today = NepaliDateTime.now();
+
     return ListView.builder(
       itemCount: 7,
       scrollDirection: Axis.horizontal,
       itemBuilder: (context, index) {
         final date = _startDate.add(Duration(days: index));
 
-        // Check if the date is today
-        final bool isToday = _isSameDay(date, _todayDate);
-        final bool isSelected = _isSameDay(date, _selectedDate);
+        final bool isToday = date.isSameDayAs(today);
+        final bool isSelected = date.isSameDayAs(_selectedDate);
 
         return CalendarItem(
           date: date,
+          isSelected: isSelected,
           textColor: _getCellTextColor(isToday, isSelected, date.weekday),
           backgroundColor: _getCellColor(isToday, isSelected, date.weekday),
           style: _style,
@@ -195,50 +195,29 @@ class _HorizontalCalendarState extends State<HorizontalNepaliCalendar> {
     widget.onDateSelected(selectedDate);
   }
 
-  /// Method to check if two dates are the same (without considering time)
-  bool _isSameDay(NepaliDateTime date1, NepaliDateTime date2) {
-    return date1.year == date2.year &&
-        date1.month == date2.month &&
-        date1.day == date2.day;
-  }
-
-// Method to get the cell background color based on today, selected state, and weekday
   Color _getCellColor(bool isToday, bool isSelected, int weekday) {
+    final cells = _style.cellsStyle;
+    // Weekends take the weekend colour wherever a weekday takes its own.
     final isWeekend = _isWeekend(weekday);
 
-    if (isToday && !isWeekend) {
-      return _style.cellsStyle.todayColor;
+    if (isToday) return isWeekend ? cells.weekDayColor : cells.todayColor;
+    if (isSelected) {
+      return (isWeekend ? cells.weekDayColor : cells.selectedColor)
+          .withValues(alpha: 0.2);
     }
-    if (isToday && isWeekend) {
-      return _style.cellsStyle.weekDayColor;
-    }
-    if (isSelected && !isWeekend) {
-      return _style.cellsStyle.selectedColor.withValues(alpha: 0.2);
-    }
-    if (isSelected && isWeekend) {
-      return _style.cellsStyle.weekDayColor.withValues(alpha: 0.2);
-    }
-
-    return Colors.transparent; // Default case
+    return Colors.transparent;
   }
 
-// Method to get the cell text color based on today, selected state, and weekday
   Color _getCellTextColor(bool isToday, bool isSelected, int weekday) {
     final isWeekend = _isWeekend(weekday);
 
     // Today sits on a filled highlight, so use the on-highlight colour.
     if (isToday) return _style.cellsStyle.onHighlightColor;
-    if (isSelected && !isWeekend) {
-      return _style.cellsStyle.selectedColor;
-    }
-    if (isSelected && isWeekend) {
-      return _style.cellsStyle.weekDayColor;
-    }
     if (isWeekend) return _style.cellsStyle.weekDayColor;
+    if (isSelected) return _style.cellsStyle.selectedColor;
     return _style.cellsStyle.dateTextColor;
   }
 
-  // Method to check if a weekday is a weekend based on the weekend type
   bool _isWeekend(int weekday) {
     return WeekUtils.isWeekend(
       weekday,
@@ -263,9 +242,13 @@ class CalendarItem extends StatelessWidget {
     required this.backgroundColor,
     required this.onDatePressed,
     required this.style,
+    this.isSelected = false,
   });
 
   final NepaliDateTime date;
+
+  /// Whether this is the selected date, reported to screen readers.
+  final bool isSelected;
   final Color textColor;
   final Color backgroundColor;
   final VoidCallback onDatePressed;
@@ -277,6 +260,7 @@ class CalendarItem extends StatelessWidget {
 
     return Semantics(
       button: true,
+      selected: isSelected,
       excludeSemantics: true,
       label: CalendarSemantics.dayLabel(
         date,
@@ -295,12 +279,11 @@ class CalendarItem extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Display the weekday name
               Text(
                 WeekUtils.formattedWeekDay(
                   date.weekday,
-                  style.effectiveConfig.language,
-                  style.effectiveConfig.weekTitleType,
+                  config.language,
+                  config.weekTitleType,
                 ),
                 style: style.headersStyle.weekHeaderStyle.copyWith(
                   color: textColor,
@@ -308,13 +291,11 @@ class CalendarItem extends StatelessWidget {
                   fontSize: 13.0,
                 ),
               ),
-              // Display the day of the month
               Text(
-                style.effectiveConfig.language == Language.english
-                    ? "${date.day}"
-                    : NepaliNumberConverter.englishToNepali(
-                        date.day.toString(),
-                      ),
+                NepaliNumberConverter.formattedNumber(
+                  '${date.day}',
+                  language: config.language,
+                ),
                 style: style.cellsStyle.dayStyle.copyWith(
                   color: textColor,
                   fontSize: 16.0,

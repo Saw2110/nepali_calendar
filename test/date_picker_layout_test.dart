@@ -27,6 +27,7 @@ void main() {
   Widget host({
     required Language language,
     NepaliDatePickerMode mode = NepaliDatePickerMode.day,
+    bool autoConfirm = true,
   }) {
     return MaterialApp(
       home: Scaffold(
@@ -35,6 +36,7 @@ void main() {
             // Asar 2083 is a 32-day month, and "असार २०८३" is a long title.
             initialDate: NepaliDateTime(year: 2083, month: 3, day: 15),
             initialMode: mode,
+            autoConfirm: autoConfirm,
             calendarStyle: NepaliCalendarStyle(
               config: CalendarConfig(language: language),
             ),
@@ -74,20 +76,37 @@ void main() {
 
     /// The Nepali labels are the wide ones -- "रद्द गर्नुहोस्" against
     /// "Cancel" -- so they are what a too-tight layout truncates first.
+    ///
+    /// Today and OK must always read in full. Cancel is the one label built
+    /// to give way: it takes the row's free space and ellipsizes only when
+    /// the row is full. The test font draws every glyph as a square, which
+    /// makes Devanagari about 2.5x wider than any real font, so here -- and
+    /// only here -- the three do not fit together and Cancel is shortened.
     testWidgets('the Nepali action labels fit', (tester) async {
-      await tester.pumpWidget(host(language: Language.nepali));
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        host(language: Language.nepali, autoConfirm: false),
+      );
       await tester.pumpAndSettle();
 
-      expect(truncatedTexts(tester), isNot(contains('रद्द गर्नुहोस्')));
+      expect(find.text('रद्द गर्नुहोस्'), findsOneWidget);
+      expect(find.text('आज'), findsOneWidget);
+
       expect(truncatedTexts(tester), isNot(contains('ठीक छ')));
       expect(truncatedTexts(tester), isNot(contains('आज')));
+      expect(tester.takeException(), isNull, reason: 'the row never overflows');
     });
 
-    testWidgets('the Nepali month title fits', (tester) async {
+    testWidgets('the Nepali month and year fields fit', (tester) async {
       await tester.pumpWidget(host(language: Language.nepali));
       await tester.pumpAndSettle();
 
-      expect(truncatedTexts(tester), isNot(contains('असार २०८३')));
+      expect(find.text('असार'), findsOneWidget);
+      expect(truncatedTexts(tester), isNot(contains('असार')));
+      expect(truncatedTexts(tester), isNot(contains('२०८३')));
     });
 
     for (final mode in NepaliDatePickerMode.values) {
@@ -153,6 +172,58 @@ void main() {
           expect(tester.takeException(), isNull);
         });
       }
+    }
+  });
+
+  /// The weekday row shows initials unless the caller asks for longer names,
+  /// and longer names shrink to fit their column rather than being cut off.
+  group('weekday names', () {
+    Widget picker({TitleFormat? format}) => MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: NepaliDatePicker(
+                initialDate: NepaliDateTime(year: 2083, month: 3, day: 15),
+                weekdayFormat: format,
+                onDateSelected: (_) {},
+              ),
+            ),
+          ),
+        );
+
+    testWidgets('are initials by default', (tester) async {
+      await tester.pumpWidget(picker());
+      await tester.pumpAndSettle();
+
+      for (final initial in ['आ', 'सो', 'मं', 'बु', 'बि', 'शु', 'श']) {
+        expect(find.text(initial), findsOneWidget, reason: initial);
+      }
+      expect(find.text('मंगल'), findsNothing);
+    });
+
+    for (final format in TitleFormat.values) {
+      testWidgets('${format.name} names fit on a small phone', (tester) async {
+        // iPhone SE, the narrowest phone the rest of this suite covers.
+        tester.view.physicalSize = const Size(375, 667);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(picker(format: format));
+        await tester.pumpAndSettle();
+
+        final names = [
+          for (var day = 0; day < 7; day++)
+            WeekUtils.formattedWeekDay(day, Language.nepali, format),
+        ];
+        for (final name in names) {
+          expect(find.text(name), findsOneWidget, reason: name);
+        }
+        expect(
+          truncatedTexts(tester).where(names.contains),
+          isEmpty,
+          reason: 'a weekday name was cut off',
+        );
+        expect(tester.takeException(), isNull);
+      });
     }
   });
 

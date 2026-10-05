@@ -18,6 +18,7 @@ void main() {
     required Brightness brightness,
     bool themed = false,
     Language language = Language.english,
+    bool autoConfirm = true,
     ValueChanged<NepaliDateTime?>? onResult,
   }) {
     Widget page(BuildContext context) => Scaffold(
@@ -30,6 +31,7 @@ void main() {
                   calendarStyle: NepaliCalendarStyle(
                     config: CalendarConfig(language: language),
                   ),
+                  autoConfirm: autoConfirm,
                 );
                 onResult?.call(result);
               },
@@ -121,12 +123,33 @@ void main() {
         isNull,
         reason: 'it should look like every other alert in the app',
       );
-      expect(dialog.shape, isNull);
+    });
+
+    testWidgets('an app dialogTheme shape wins over the compact default',
+        (tester) async {
+      const shape = BeveledRectangleBorder();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(dialogTheme: const DialogThemeData(shape: shape)),
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () => showNepaliDatePicker(context: context),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await open(tester);
+
+      final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+      expect(dialog.shape, shape);
     });
   });
 
   group('result', () {
-    testWidgets('returns the selected date on confirm', (tester) async {
+    testWidgets('returns the tapped date straight away', (tester) async {
       NepaliDateTime? result;
       var called = false;
 
@@ -143,13 +166,39 @@ void main() {
 
       await tester.tap(find.text('15'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('OK'));
-      await tester.pumpAndSettle();
 
       expect(called, isTrue);
       expect(result?.day, 15);
       expect(result?.month, 1);
       expect(result?.year, 2081);
+    });
+
+    testWidgets('without autoConfirm, returns the selection on OK',
+        (tester) async {
+      NepaliDateTime? result;
+      var called = false;
+
+      await tester.pumpWidget(
+        host(
+          brightness: Brightness.light,
+          autoConfirm: false,
+          onResult: (value) {
+            result = value;
+            called = true;
+          },
+        ),
+      );
+      await open(tester);
+
+      await tester.tap(find.text('15'));
+      await tester.pumpAndSettle();
+      expect(called, isFalse, reason: 'the tap alone must not close it');
+
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      expect(called, isTrue);
+      expect(result?.day, 15);
     });
 
     testWidgets('returns null on cancel', (tester) async {
@@ -159,6 +208,7 @@ void main() {
       await tester.pumpWidget(
         host(
           brightness: Brightness.light,
+          autoConfirm: false,
           onResult: (value) {
             result = value;
             called = true;
@@ -209,8 +259,11 @@ void main() {
     /// is not reachable on a small phone at any sensible padding. Flutter's
     /// own Material DatePicker uses roughly 42dp cells for the same reason.
     ///
-    /// What the picker does guarantee: cells never fall below
-    /// [_minCellExtent]-ish (36dp), and the dialog never overflows.
+    /// What the picker does guarantee: cells are never narrower than 36dp,
+    /// rows are 36dp wherever the screen has the height, and the dialog never
+    /// overflows. A phone in landscape does not have the height: there the
+    /// rows shrink rather than the grid scrolling -- see 'the day grid is
+    /// fixed' below.
     const devices = <String, Size>{
       'iPhone SE': Size(375, 667),
       'iPhone 14': Size(390, 844),
@@ -220,6 +273,8 @@ void main() {
     };
 
     for (final entry in devices.entries) {
+      final isShort = entry.value.height < 500;
+
       testWidgets('${entry.key} keeps cells usable', (tester) async {
         tester.view.physicalSize = entry.value;
         tester.view.devicePixelRatio = 1.0;
@@ -241,11 +296,59 @@ void main() {
           greaterThanOrEqualTo(36.0),
           reason: '${entry.key}: cells ${cell.width}x${cell.height} too narrow',
         );
+        // Rows share out their height exactly, so allow for rounding.
         expect(
           cell.height,
-          greaterThanOrEqualTo(36.0),
+          greaterThanOrEqualTo(isShort ? 28.0 : 35.5),
           reason: '${entry.key}: cells ${cell.width}x${cell.height} too short',
         );
+        expect(tester.takeException(), isNull);
+      });
+    }
+  });
+
+  group('the day grid is fixed', () {
+    /// Rows used to be measured against a scroll threshold equal to their own
+    /// height, so a fraction of a pixel lost to rounding made the grid
+    /// scrollable. The grid is now plain rows and columns.
+    const devices = <String, Size>{
+      'iPhone SE': Size(375, 667),
+      'phone landscape': Size(844, 390),
+    };
+
+    for (final entry in devices.entries) {
+      testWidgets('${entry.key}: no scrolling, every cell on screen',
+          (tester) async {
+        tester.view.physicalSize = entry.value;
+        tester.view.devicePixelRatio = 1.0;
+
+        await tester.pumpWidget(host(brightness: Brightness.light));
+        await open(tester);
+
+        expect(
+          find.descendant(
+            of: find.byType(NepaliDatePicker),
+            matching: find.byType(Scrollable),
+          ),
+          findsNothing,
+        );
+
+        final dialog = tester.getRect(find.byType(NepaliDatePicker));
+        final cells = find.descendant(
+          of: find.byType(NepaliDatePicker),
+          matching: find.byType(InkResponse),
+        );
+        // 42 day cells; the other InkResponses are the header and footer
+        // buttons, whose subclasses do not match byType.
+        expect(cells, findsNWidgets(42));
+        for (final element in cells.evaluate()) {
+          final rect = tester.getRect(find.byWidget(element.widget));
+          expect(
+            dialog.contains(rect.bottomRight - const Offset(0.5, 0.5)),
+            isTrue,
+            reason: '${entry.key}: a cell lies outside the picker',
+          );
+        }
         expect(tester.takeException(), isNull);
       });
     }

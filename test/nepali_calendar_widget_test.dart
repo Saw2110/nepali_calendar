@@ -322,6 +322,241 @@ void main() {
       expect(find.byType(CalendarHeader), findsNothing);
     });
   });
+
+  /// Controller jumps used to be mistaken for swipes: every page the
+  /// PageView passed through set the date and fired callbacks.
+  group('controller jumps', () {
+    testWidgets('runCallback: false fires no callbacks', (tester) async {
+      final controller = NepaliCalendarController();
+      addTearDown(controller.dispose);
+      final fired = <NepaliDateTime>[];
+
+      await tester.pumpWidget(
+        host(
+          NepaliCalendar(
+            initialDate: NepaliDateTime(year: 2081, month: 1, day: 10),
+            controller: controller,
+            onMonthChanged: fired.add,
+            onDayChanged: fired.add,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      controller.jumpToDate(
+        NepaliDateTime(year: 2081, month: 5, day: 20),
+        animate: false,
+      );
+      await tester.pumpAndSettle();
+
+      expect(fired, isEmpty);
+      expect(controller.selectedDate!.day, 20);
+    });
+
+    testWidgets(
+        'an animated jump fires once and keeps its day past shorter months',
+        (tester) async {
+      final controller = NepaliCalendarController();
+      addTearDown(controller.dispose);
+      final fired = <NepaliDateTime>[];
+
+      await tester.pumpWidget(
+        host(
+          NepaliCalendar(
+            initialDate: NepaliDateTime(year: 2081, month: 1, day: 10),
+            controller: controller,
+            onMonthChanged: fired.add,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // BS 2081: Shrawan has 32 days; Asar, passed on the way, has 31.
+      controller.jumpToDate(
+        NepaliDateTime(year: 2081, month: 4, day: 32),
+        runCallback: true,
+      );
+      await tester.pumpAndSettle();
+
+      expect(fired, hasLength(1));
+      expect(controller.selectedDate!.month, 4);
+      expect(controller.selectedDate!.day, 32);
+    });
+
+    testWidgets('a replaced controller no longer drives the calendar',
+        (tester) async {
+      final first = NepaliCalendarController();
+      final second = NepaliCalendarController();
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+      final fired = <NepaliDateTime>[];
+
+      Widget calendar(NepaliCalendarController c) => host(
+            NepaliCalendar(
+              initialDate: NepaliDateTime(year: 2081, month: 1, day: 10),
+              controller: c,
+              onMonthChanged: fired.add,
+            ),
+          );
+
+      await tester.pumpWidget(calendar(first));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(calendar(second));
+      await tester.pumpAndSettle();
+
+      first.nextMonth(animate: false);
+      await tester.pumpAndSettle();
+
+      expect(fired, isEmpty);
+      expect(second.selectedDate!.month, 1);
+    });
+
+    testWidgets('a controller that outlives its calendar does not throw',
+        (tester) async {
+      final controller = NepaliCalendarController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(host(NepaliCalendar(controller: controller)));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox());
+
+      controller.nextMonth(animate: false);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    /// Attaching used to notify listeners in the middle of building, so a
+    /// ListenableBuilder above the calendar threw.
+    testWidgets('a listener above the calendar can rebuild on attach',
+        (tester) async {
+      final controller = NepaliCalendarController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        host(
+          ListenableBuilder(
+            listenable: controller,
+            builder: (context, _) => Column(
+              children: [
+                Text('${controller.selectedDate?.day}'),
+                Expanded(
+                  child: NepaliCalendar(
+                    controller: controller,
+                    initialDate: NepaliDateTime(year: 2081, month: 1, day: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('10'), findsWidgets);
+    });
+  });
+
+  group('data edges and month lengths', () {
+    /// A collapsed pane or a page mid-transition can hand the calendar zero
+    /// width; the grid then gets a zero aspect ratio and must not throw.
+    testWidgets('a zero-width calendar builds without throwing',
+        (tester) async {
+      await tester.pumpWidget(
+        host(
+          Center(
+            child: SizedBox(
+              width: 0,
+              height: 600,
+              child: NepaliCalendar(initialDate: baisakh2081),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    /// Swiping keeps the selected day number. From the 32nd of a 32-day month
+    /// into a 31-day one, that used to build an invalid date that silently
+    /// became the 1st of the month after.
+    testWidgets('swiping clamps the day to the new month', (tester) async {
+      final controller = NepaliCalendarController();
+      addTearDown(controller.dispose);
+
+      // BS 2081: Jestha has 32 days, Asar 31.
+      await tester.pumpWidget(
+        host(
+          NepaliCalendar(
+            initialDate: NepaliDateTime(year: 2081, month: 2, day: 32),
+            controller: controller,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.fling(
+        find.byType(PageView),
+        const Offset(-600, 0),
+        2000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(controller.selectedDate!.month, 3);
+      expect(controller.selectedDate!.day, 31);
+    });
+
+    testWidgets('nextMonth does nothing at the last supported month',
+        (tester) async {
+      final controller = NepaliCalendarController();
+      addTearDown(controller.dispose);
+      final last = CalendarUtils.nepaliYears.keys.last;
+
+      await tester.pumpWidget(
+        host(
+          NepaliCalendar(
+            initialDate: NepaliDateTime(year: last, month: 12, day: 1),
+            controller: controller,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      controller.nextMonth();
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(controller.selectedDate!.year, last);
+      expect(controller.selectedDate!.month, 12);
+    });
+
+    testWidgets('previousMonth does nothing at the first supported month',
+        (tester) async {
+      final controller = NepaliCalendarController();
+      addTearDown(controller.dispose);
+      final first = CalendarUtils.nepaliYears.keys.first;
+
+      await tester.pumpWidget(
+        host(
+          NepaliCalendar(
+            initialDate: NepaliDateTime(year: first, month: 1, day: 15),
+            controller: controller,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      controller.previousMonth();
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(controller.selectedDate!.year, first);
+      expect(controller.selectedDate!.month, 1);
+    });
+  });
 }
 
 /// Regression guard for the grid-height budget.

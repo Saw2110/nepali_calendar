@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/nepali_date_time.dart';
+import '../utils/calendar_layout.dart';
+import '../utils/calendar_utils.dart';
 import 'calendar_controller.dart';
 
 /// Controller for managing the state and navigation of [NepaliCalendar].
@@ -53,8 +55,16 @@ class NepaliCalendarController extends CalendarController {
   }) {
     _selectedDateCallback = selectedDateCallback;
     _selectedDate = initialDate;
-    notifyListeners();
+    // The calendar calls this while it is being built. Notifying right away
+    // would make a listener above it -- a ListenableBuilder showing the
+    // selected date, say -- call setState during build, which throws. Tell
+    // listeners once the frame is done instead.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_disposed) notifyListeners();
+    });
   }
+
+  bool _disposed = false;
 
   @override
   void jumpToDate(
@@ -72,7 +82,8 @@ class NepaliCalendarController extends CalendarController {
 
     _selectedDate = date;
 
-    if (isProgrammatic && _selectedDateCallback != null) {
+    // isInitialized above guarantees the callback.
+    if (isProgrammatic) {
       _selectedDateCallback!(
         date,
         runCallback: runCallback,
@@ -84,47 +95,37 @@ class NepaliCalendarController extends CalendarController {
   }
 
   @override
-  void nextMonth({bool animate = true}) {
-    if (!isInitialized || _selectedDate == null) {
-      debugPrint(
-        'NepaliCalendarController: Cannot navigate - controller is not initialized',
-      );
-      return;
-    }
-
-    final currentDate = _selectedDate!;
-    final nextMonth = currentDate.month == 12
-        ? NepaliDateTime(year: currentDate.year + 1)
-        : NepaliDateTime(
-            year: currentDate.year,
-            month: currentDate.month + 1,
-          );
-
-    jumpToDate(nextMonth, animate: animate);
-  }
+  void nextMonth({bool animate = true}) => _shift(1, animate: animate);
 
   @override
-  void previousMonth({bool animate = true}) {
-    if (!isInitialized || _selectedDate == null) {
+  void previousMonth({bool animate = true}) => _shift(-1, animate: animate);
+
+  /// Jumps to the 1st of the month [delta] away. Does nothing when not
+  /// attached, or when that month is past either end of the calendar data.
+  void _shift(int delta, {required bool animate}) {
+    final current = _selectedDate;
+    if (!isInitialized || current == null) {
       debugPrint(
         'NepaliCalendarController: Cannot navigate - controller is not initialized',
       );
       return;
     }
 
-    final currentDate = _selectedDate!;
-    final prevMonth = currentDate.month == 1
-        ? NepaliDateTime(year: currentDate.year - 1, month: 12)
-        : NepaliDateTime(
-            year: currentDate.year,
-            month: currentDate.month - 1,
-          );
+    final (year, month) = shiftMonth(current.year, current.month, delta);
+    if (!CalendarUtils.nepaliYears.containsKey(year)) {
+      debugPrint(
+        'NepaliCalendarController: Cannot navigate - already at the '
+        '${delta > 0 ? 'last' : 'first'} supported month',
+      );
+      return;
+    }
 
-    jumpToDate(prevMonth, animate: animate);
+    jumpToDate(NepaliDateTime(year: year, month: month), animate: animate);
   }
 
   @override
   void dispose() {
+    _disposed = true;
     _selectedDateCallback = null;
     super.dispose();
   }

@@ -4,11 +4,9 @@
 
 import 'dart:math' as math;
 
-// Import Flutter material package for UI components
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-// Import custom source file containing calendar utilities
 import 'src.dart';
 
 /// Largest height a single day cell is allowed to take.
@@ -29,9 +27,8 @@ const double _minCellHeight = 32.0;
 /// hands the grid this share of it, leaving the rest for the header above and
 /// the event list below.
 ///
-/// Measured, not assumed: up to 0.0.7 this was a fraction of the *screen*
-/// height, so putting anything above the calendar -- a toolbar, a filter row --
-/// overflowed it by however tall that thing was.
+/// A share of the measured height, not of the screen, so a toolbar above the
+/// calendar does not push it into overflow.
 const double _gridHeightFraction = 0.62;
 
 /// One weekday-header row plus the most date rows a month can need.
@@ -44,7 +41,6 @@ const int _totalRows = 1 + CalendarUtils.maxWeekRowsInMonth;
 /// [CalendarMonthView] wraps itself in 8px of padding on every side.
 const double _monthViewPadding = 16.0;
 
-// // Main Nepali Calendar widget with generic event type T
 class NepaliCalendar<T> extends StatefulWidget {
   final NepaliDateTime? initialDate;
   final List<CalendarEvent<T>>? eventList;
@@ -67,7 +63,6 @@ class NepaliCalendar<T> extends StatefulWidget {
   final NepaliCalendarStyle calendarStyle;
   final OnDateSelected? onMonthChanged;
   final OnDateSelected? onDayChanged;
-  // Add controller parameter
   final NepaliCalendarController? controller;
 
   /// Custom builder for calendar components.
@@ -168,13 +163,13 @@ class NepaliCalendar<T> extends StatefulWidget {
   State<NepaliCalendar> createState() => _NepaliCalendarState<T>();
 }
 
-// Modified State class
 class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
   late PageController _pageController;
-  late NepaliDateTime _currentDate;
   late ValueNotifier<NepaliDateTime> _selectedDateNotifier;
-  late ValueNotifier<int> _currentPageIndexNotifier;
-  late int _currentPageIndex;
+
+  /// The page the PageView last settled on. Read while a swipe is in
+  /// progress, before the PageView reports a fractional page of its own.
+  late int _settledPage;
 
   /// Date-keyed index over [NepaliCalendar.eventList].
   ///
@@ -182,19 +177,48 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
   /// builds several months at a time, and each month asks after 35 or 42 dates.
   late CalendarEventIndex<T> _eventIndex;
 
+  /// True while a controller jump is moving the page.
+  ///
+  /// The jump sets the selected date itself, once. Without this, every page
+  /// the PageView passed through reported itself as a swipe: callbacks fired
+  /// even with `runCallback: false`, once per month crossed, and the day could
+  /// be clamped by a shorter month on the way.
+  bool _jumping = false;
+
   @override
   void initState() {
     super.initState();
-    _currentDate = widget.initialDate ?? NepaliDateTime.now();
-    _selectedDateNotifier = ValueNotifier(_currentDate);
-    _initializePageController();
-    _currentPageIndexNotifier = ValueNotifier(_currentPageIndex);
+    final initial = widget.initialDate ?? NepaliDateTime.now();
+    _selectedDateNotifier = ValueNotifier(initial);
+    _settledPage = _pageOf(initial);
+    _pageController = PageController(initialPage: _settledPage);
     _eventIndex = CalendarEventIndex<T>.fromList(widget.eventList);
 
-    // Initialize controller if provided
-    widget.controller?.init(
-      selectedDateCallback: _handleDateChanged,
-      initialDate: _currentDate,
+    _attach(widget.controller, initial);
+  }
+
+  /// Hands [controller] a callback that only acts while [controller] is still
+  /// this calendar's controller and the calendar is still mounted.
+  ///
+  /// A controller swapped out for another one, or one that outlives the
+  /// calendar, keeps the callback it was given -- there is no public way to
+  /// take it back. Without this check it went on driving the calendar after
+  /// being replaced, and threw once the calendar was disposed.
+  void _attach(NepaliCalendarController? controller, NepaliDateTime date) {
+    controller?.init(
+      selectedDateCallback: (
+        newDate, {
+        required bool runCallback,
+        required bool animate,
+      }) {
+        if (!mounted || !identical(widget.controller, controller)) return;
+        _handleDateChanged(
+          newDate,
+          runCallback: runCallback,
+          animate: animate,
+        );
+      },
+      initialDate: date,
     );
   }
 
@@ -209,12 +233,8 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
       _eventIndex = CalendarEventIndex<T>.fromList(widget.eventList);
     }
 
-    // Handle controller changes
     if (widget.controller != oldWidget.controller) {
-      widget.controller?.init(
-        selectedDateCallback: _handleDateChanged,
-        initialDate: _selectedDateNotifier.value,
-      );
+      _attach(widget.controller, _selectedDateNotifier.value);
     }
   }
 
@@ -222,42 +242,41 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
   void dispose() {
     _pageController.dispose();
     _selectedDateNotifier.dispose();
-    _currentPageIndexNotifier.dispose();
     super.dispose();
   }
 
-  // Handle date changes from controller
   void _handleDateChanged(
     NepaliDateTime date, {
     required bool runCallback,
     required bool animate,
   }) {
-    final pageIndex =
-        ((date.year - CalendarUtils.calenderyearStart) * 12) + date.month - 1;
-
-    if (animate) {
-      _pageController.animateToPage(
-        pageIndex,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    } else {
-      _pageController.jumpToPage(pageIndex);
-    }
+    final pageIndex = _pageOf(date);
 
     _updateCurrentDate(date.year, date.month, date.day, runCallback);
+
+    _jumping = true;
+    if (animate) {
+      _pageController
+          .animateToPage(
+            pageIndex,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+          )
+          .whenComplete(() => _jumping = false);
+    } else {
+      _pageController.jumpToPage(pageIndex);
+      _jumping = false;
+    }
   }
 
-  // Initialize page controller with correct initial page
-  void _initializePageController() {
-    _currentPageIndex =
-        ((_currentDate.year - CalendarUtils.calenderyearStart) * 12) +
-            _currentDate.month -
-            1;
-    _pageController = PageController(initialPage: _currentPageIndex);
-  }
+  /// The PageView page that shows [date]'s month.
+  static int _pageOf(NepaliDateTime date) =>
+      (date.year - CalendarUtils.calenderyearStart) * 12 + date.month - 1;
 
-  // Update current date and trigger appropriate callbacks
+  /// The year and month a PageView page shows; the inverse of [_pageOf].
+  static (int, int) _monthOf(int page) =>
+      (CalendarUtils.calenderyearStart + page ~/ 12, page % 12 + 1);
+
   void _updateCurrentDate(
     int year,
     int month,
@@ -268,10 +287,8 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
     final newDate = NepaliDateTime(year: year, month: month, day: day);
     _selectedDateNotifier.value = newDate;
 
-    // Update controller's internal state
     widget.controller?.selectedDate = newDate;
 
-    // Call appropriate callback based on what changed
     if (runCallback) {
       if (previousDate.month != month || previousDate.year != year) {
         widget.onMonthChanged?.call(newDate);
@@ -296,7 +313,7 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
 
     // `page` is only readable once the PageView has been laid out; before then
     // the last settled index is the best available answer.
-    final fallback = _currentPageIndexNotifier.value.toDouble();
+    final fallback = _settledPage.toDouble();
     final page =
         _pageController.hasClients && _pageController.position.haveDimensions
             ? (_pageController.page ?? fallback)
@@ -315,16 +332,14 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
   }
 
   /// The row count of the month a PageView index maps to.
-  int _weekRowsForPage(int index, WeekStartType weekStartType) =>
-      CalendarUtils.weekRowsInMonth(
-        CalendarUtils.calenderyearStart + (index ~/ 12),
-        (index % 12) + 1,
-        weekStartType,
-      );
+  int _weekRowsForPage(int index, WeekStartType weekStartType) {
+    final (year, month) = _monthOf(index);
+    return CalendarUtils.weekRowsInMonth(year, month, weekStartType);
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Explicit style > ambient NepaliCalendarTheme > pre-0.1.0 defaults.
+    // Explicit style > ambient NepaliCalendarTheme > the built-in defaults.
     final calendarStyle =
         NepaliCalendarTheme.resolve(context, widget.calendarStyle);
 
@@ -352,13 +367,11 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
   ) {
     return Column(
       children: [
-        // Calendar card containing header and month view (outside PageView)
         Card(
           elevation: 0,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Calendar header with navigation (updates via ValueNotifier)
               ValueListenableBuilder<NepaliDateTime>(
                 valueListenable: _selectedDateNotifier,
                 builder: (context, selectedDate, _) {
@@ -383,12 +396,10 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                   // The month view is one weekday-header row plus six date
                   // rows, all seven columns wide.
                   //
-                  // Up to 0.0.7 cells were always square, which made the whole
-                  // calendar as tall as the viewport was wide: on anything
-                  // wider than a phone -- a tablet, desktop window or browser
-                  // -- it overflowed its parent. Cap the cell height instead,
-                  // so cells grow sideways on wide viewports rather than the
-                  // calendar growing without bound.
+                  // Square cells would make the calendar as tall as the
+                  // viewport is wide, overflowing on a tablet or desktop.
+                  // Cap the height instead, so cells grow sideways on wide
+                  // viewports.
                   //
                   // Measure against the width the grid actually gets, which is
                   // what is left after CalendarMonthView's own padding. Up to
@@ -410,17 +421,10 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                     _minCellHeight,
                     math.min(math.min(cellWidth, _maxCellHeight), heightBudget),
                   );
-                  // A viewport can be handed zero width -- a collapsed pane, a
-                  // page mid-transition, a parent that lays out before it has
-                  // measured itself -- and `SliverGridDelegateWithFixedCross
-                  // AxisCount` asserts on a ratio that is not positive and
-                  // finite. Fall back to square cells for those frames rather
-                  // than throwing; the next frame with real width corrects it.
-                  final rawAspectRatio = cellWidth / cellHeight;
-                  final cellAspectRatio =
-                      rawAspectRatio > 0 && rawAspectRatio.isFinite
-                          ? rawAspectRatio
-                          : 1.0;
+                  // Zero on a zero-width viewport (a collapsed pane, a page
+                  // mid-transition); CalendarGrid and WeekdayHeader fall back
+                  // to square cells for such frames rather than throwing.
+                  final cellAspectRatio = cellWidth / cellHeight;
 
                   // CalendarMonthView adds 8px padding all round, and spaces
                   // the header off the grid unless borders are drawn.
@@ -431,34 +435,33 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                   final pageView = PageView.builder(
                     controller: _pageController,
                     itemCount: CalendarUtils.nepaliYears.length * 12,
-                    // Add physics for smoother scrolling
                     physics: const BouncingScrollPhysics(),
                     onPageChanged: (index) {
-                      // Calculate year and month from page index
-                      final int year =
-                          CalendarUtils.calenderyearStart + (index ~/ 12);
-                      final int month = (index % 12) + 1;
+                      final (year, month) = _monthOf(index);
 
-                      // Update page index notifier
-                      _currentPageIndexNotifier.value = index;
+                      _settledPage = index;
 
-                      // Update current date and trigger callback
+                      // A controller jump has already set the date.
+                      if (_jumping) return;
+
+                      // Keep the selected day number, clamped to the new
+                      // month: swiping from Asar 32 into a 31-day month used
+                      // to build an invalid date, which silently became the
+                      // 1st of the month after.
+                      final daysInMonth =
+                          CalendarUtils.nepaliYears[year]![month];
                       _updateCurrentDate(
                         year,
                         month,
-                        _selectedDateNotifier.value.day,
+                        math.min(_selectedDateNotifier.value.day, daysInMonth),
                       );
                     },
                     itemBuilder: (context, index) {
-                      // Calculate year and month for current page
-                      final year =
-                          CalendarUtils.calenderyearStart + (index ~/ 12);
-                      final month = (index % 12) + 1;
+                      final (year, month) = _monthOf(index);
 
                       return AnimatedBuilder(
                         animation: _pageController,
                         builder: (context, child) {
-                          // Calculate page offset for smooth transitions
                           double scale = 1.0;
                           double opacity = 1.0;
 
@@ -467,8 +470,7 @@ class _NepaliCalendarState<T> extends State<NepaliCalendar<T>> {
                                 _pageController.page ?? index.toDouble();
                             final double offset = (page - index).abs();
 
-                            // Smooth scale transition: 1.0 -> 0.85 (less dramatic)
-                            // Using a curve for smoother interpolation
+                            // Linear scale, 1.0 -> 0.85, with the swipe offset.
                             scale = 1.0 - (offset * 0.15).clamp(0.0, 0.15);
 
                             // Smooth opacity transition: 1.0 -> 0.5

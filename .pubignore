@@ -11,6 +11,12 @@
 AUDIT.md
 TASK.md
 folder_structure.md
+/doc/CODE_REVIEW.md
+
+# Design references and README screenshots. The README loads its images from
+# GitHub by URL, so they need not travel inside the package -- they would only
+# add about half a megabyte to every download.
+/ref_image/
 
 # --- Mirrors .gitignore --------------------------------------------------
 # Miscellaneous

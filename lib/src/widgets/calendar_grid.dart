@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../src.dart';
+import '../utils/calendar_layout.dart';
 
 /// The grid is an implementation detail of [NepaliCalendar]. Use
 /// [NepaliCalendar] or [NepaliYearCalendar], and `CalendarBuilder` to
@@ -41,10 +42,9 @@ class CalendarGrid<T> extends StatelessWidget {
 
   /// Width-to-height ratio of each day cell.
   ///
-  /// Defaults to 1.0 (square cells), which is what every version up to 0.0.7
-  /// used unconditionally. [NepaliCalendar] now passes a ratio greater than 1
-  /// on wide viewports so that cells grow sideways rather than making the
-  /// calendar as tall as the viewport is wide.
+  /// Defaults to 1.0 (square cells). [NepaliCalendar] passes a ratio greater
+  /// than 1 on wide viewports so that cells grow sideways rather than making
+  /// the calendar as tall as the viewport is wide.
   final double cellAspectRatio;
 
   /// [cellAspectRatio], guarded against the values the grid delegate rejects.
@@ -66,50 +66,83 @@ class CalendarGrid<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get the first day of the month
-    final firstDayOfMonth = NepaliDateTime(year: year, month: month);
-    // Normalize the weekday of the first day based on week start type
-    final weekdayOfFirstDay = _normalizeWeekday(firstDayOfMonth.weekday);
-    // Get the total number of days in the month
-    final daysCountInMonth = _daysInMonth(year, month) ?? 0;
+    final config = calendarStyle.effectiveConfig;
+    final index = _index;
 
-    // Five or six rows, whichever this month actually needs -- unless the
-    // config asks for six unconditionally.
-    final cellCount = _rowCount * 7;
-
-    final gridItems = _buildCalendarGrid(
-      weekdayOfFirstDay,
-      daysCountInMonth,
-      _index,
-      cellCount,
+    final leading = WeekUtils.normalizeWeekday(
+      NepaliDateTime(year: year, month: month).weekday,
+      config.weekStartType,
     );
+    final length = _daysInMonth(year, month) ?? 0;
+    final (prevYear, prevMonth) = shiftMonth(year, month, -1);
+    final (nextYear, nextMonth) = shiftMonth(year, month, 1);
+    // Null past either end of the bundled data: the first and last supported
+    // months have no neighbour to borrow dates from, so those cells stay
+    // blank rather than the page failing to build.
+    final prevLength = _daysInMonth(prevYear, prevMonth);
+    final nextLength = _daysInMonth(nextYear, nextMonth);
 
-    final gridView = GridView.builder(
+    // Each cell is worked out from its position: before the 1st is the
+    // previous month, past the last day the next one, both dimmed.
+    Widget cellAt(int position) {
+      final day = position - leading + 1;
+      if (day < 1) {
+        return prevLength == null
+            ? const SizedBox.shrink()
+            : _cell(prevYear, prevMonth, prevLength + day, index, dimmed: true);
+      }
+      if (day > length) {
+        return nextLength == null
+            ? const SizedBox.shrink()
+            : _cell(nextYear, nextMonth, day - length, index, dimmed: true);
+      }
+      return _cell(year, month, day, index);
+    }
+
+    return GridView.builder(
       shrinkWrap: true,
       padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 7, // 7 columns for 7 days in a week
+        crossAxisCount: 7,
         childAspectRatio: _effectiveAspectRatio,
       ),
-      itemCount: cellCount,
-      itemBuilder: (context, index) {
-        // Wrap each cell with table-style borders (right + bottom)
-        if (calendarStyle.effectiveConfig.showBorder) {
-          return _wrapWithTableBorder(gridItems[index]);
-        }
-        return gridItems[index];
+      // Five or six rows, whichever this month needs -- unless the config
+      // asks for six unconditionally.
+      itemCount: _rowCount * 7,
+      itemBuilder: (context, position) {
+        final cell = cellAt(position);
+        // Right and bottom lines per cell; CalendarMonthView adds the outer
+        // top and left edge.
+        return config.showBorder ? tableBorder(cell, calendarStyle) : cell;
       },
     );
+  }
 
-    // Don't add top/left border here - CalendarMonthView will handle it
-    return gridView;
+  CalendarCell<T> _cell(
+    int year,
+    int month,
+    int day,
+    CalendarEventIndex<T> index, {
+    bool dimmed = false,
+  }) {
+    final date = NepaliDateTime(year: year, month: month, day: day);
+    return CalendarCell<T>(
+      day: day,
+      date: date,
+      selectedDate: selectedDate,
+      events: index.eventsOn(date),
+      onDaySelected: onDaySelected,
+      calendarStyle: calendarStyle,
+      isDimmed: dimmed,
+      cellBuilder: cellBuilder,
+    );
   }
 
   /// How many week rows this month is drawn with.
   ///
-  /// Up to 0.0.7 this was always six, which left five-row months showing a
-  /// whole trailing row of the next month's dates. See
+  /// Five or six, as the month needs, so a five-row month does not end in a
+  /// whole row of the next month's dates. See
   /// [CalendarConfig.sixWeekMonthsEnforced].
   int get _rowCount => calendarStyle.effectiveConfig.sixWeekMonthsEnforced
       ? CalendarUtils.maxWeekRowsInMonth
@@ -118,103 +151,6 @@ class CalendarGrid<T> extends StatelessWidget {
           month,
           calendarStyle.effectiveConfig.weekStartType,
         );
-
-  // Method to build the complete calendar grid, padded out to [cellCount]
-  List<Widget> _buildCalendarGrid(
-    int weekdayOfFirstDay,
-    int daysCountInMonth,
-    CalendarEventIndex<T> index,
-    int cellCount,
-  ) {
-    final gridItems = <Widget>[];
-
-    // Add previous month days
-    if (weekdayOfFirstDay > 0) {
-      final prevMonth = month == 1 ? 12 : month - 1;
-      final prevYear = month == 1 ? year - 1 : year;
-      final daysInPrevMonth = _daysInMonth(prevYear, prevMonth);
-
-      for (int i = weekdayOfFirstDay - 1; i >= 0; i--) {
-        // The month before the first supported one has no dates to show, so
-        // its cells are left blank rather than the page failing to build.
-        if (daysInPrevMonth == null) {
-          gridItems.add(const SizedBox.shrink());
-          continue;
-        }
-
-        final day = daysInPrevMonth - i;
-        final date = NepaliDateTime(year: prevYear, month: prevMonth, day: day);
-        final events = index.eventsOn(date);
-
-        gridItems.add(
-          CalendarCell<T>(
-            day: day,
-            date: date,
-            selectedDate: selectedDate,
-            events: events,
-            onDaySelected: onDaySelected,
-            calendarStyle: calendarStyle,
-            isDimmed: true,
-            cellBuilder: cellBuilder,
-          ),
-        );
-      }
-    }
-
-    // Add current month days
-    for (int day = 1; day <= daysCountInMonth; day++) {
-      final date = NepaliDateTime(year: year, month: month, day: day);
-      final events = index.eventsOn(date);
-
-      gridItems.add(
-        CalendarCell<T>(
-          day: day,
-          date: date,
-          selectedDate: selectedDate,
-          events: events,
-          onDaySelected: onDaySelected,
-          calendarStyle: calendarStyle,
-          cellBuilder: cellBuilder,
-        ),
-      );
-    }
-
-    // Add next month days to fill out the last row
-    final remainingCells = cellCount - gridItems.length;
-    if (remainingCells > 0) {
-      final nextMonth = month == 12 ? 1 : month + 1;
-      final nextYear = month == 12 ? year + 1 : year;
-
-      // Same at the other end of the range: the month after the last
-      // supported one cannot be dated, so fill the row with blanks.
-      if (_daysInMonth(nextYear, nextMonth) == null) {
-        gridItems.addAll(
-          List<Widget>.filled(remainingCells, const SizedBox.shrink()),
-        );
-        return gridItems;
-      }
-
-      for (int day = 1; day <= remainingCells; day++) {
-        final date = NepaliDateTime(year: nextYear, month: nextMonth, day: day);
-        final events = index.eventsOn(date);
-
-        gridItems.add(
-          CalendarCell<T>(
-            day: day,
-            date: date,
-            selectedDate: selectedDate,
-            events: events,
-            onDaySelected: onDaySelected,
-            calendarStyle: calendarStyle,
-            isDimmed: true,
-            cellBuilder: cellBuilder,
-          ),
-        );
-      }
-    }
-
-    return gridItems;
-  }
 
   /// The index to look events up in.
   ///
@@ -231,36 +167,4 @@ class CalendarGrid<T> extends StatelessWidget {
   /// `nepaliYears[year]!` brought the whole calendar down on those two pages.
   int? _daysInMonth(int year, int month) =>
       CalendarUtils.nepaliYears[year]?[month];
-
-  // Method to normalize the weekday to a 0-based index based on week start type
-  int _normalizeWeekday(int weekday) => WeekUtils.normalizeWeekday(
-        weekday,
-        calendarStyle.effectiveConfig.weekStartType,
-      );
-
-  /// Wraps a cell with table-style borders (right and bottom only).
-  /// This creates a clean grid pattern when combined with the container's
-  /// top and left borders.
-  Widget _wrapWithTableBorder(Widget child) {
-    final borderColor =
-        calendarStyle.cellsStyle.borderColor.withValues(alpha: 0.3);
-
-    return DecoratedBox(
-      // Drawn over the cell, not under it. A DecoratedBox paints its
-      // decoration behind its child by default, and every cell's own
-      // background fills the cell corner to corner -- so up to 0.1.0 an
-      // opaque background painted straight over the lines this draws, and
-      // today's cell erased its own right and bottom gridlines. Selected
-      // cells tinted theirs instead, which left them a different colour from
-      // every other line in the table.
-      position: DecorationPosition.foreground,
-      decoration: BoxDecoration(
-        border: Border(
-          right: BorderSide(color: borderColor),
-          bottom: BorderSide(color: borderColor),
-        ),
-      ),
-      child: child,
-    );
-  }
 }

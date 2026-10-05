@@ -43,7 +43,8 @@ class CalendarSemantics {
       if (isHoliday) nepali ? 'बिदा' : 'Holiday',
       if (eventCount > 0) _events(eventCount, language),
       // Announced last, because it qualifies everything before it.
-      if (isOtherMonth) nepali ? 'अर्को महिना' : 'Other month',
+      // 'अर्को महिना' means "next month"; a previous month's day is not one.
+      if (isOtherMonth) nepali ? 'अन्य महिना' : 'Other month',
       if (isDisabled) nepali ? 'उपलब्ध छैन' : 'Unavailable',
     ].join(', ');
   }

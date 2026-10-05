@@ -30,7 +30,7 @@ class MonthUtils {
   }
 
   /// List of Nepali month names in Nepali script.
-  static final List<String> _nepaliMonths = [
+  static const List<String> _nepaliMonths = [
     "बैशाख",
     "जेठ",
     "असार",
@@ -46,7 +46,7 @@ class MonthUtils {
   ];
 
   /// List of Nepali month names in English script.
-  static final List<String> _nepaliENMonths = [
+  static const List<String> _nepaliENMonths = [
     "Baisakh",
     "Jestha",
     "Asar",

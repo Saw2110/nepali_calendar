@@ -32,7 +32,8 @@ import 'package:flutter/services.dart';
 /// setting. If a user has turned that off, nothing here will reach them, and
 /// that is the correct behaviour rather than something to work around.
 enum CalendarHaptics {
-  /// No feedback.
+  /// No feedback. The default, so upgrading never makes an app start
+  /// vibrating; opt in with one of the values below.
   none,
 
   /// The lightest tick the platform offers.
@@ -46,7 +47,7 @@ enum CalendarHaptics {
 
   /// A crisp tap, the same one the system keyboard uses for a keypress.
   ///
-  /// The default, and the right answer for selecting a date: it is a discrete,
+  /// The recommended value for selecting a date: it is a discrete,
   /// deliberate action, and this is the feedback a user already associates
   /// with one. Reliably felt on Android, where it maps to `VIRTUAL_KEY`.
   light,

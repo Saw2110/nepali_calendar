@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../src.dart';
@@ -19,9 +17,21 @@ import 'internal/picker_shared.dart';
 /// then.
 ///
 /// [minDate] and [maxDate] bound the selection, clamped to the range the
-/// bundled calendar data covers (BS 1969-2100). [maxDays] caps the length,
+/// bundled calendar data covers (BS 1969-2250). [maxDays] caps the length,
 /// both ends counted: once a start is picked, later dates beyond it are
-/// dimmed. An [initialRange] outside the bounds is ignored.
+/// dimmed. An [initialRange] outside the bounds, or longer than [maxDays],
+/// is ignored: the picker opens with nothing selected.
+///
+/// [barrierDismissible] and [barrierColor] apply to the dialog layout only.
+/// On a phone the picker is a full-screen page, closed with its close button
+/// or the system Back gesture rather than by tapping outside.
+///
+/// [pickerBuilder] replaces parts of the picker with custom designs; see
+/// [DatePickerBuilder].
+///
+/// [weekdayFormat] sets how the weekday names are written: initials
+/// (`आ सो मं`) by default, or [TitleFormat.half] / [TitleFormat.full] for
+/// longer names, which shrink to fit rather than being cut off.
 ///
 /// [confirmText] and [cancelText] override the action labels, which
 /// otherwise follow the configured [Language].
@@ -44,11 +54,15 @@ Future<NepaliDateTimeRange?> showNepaliDateRangePicker({
   String? cancelText,
   bool barrierDismissible = true,
   Color? barrierColor,
+  TitleFormat? weekdayFormat,
+  DatePickerBuilder? pickerBuilder,
 }) {
   Widget picker(BuildContext context) {
     final style = NepaliCalendarTheme.resolve(context, calendarStyle);
     final nepali = style.effectiveConfig.language == Language.nepali;
-    final localizations = pickerMaterialLocalizations(context);
+    // An English picker says what the app's other dialogs say; Flutter has
+    // no Nepali MaterialLocalizations, so a Nepali one keeps its own.
+    final localizations = nepali ? null : pickerMaterialLocalizations(context);
 
     return NepaliDateRangePicker(
       initialRange: initialRange,
@@ -56,12 +70,10 @@ Future<NepaliDateTimeRange?> showNepaliDateRangePicker({
       maxDate: maxDate,
       maxDays: maxDays,
       calendarStyle: calendarStyle,
-      // An English picker says what the app's other dialogs say; Flutter has
-      // no Nepali MaterialLocalizations, so a Nepali one keeps its own.
-      confirmText:
-          confirmText ?? (nepali ? null : localizations?.saveButtonLabel),
-      cancelText:
-          cancelText ?? (nepali ? null : localizations?.cancelButtonLabel),
+      weekdayFormat: weekdayFormat,
+      pickerBuilder: pickerBuilder,
+      confirmText: confirmText ?? localizations?.saveButtonLabel,
+      cancelText: cancelText ?? localizations?.cancelButtonLabel,
       onConfirm: (range) => Navigator.of(context).pop(range),
       onCancel: () => Navigator.of(context).pop(),
     );
@@ -69,39 +81,22 @@ Future<NepaliDateTimeRange?> showNepaliDateRangePicker({
 
   final width = MediaQuery.sizeOf(context).width;
 
-  if (width < 600) {
+  if (width < pickerWideBreakpoint) {
     return Navigator.of(context).push<NepaliDateTimeRange>(
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (context) => Scaffold(
-          body: SafeArea(child: Builder(builder: picker)),
+          body: SafeArea(child: picker(context)),
         ),
       ),
     );
   }
 
-  return showDialog<NepaliDateTimeRange>(
+  return showPickerDialog<NepaliDateTimeRange>(
     context: context,
+    preferredWidth: NepaliDateRangePicker.preferredWideWidth,
     barrierDismissible: barrierDismissible,
-    barrierColor: barrierColor ?? Colors.black.withValues(alpha: 0.5),
-    builder: (context) => AlertDialog(
-      // Like showNepaliDatePicker: the app's dialogTheme colours, a compact
-      // radius unless the theme sets a shape of its own.
-      shape: DialogTheme.of(context).shape ??
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(pickerDialogRadius),
-          ),
-      contentPadding: const EdgeInsets.only(top: 8, bottom: 4),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      // A tight width: AlertDialog measures its content's intrinsic width,
-      // which the picker's LayoutBuilder cannot report.
-      content: SizedBox(
-        width: math.min(
-          NepaliDateRangePicker.preferredWideWidth,
-          MediaQuery.sizeOf(context).width - 32,
-        ),
-        child: Builder(builder: picker),
-      ),
-    ),
+    barrierColor: barrierColor,
+    builder: picker,
   );
 }

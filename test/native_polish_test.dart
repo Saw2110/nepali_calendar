@@ -238,10 +238,33 @@ void main() {
   });
 
   group('haptics', () {
-    testWidgets('selecting a date fires the keypress tick', (tester) async {
+    /// v0.1.0 had no haptics, so an upgrade must not make an app start
+    /// vibrating: feedback is opt-in.
+    testWidgets('no haptics by default', (tester) async {
       final haptics = captureHaptics(tester);
 
       await tester.pumpWidget(host(NepaliCalendar(initialDate: baisakh2081)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('१५').first);
+      await tester.pumpAndSettle();
+
+      expect(haptics, isEmpty);
+    });
+
+    testWidgets('opting in to light fires the keypress tick', (tester) async {
+      final haptics = captureHaptics(tester);
+
+      await tester.pumpWidget(
+        host(
+          NepaliCalendar(
+            initialDate: baisakh2081,
+            calendarStyle: const NepaliCalendarStyle(
+              config: CalendarConfig(hapticFeedback: CalendarHaptics.light),
+            ),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('१५').first);
@@ -275,7 +298,15 @@ void main() {
       final haptics = captureHaptics(tester);
 
       await tester.pumpWidget(
-        host(NepaliYearCalendar(year: 2081, onDaySelected: (_) {})),
+        host(
+          NepaliYearCalendar(
+            year: 2081,
+            calendarStyle: const NepaliCalendarStyle(
+              config: CalendarConfig(hapticFeedback: CalendarHaptics.light),
+            ),
+            onDaySelected: (_) {},
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -379,6 +410,7 @@ void main() {
                   calendarStyle: const NepaliCalendarStyle(
                     config: CalendarConfig(language: Language.english),
                   ),
+                  autoConfirm: false,
                 ),
                 child: const Text('open'),
               ),
@@ -402,7 +434,10 @@ void main() {
           home: Builder(
             builder: (context) => Scaffold(
               body: ElevatedButton(
-                onPressed: () => showNepaliDatePicker(context: context),
+                onPressed: () => showNepaliDatePicker(
+                  context: context,
+                  autoConfirm: false,
+                ),
                 child: const Text('open'),
               ),
             ),

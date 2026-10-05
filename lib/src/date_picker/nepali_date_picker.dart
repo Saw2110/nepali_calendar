@@ -9,19 +9,15 @@ import 'package:flutter/material.dart';
 
 import '../src.dart';
 import '../utils/calendar_semantics.dart';
+import 'internal/date_picker_layout.dart';
 import 'internal/picker_shared.dart';
 
 // ---------------------------------------------------------------------------
 // Dimensions
 //
-// Every measurement the picker uses lives here. The previous implementation
-// scattered them through the build methods, and two of them disagreed about
-// the same gap.
+// The measurements of the parts. Those that decide the picker's overall size
+// live in internal/date_picker_layout.dart, which the dialog shares.
 // ---------------------------------------------------------------------------
-
-const int _columns = pickerColumns;
-
-const int _rows = pickerRows;
 
 /// Columns of the month page and the year list.
 const int _choiceColumns = 3;
@@ -29,33 +25,15 @@ const int _choiceColumns = 3;
 /// Rows of the month page. Four rows of three fit all twelve months at once.
 const int _choiceRows = 4;
 
-/// Width the picker takes when there is room.
-///
-/// The day grid plus its gutters. Since the Today action moved into the
-/// footer, nothing else in the picker is wider -- the Nepali Cancel / OK pair
-/// included.
-const double _preferredWidth = 330.0;
-
-/// Height of the navigation header.
-const double _headerHeight = 44.0;
-
-/// Height of a month or year dropdown field inside the header.
+/// Height of the month or year label between its arrows.
 const double _fieldHeight = 36.0;
 
-/// Height of the weekday initials row.
-const double _weekdayHeight = 20.0;
-
-/// Height of the footer: the divider, the AD date and Today.
-const double _footerHeight = 41.0;
-
-/// Height of the Cancel / OK row, shown only without auto-confirm.
-const double _actionsHeight = 44.0;
-
-/// Padding above and below the grid, combined.
-const double _verticalPadding = 8.0;
-
-/// Gap between cells.
-const double _cellGap = pickerCellGap;
+/// Size of the navigation row's arrows.
+///
+/// Four arrows share the row with two labels, so they are a little under the
+/// 44dp the range picker's arrows get; 40 still clears Material's minimum
+/// comfortably on a dialog this size.
+const double _arrowSize = 40.0;
 
 /// Gap between month or year tiles.
 const double _choiceGap = 8.0;
@@ -66,97 +44,8 @@ const double _choiceHeight = 40.0;
 /// Distance between the tops of two rows in the year list.
 const double _yearRowExtent = _choiceHeight + _choiceGap;
 
-/// The size a day cell aims for.
-///
-/// Material asks for a 48dp touch target. Seven columns of 48 need 336dp plus
-/// gutters, which a small phone's dialog does not have -- Flutter's own
-/// Material DatePicker lands near 42dp for the same reason.
-const double _preferredCell = 42.0;
-
-/// The height a row of the day grid aims for: shorter than a cell is wide.
-/// Only a short viewport (a phone in landscape) makes rows shorter still.
-const double _preferredRow = 42.0;
-
-/// The narrowest a day cell may get.
-const double _minCell = 36.0;
-
-/// Minimum touch target for the header's icon buttons: the header's height.
-const double _minTouchTarget = _headerHeight;
-
-/// Horizontal padding inside the picker.
-const double _gutter = 12.0;
-
-/// Corner radius for interactive surfaces: cells, fields and tiles.
-const double _radius = pickerRadius;
-
 /// How long a view change takes.
 const Duration _transition = Duration(milliseconds: 200);
-
-// ---------------------------------------------------------------------------
-// Layout
-// ---------------------------------------------------------------------------
-
-/// How big the picker wants to be for a given viewport.
-@immutable
-class _Layout {
-  final double width;
-  final double height;
-  final double cell;
-
-  const _Layout({
-    required this.width,
-    required this.height,
-    required this.cell,
-  });
-
-  /// Width the grid occupies. Narrower than [width]; the grid is centred.
-  double get gridWidth => (cell * _columns) + (_cellGap * (_columns - 1));
-
-  /// Measures the picker against the space on offer.
-  ///
-  /// The picker sizes to its content. Up to 0.0.7 it was pinned to 420x480
-  /// whatever it held, so the rows floated apart in dead space -- which is
-  /// what made it look bulky.
-  factory _Layout.measure(
-    BuildContext context,
-    BoxConstraints constraints, {
-    required bool withFooter,
-    required bool withActions,
-  }) {
-    final screen = MediaQuery.sizeOf(context);
-    final maxWidth =
-        constraints.hasBoundedWidth ? constraints.maxWidth : screen.width;
-    final maxHeight =
-        constraints.hasBoundedHeight ? constraints.maxHeight : screen.height;
-
-    final width = math.min(_preferredWidth, maxWidth);
-
-    // Cells are square. Their size is capped so a tablet does not get a
-    // ballooning grid, and floored so a phone in landscape does not get an
-    // unusable one.
-    final widthBudget =
-        (width - (_gutter * 2) - (_cellGap * (_columns - 1))) / _columns;
-    final cell = widthBudget.clamp(_minCell, _preferredCell);
-
-    // Rows are shorter than cells are wide: square rows made the picker tall
-    // for what it holds. The day grid gives whatever rows it gets to the
-    // cells, and the selection square fits the shorter side.
-    final row = math.min(cell, _preferredRow);
-
-    final chrome = _headerHeight +
-        _weekdayHeight +
-        _verticalPadding +
-        (withFooter ? _footerHeight : 0.0) +
-        (withActions ? _actionsHeight : 0.0);
-    const gaps = _cellGap * (_rows - 1);
-
-    // A short viewport (a phone in landscape) caps the height, and the day
-    // grid's rows shrink to share what is left. The grid never scrolls.
-    final height = math.min(maxHeight, chrome + (row * _rows) + gaps);
-
-    return _Layout(width: width, height: height, cell: cell);
-  }
-}
 
 // ---------------------------------------------------------------------------
 // The picker
@@ -164,10 +53,11 @@ class _Layout {
 
 /// A Nepali (Bikram Sambat) date picker.
 ///
-/// A month grid under a `‹ [Month ▾] [Year ▾] ›` header; the two fields swap
-/// the grid for a 4x3 page of months or years. A footer shows the selected
-/// date in the Gregorian (AD) calendar beside a Today shortcut. Colours and
-/// typography follow an ambient [NepaliCalendarTheme] unless an explicit
+/// A coloured band shows the selected date in BS and in the Gregorian (AD)
+/// calendar. Below it, `‹ Month ›  ‹ Year ›` steps
+/// the month grid by months or years; tapping the month or the year swaps the
+/// grid for a 4x3 page of months or a scrolling list of years. Today sits at
+/// the bottom left, Close -- and OK, unless a tap confirms -- at the right. Colours and typography follow an ambient [NepaliCalendarTheme] unless an explicit
 /// [calendarStyle] is given, so light and dark work without configuration:
 ///
 /// ```dart
@@ -184,7 +74,7 @@ class NepaliDatePicker extends StatefulWidget {
   /// Exposed so a host that must give the picker a tight width can ask for the
   /// right one. [AlertDialog], for instance, measures its content's intrinsic
   /// width, which a [LayoutBuilder] cannot answer -- so it has to be told.
-  static const double preferredWidth = _preferredWidth;
+  static const double preferredWidth = datePickerWidth;
 
   /// Called whenever a date is tapped, before it is confirmed.
   ///
@@ -229,26 +119,48 @@ class NepaliDatePicker extends StatefulWidget {
   /// Only shown when [autoConfirm] is false.
   final String? confirmText;
 
-  /// Label for the cancel action. Defaults to "Cancel" / "रद्द गर्नुहोस्".
-  ///
-  /// Only shown when [autoConfirm] is false.
+  /// Label for the cancel action. Defaults to "Cancel" / "रद्द गर्नुहोस्",
+  /// or to "Close" / "बन्द गर्नुहोस्" when [autoConfirm] leaves it alone at
+  /// the bottom.
   final String? cancelText;
 
-  /// Whether to render the footer: the AD date, Today and, without
-  /// [autoConfirm], Cancel / OK.
+  /// Whether to render the action row: Today, Close and, without
+  /// [autoConfirm], OK.
   ///
   /// Set false when the host supplies its own actions. The picker then never
   /// confirms on its own -- [autoConfirm] is ignored -- so pair it with
-  /// [onDateSelected] to receive the selection.
+  /// [onDateSelected] to receive the selection. The title band stays.
   final bool showActions;
 
   /// Whether tapping a date (or Today) confirms it straight away.
   ///
-  /// On by default: a tap selects and confirms in one step, through
-  /// [onConfirm] or by popping the route. Set false to keep the selection
-  /// pending until the user presses OK; a Cancel / OK row then appears below
-  /// the footer. Ignored when [showActions] is false.
+  /// When true, a tap selects and confirms in one step, through [onConfirm]
+  /// or by popping the route, and only Close is shown at the bottom.
+  ///
+  /// Off by default here, so a picker embedded in a page behaves as it did in
+  /// 0.1.0: a tap only selects, and nothing is confirmed -- or popped -- until
+  /// the user presses OK. [showNepaliDatePicker] turns it on, because in a
+  /// dialog a tap that closes it is what users expect. Ignored when
+  /// [showActions] is false.
   final bool autoConfirm;
+
+  /// How the weekday names above the grid are written.
+  ///
+  /// Null (the default) shows initials -- `आ सो मं` / `S M T` -- which fit
+  /// any phone. [TitleFormat.half] and [TitleFormat.full] show longer names;
+  /// a name too wide for its column is scaled down to fit rather than cut
+  /// off. Independent of [CalendarConfig.weekTitleType], which the calendars
+  /// use.
+  final TitleFormat? weekdayFormat;
+
+  /// Custom designs for the picker's parts: the title band, the navigation
+  /// row, day cells, weekday names, the action row, and the month and year
+  /// tiles. Each part left unset, or whose builder returns null, keeps the
+  /// default design.
+  ///
+  /// A custom footer replaces the action row, and is not shown when
+  /// [showActions] is false.
+  final DatePickerBuilder? pickerBuilder;
 
   const NepaliDatePicker({
     super.key,
@@ -263,7 +175,9 @@ class NepaliDatePicker extends StatefulWidget {
     this.confirmText,
     this.cancelText,
     this.showActions = true,
-    this.autoConfirm = true,
+    this.autoConfirm = false,
+    this.weekdayFormat,
+    this.pickerBuilder,
   });
 
   @override
@@ -299,7 +213,21 @@ class NepaliDatePicker extends StatefulWidget {
         FlagProperty(
           'autoConfirm',
           value: autoConfirm,
-          ifFalse: 'confirm with OK',
+          ifTrue: 'confirms on tap',
+        ),
+      )
+      ..add(
+        EnumProperty<TitleFormat>(
+          'weekdayFormat',
+          weekdayFormat,
+          defaultValue: null,
+        ),
+      )
+      ..add(
+        DiagnosticsProperty<DatePickerBuilder>(
+          'pickerBuilder',
+          pickerBuilder,
+          defaultValue: null,
         ),
       );
   }
@@ -317,7 +245,12 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
   /// at either end of the list.
   final _yearScroll = ScrollController();
 
-  PickerBounds get _bounds =>
+  /// The selectable range, built once rather than on every access -- the
+  /// grid consults it for each day cell. Rebuilt only when [widget]'s bounds
+  /// change.
+  late PickerBounds _bounds;
+
+  PickerBounds _computeBounds() =>
       PickerBounds.from(min: widget.minDate, max: widget.maxDate);
 
   /// Whether a tap confirms by itself. A picker without its footer never
@@ -327,11 +260,25 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
   @override
   void initState() {
     super.initState();
+    _bounds = _computeBounds();
     final initial = _bounds.clamp(widget.initialDate ?? NepaliDateTime.now());
     _selected = initial;
     _displayed = initial;
     _mode = widget.initialMode;
     if (_mode == NepaliDatePickerMode.year) _scrollToYearAfterLayout();
+  }
+
+  @override
+  void didUpdateWidget(covariant NepaliDatePicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.minDate != oldWidget.minDate ||
+        widget.maxDate != oldWidget.maxDate) {
+      _bounds = _computeBounds();
+      // Pull the selection and the month on show into the new range, so the
+      // picker never holds a date it would refuse to let the user pick.
+      _selected = _bounds.clamp(_selected);
+      _displayed = _bounds.clamp(_displayed);
+    }
   }
 
   @override
@@ -444,27 +391,22 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
       return;
     }
     setState(() {
-      switch (_mode) {
-        case NepaliDatePickerMode.day:
-          _displayed = _monthOffsetBy(delta)!;
-        case NepaliDatePickerMode.month:
-          _displayed = _bounds.clamp(
-            NepaliDateTime(
-              year: _displayed.year + delta,
-              month: _displayed.month,
-              day: 1,
-            ),
-          );
-        case NepaliDatePickerMode.year:
-          break;
-      }
+      _displayed = _mode == NepaliDatePickerMode.day
+          ? _bounds.monthOffset(_displayed, delta)!
+          : _bounds.clamp(
+              NepaliDateTime(
+                year: _displayed.year + delta,
+                month: _displayed.month,
+                day: 1,
+              ),
+            );
     });
   }
 
   bool _canStep(int delta) {
     switch (_mode) {
       case NepaliDatePickerMode.day:
-        return _monthOffsetBy(delta) != null;
+        return _bounds.monthOffset(_displayed, delta) != null;
       case NepaliDatePickerMode.month:
         final year = _displayed.year + delta;
         return year >= _bounds.min.year && year <= _bounds.max.year;
@@ -477,36 +419,50 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
     }
   }
 
-  /// The month [delta] away, or null if nothing in it is selectable.
-  NepaliDateTime? _monthOffsetBy(int delta) {
-    var year = _displayed.year;
-    var month = _displayed.month + delta;
-    if (month < 1) {
-      month = 12;
-      year -= 1;
-    } else if (month > 12) {
-      month = 1;
-      year += 1;
-    }
-    if (!_bounds.containsAnyOf(year, month)) return null;
-    return NepaliDateTime(year: year, month: month, day: 1);
+  /// Whether the month arrows can step [delta] months. Only in the day view:
+  /// the month and year views already show every month.
+  bool _canStepMonth(int delta) =>
+      _mode == NepaliDatePickerMode.day &&
+      _bounds.monthOffset(_displayed, delta) != null;
+
+  void _stepMonth(int delta) {
+    if (!_canStepMonth(delta)) return;
+    setState(() => _displayed = _bounds.monthOffset(_displayed, delta)!);
+  }
+
+  /// Whether the year arrows can step [delta] years -- or, in the year view,
+  /// a screenful of the list.
+  bool _canStepYear(int delta) {
+    if (_mode == NepaliDatePickerMode.year) return _canStep(delta);
+    final year = _displayed.year + delta;
+    return year >= _bounds.min.year && year <= _bounds.max.year;
+  }
+
+  /// Steps [delta] years, keeping the month; a month outside the range is
+  /// pulled to its nearest end.
+  void _stepYear(int delta) {
+    if (!_canStepYear(delta)) return;
+    if (_mode == NepaliDatePickerMode.year) return _step(delta);
+    setState(() {
+      _displayed = _bounds.clamp(
+        NepaliDateTime(
+          year: _displayed.year + delta,
+          month: _displayed.month,
+          day: 1,
+        ),
+      );
+    });
   }
 
   void _confirm() {
     final onConfirm = widget.onConfirm;
-    if (onConfirm != null) {
-      onConfirm(_selected);
-      return;
-    }
+    if (onConfirm != null) return onConfirm(_selected);
     Navigator.of(context).pop(_selected);
   }
 
   void _cancel() {
     final onCancel = widget.onCancel;
-    if (onCancel != null) {
-      onCancel();
-      return;
-    }
+    if (onCancel != null) return onCancel();
     Navigator.of(context).pop();
   }
 
@@ -530,11 +486,10 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final layout = _Layout.measure(
+        final layout = DatePickerLayout.measure(
           context,
           constraints,
-          withFooter: widget.showActions,
-          withActions: widget.showActions && !widget.autoConfirm,
+          withActions: widget.showActions,
         );
         return SizedBox(
           width: layout.width,
@@ -545,98 +500,169 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
     );
   }
 
-  Widget _buildBody(NepaliCalendarStyle style, _Layout layout) {
+  Widget _buildBody(NepaliCalendarStyle style, DatePickerLayout layout) {
     final isDayView = _mode == NepaliDatePickerMode.day;
     final language = style.effectiveConfig.language;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          height: _headerHeight,
-          // Rebuilt on scroll so the arrows disable at the ends of the year
-          // list; outside the year view the list is detached and silent.
-          child: ListenableBuilder(
-            listenable: _yearScroll,
-            builder: (context, _) => _Header(
-              style: style,
-              mode: _mode,
-              monthLabel: MonthUtils.formattedMonth(_displayed.month, language),
-              yearLabel: NepaliNumberConverter.formattedNumber(
-                '${_displayed.year}',
+    final todayInRange = _bounds.contains(NepaliDateTime.now());
+    final title = PickerTitleData(
+      selected: _selected,
+      onToday: todayInRange ? _goToToday : null,
+      isBesideGrid: layout.sideBand,
+      style: style,
+      language: language,
+    );
+    final band = widget.pickerBuilder?.titleBuilder?.call(title) ??
+        _TitleBand(data: title);
+
+    final main = <Widget>[
+      SizedBox(
+        height: datePickerHeaderHeight,
+        // Rebuilt on scroll so the arrows disable at the ends of the year
+        // list; outside the year view the list is detached and silent.
+        child: ListenableBuilder(
+          listenable: _yearScroll,
+          builder: (context, _) {
+            final onPrevious = _canStep(-1) ? () => _step(-1) : null;
+            final onNext = _canStep(1) ? () => _step(1) : null;
+            final onPreviousYear =
+                _canStepYear(-1) ? () => _stepYear(-1) : null;
+            final onNextYear = _canStepYear(1) ? () => _stepYear(1) : null;
+            final custom = widget.pickerBuilder?.headerBuilder?.call(
+              PickerHeaderData(
+                month: NepaliDateTime(
+                  year: _displayed.year,
+                  month: _displayed.month,
+                  day: 1,
+                ),
+                mode: _mode,
+                onPrevious: onPrevious,
+                onNext: onNext,
+                onPreviousYear: onPreviousYear,
+                onNextYear: onNextYear,
+                onMonthTap: _toggleMonthView,
+                onYearTap: _toggleYearView,
+                style: style,
                 language: language,
               ),
-              onMonthTap: _toggleMonthView,
-              onYearTap: _toggleYearView,
-              onPrevious: _canStep(-1) ? () => _step(-1) : null,
-              onNext: _canStep(1) ? () => _step(1) : null,
+            );
+            return custom ??
+                _Header(
+                  style: style,
+                  mode: _mode,
+                  monthLabel:
+                      MonthUtils.formattedMonth(_displayed.month, language),
+                  yearLabel: NepaliNumberConverter.formattedNumber(
+                    '${_displayed.year}',
+                    language: language,
+                  ),
+                  onMonthTap: _toggleMonthView,
+                  onYearTap: _toggleYearView,
+                  onPreviousMonth:
+                      _canStepMonth(-1) ? () => _stepMonth(-1) : null,
+                  onNextMonth: _canStepMonth(1) ? () => _stepMonth(1) : null,
+                  onPreviousYear: onPreviousYear,
+                  onNextYear: onNextYear,
+                );
+          },
+        ),
+      ),
+      // The weekday row means nothing outside the day grid. Total height is
+      // fixed regardless, so hiding it gives the space to the grid instead
+      // of making the dialog jump.
+      if (isDayView) ...[
+        SizedBox(height: pickerCellGap),
+        SizedBox(
+          height: datePickerWeekdayHeight,
+          child: Center(
+            child: SizedBox(
+              width: layout.gridWidth,
+              child: PickerWeekdayRow(
+                style: style,
+                format: widget.weekdayFormat,
+                builder: widget.pickerBuilder,
+              ),
             ),
           ),
         ),
-        // The weekday row means nothing outside the day grid. Total height is
-        // fixed regardless, so hiding it gives the space to the grid instead
-        // of making the dialog jump.
-        if (isDayView) ...[
-          SizedBox(height: _cellGap),
-          SizedBox(
-            height: _weekdayHeight,
-            child: Center(
-              child: SizedBox(
-                width: layout.gridWidth,
-                child: PickerWeekdayRow(style: style),
-              ),
+      ],
+      Expanded(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: datePickerVerticalPadding / 2,
             ),
-          ),
-        ],
-        Expanded(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: _verticalPadding / 2,
-              ),
-              child: SizedBox(
-                width: layout.gridWidth,
-                child: GestureDetector(
-                  onHorizontalDragEnd: (details) {
-                    final velocity = details.primaryVelocity ?? 0;
-                    if (velocity < -500) _step(1);
-                    if (velocity > 500) _step(-1);
-                  },
-                  child: AnimatedSwitcher(
-                    duration: _transition,
-                    child: KeyedSubtree(
-                      key: ValueKey(_viewKey),
-                      child: _buildView(style, layout),
-                    ),
+            child: SizedBox(
+              width: layout.gridWidth,
+              child: GestureDetector(
+                onHorizontalDragEnd: (details) {
+                  final velocity = details.primaryVelocity ?? 0;
+                  if (velocity < -500) _step(1);
+                  if (velocity > 500) _step(-1);
+                },
+                child: AnimatedSwitcher(
+                  duration: _transition,
+                  child: KeyedSubtree(
+                    key: ValueKey(_viewKey),
+                    child: _buildView(style, layout),
                   ),
                 ),
               ),
             ),
           ),
         ),
-        if (widget.showActions)
-          SizedBox(
-            height: _footerHeight,
-            child: _Footer(
-              style: style,
-              selected: _selected,
-              showToday: _bounds.contains(NepaliDateTime.now()),
-              onToday: _goToToday,
-            ),
-          ),
-        if (widget.showActions && !widget.autoConfirm)
-          SizedBox(
-            height: _actionsHeight,
-            child: _Actions(
-              style: style,
-              confirmText: widget.confirmText,
-              cancelText: widget.cancelText,
-              onCancel: _cancel,
-              onConfirm: _confirm,
-            ),
-          ),
+      ),
+      if (widget.showActions)
+        SizedBox(height: datePickerActionsHeight, child: _buildActions(style)),
+    ];
+
+    if (layout.sideBand) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(width: datePickerSideBandWidth, child: band),
+          Expanded(child: Column(children: main)),
+        ],
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Full width: the column would otherwise centre the band and let it
+        // shrink to its text.
+        SizedBox(
+          width: double.infinity,
+          height: datePickerBandHeight,
+          child: band,
+        ),
+        ...main,
       ],
     );
+  }
+
+  /// Today, then Close -- or Cancel and OK unless a tap confirms -- or a
+  /// custom footer.
+  Widget _buildActions(NepaliCalendarStyle style) {
+    final withConfirm = !widget.autoConfirm;
+    final custom = widget.pickerBuilder?.footerBuilder?.call(
+      PickerFooterData(
+        selected: _selected,
+        onToday: _bounds.contains(NepaliDateTime.now()) ? _goToToday : null,
+        onConfirm: withConfirm ? _confirm : null,
+        onCancel: _cancel,
+        style: style,
+        language: style.effectiveConfig.language,
+      ),
+    );
+    return custom ??
+        _Actions(
+          style: style,
+          confirmText: widget.confirmText,
+          cancelText: widget.cancelText,
+          onToday: _bounds.contains(NepaliDateTime.now()) ? _goToToday : null,
+          onCancel: _cancel,
+          onConfirm: withConfirm ? _confirm : null,
+        );
   }
 
   /// Identifies what the grid area shows, so a change of year in the month
@@ -652,7 +678,7 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
     }
   }
 
-  Widget _buildView(NepaliCalendarStyle style, _Layout layout) {
+  Widget _buildView(NepaliCalendarStyle style, DatePickerLayout layout) {
     final language = style.effectiveConfig.language;
 
     switch (_mode) {
@@ -663,13 +689,17 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
           displayed: _displayed,
           selected: _selected,
           onSelect: _selectDay,
+          builder: widget.pickerBuilder,
         );
       case NepaliDatePickerMode.month:
         return _ChoicePage(
           style: style,
+          builder: widget.pickerBuilder,
           choices: [
             for (var month = 1; month <= 12; month++)
               _Choice(
+                value: month,
+                isYear: false,
                 label: MonthUtils.formattedMonth(month, language),
                 isSelected: month == _displayed.month,
                 isDisabled: !_bounds.containsAnyOf(_displayed.year, month),
@@ -685,6 +715,7 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
           selectedYear: _displayed.year,
           controller: _yearScroll,
           onSelect: _selectYear,
+          builder: widget.pickerBuilder,
         );
     }
   }
@@ -694,10 +725,96 @@ class _NepaliDatePickerState extends State<NepaliDatePicker> {
 // Header
 // ---------------------------------------------------------------------------
 
-/// `‹ [Month ▾] [Year ▾] ›`.
+/// The selected date on a band of the selection colour: the year, the date
+/// in BS and the same date in AD. Above the grid, or beside it on a short
+/// screen. Display only: Today lives in the action row.
 ///
-/// The arrows step through whatever the grid area shows: months in the day
-/// view, pages in the month and year views.
+/// The AD date is the one most users cross-check a BS date against, so it
+/// sits right under it. It is always written in English: it is the
+/// Gregorian date, and the format matches what users see on their other
+/// devices.
+class _TitleBand extends StatelessWidget {
+  final PickerTitleData data;
+
+  const _TitleBand({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final cells = data.style.cellsStyle;
+    final foreground = cells.onHighlightColor;
+    final muted = foreground.withValues(alpha: 0.75);
+    final year = Text(
+      data.yearLabel,
+      style: textTheme.titleSmall?.copyWith(
+        color: muted,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+    final date = Text(
+      data.dateLabel,
+      style: textTheme.headlineSmall?.copyWith(
+        color: foreground,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+    final ad = Text(
+      data.adLabel,
+      style: textTheme.bodySmall?.copyWith(color: muted),
+    );
+
+    if (data.isBesideGrid) {
+      return ColoredBox(
+        color: cells.selectedColor,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          // The date wraps to the band's width; a large text scale shrinks
+          // the block rather than overflowing it.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.topStart,
+            child: SizedBox(
+              width: datePickerSideBandWidth - 32,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  year,
+                  const SizedBox(height: 4),
+                  date,
+                  const SizedBox(height: 4),
+                  ad,
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ColoredBox(
+      color: cells.selectedColor,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        // Scaled down rather than overflowing at a large text scale.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [year, date, ad],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// `‹ Month ›  ‹ Year ›`.
+///
+/// The month arrows step months in the day view; the year arrows step years,
+/// or a screenful of the list in the year view. Tapping the month or the
+/// year opens its page in the grid area, and tapping it again returns to the
+/// days.
 class _Header extends StatelessWidget {
   final NepaliCalendarStyle style;
   final NepaliDatePickerMode mode;
@@ -705,8 +822,10 @@ class _Header extends StatelessWidget {
   final String yearLabel;
   final VoidCallback onMonthTap;
   final VoidCallback onYearTap;
-  final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
+  final VoidCallback? onPreviousMonth;
+  final VoidCallback? onNextMonth;
+  final VoidCallback? onPreviousYear;
+  final VoidCallback? onNextYear;
 
   const _Header({
     required this.style,
@@ -715,61 +834,51 @@ class _Header extends StatelessWidget {
     required this.yearLabel,
     required this.onMonthTap,
     required this.onYearTap,
-    required this.onPrevious,
-    required this.onNext,
+    required this.onPreviousMonth,
+    required this.onNextMonth,
+    required this.onPreviousYear,
+    required this.onNextYear,
   });
 
   @override
   Widget build(BuildContext context) {
     final nepali = style.effectiveConfig.language == Language.nepali;
-    final String previous;
-    final String next;
-    switch (mode) {
-      case NepaliDatePickerMode.day:
-        previous = nepali ? 'अघिल्लो महिना' : 'Previous month';
-        next = nepali ? 'अर्को महिना' : 'Next month';
-      case NepaliDatePickerMode.month:
-        previous = nepali ? 'अघिल्लो वर्ष' : 'Previous year';
-        next = nepali ? 'अर्को वर्ष' : 'Next year';
-      case NepaliDatePickerMode.year:
-        previous = nepali ? 'अघिल्लो पृष्ठ' : 'Previous page';
-        next = nepali ? 'अर्को पृष्ठ' : 'Next page';
-    }
+    final paging = mode == NepaliDatePickerMode.year;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
         children: [
-          _NavButton(
-            icon: Icons.chevron_left_rounded,
-            tooltip: previous,
-            onPressed: onPrevious,
-          ),
           Expanded(
-            flex: 3,
-            child: _DropdownField(
+            child: _Stepper(
               style: style,
               label: monthLabel,
               semanticLabel: nepali ? 'महिना छान्नुहोस्' : 'Select month',
               isOpen: mode == NepaliDatePickerMode.month,
               onTap: onMonthTap,
+              previousTooltip: nepali ? 'अघिल्लो महिना' : 'Previous month',
+              nextTooltip: nepali ? 'अर्को महिना' : 'Next month',
+              onPrevious: onPreviousMonth,
+              onNext: onNextMonth,
             ),
           ),
           const SizedBox(width: _choiceGap),
           Expanded(
-            flex: 2,
-            child: _DropdownField(
+            child: _Stepper(
               style: style,
               label: yearLabel,
               semanticLabel: nepali ? 'वर्ष छान्नुहोस्' : 'Select year',
-              isOpen: mode == NepaliDatePickerMode.year,
+              isOpen: paging,
               onTap: onYearTap,
+              previousTooltip: paging
+                  ? (nepali ? 'अघिल्लो पृष्ठ' : 'Previous page')
+                  : (nepali ? 'अघिल्लो वर्ष' : 'Previous year'),
+              nextTooltip: paging
+                  ? (nepali ? 'अर्को पृष्ठ' : 'Next page')
+                  : (nepali ? 'अर्को वर्ष' : 'Next year'),
+              onPrevious: onPreviousYear,
+              onNext: onNextYear,
             ),
-          ),
-          _NavButton(
-            icon: Icons.chevron_right_rounded,
-            tooltip: next,
-            onPressed: onNext,
           ),
         ],
       ),
@@ -777,107 +886,104 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// An outlined field that looks like a dropdown and opens the month or year
-/// page in the grid area. Tapping it again returns to the days.
+/// `‹ label ›`: a tappable label between two arrows.
 ///
-/// The open field takes the selection colour, so it is clear which page the
-/// grid is showing.
-class _DropdownField extends StatelessWidget {
+/// The label carries a ▾, so it reads as something that opens; the open label
+/// takes the selection colour and flips its ▾, so it is clear which page the
+/// grid is showing. A null arrow callback shows the arrow disabled rather
+/// than hiding it, so the row does not reflow at the ends of the range.
+class _Stepper extends StatelessWidget {
   final NepaliCalendarStyle style;
   final String label;
   final String semanticLabel;
   final bool isOpen;
   final VoidCallback onTap;
+  final String previousTooltip;
+  final String nextTooltip;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
 
-  const _DropdownField({
+  const _Stepper({
     required this.style,
     required this.label,
     required this.semanticLabel,
     required this.isOpen,
     required this.onTap,
+    required this.previousTooltip,
+    required this.nextTooltip,
+    required this.onPrevious,
+    required this.onNext,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final borderColor =
-        isOpen ? style.cellsStyle.selectedColor : colors.outlineVariant;
+    final accent = isOpen ? style.cellsStyle.selectedColor : null;
 
-    return Semantics(
-      button: true,
-      label: semanticLabel,
-      value: label,
-      expanded: isOpen,
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(_radius),
-        child: Container(
-          height: _fieldHeight,
-          padding: const EdgeInsets.only(left: 10, right: 6),
-          decoration: BoxDecoration(
-            border: Border.all(color: borderColor, width: isOpen ? 1.5 : 1),
-            borderRadius: BorderRadius.circular(_radius),
+    Widget arrow(IconData icon, String tooltip, VoidCallback? onPressed) =>
+        IconButton(
+          onPressed: onPressed,
+          icon: Icon(icon, size: 20),
+          tooltip: tooltip,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(
+            width: _arrowSize,
+            height: _arrowSize,
           ),
-          child: Row(
-            children: [
-              // Expanded so an oversized label degrades rather than
-              // overflowing -- a last resort, not the normal case.
-              Expanded(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
-                  style: style.headersStyle.monthHeaderStyle.copyWith(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+        );
+
+    return Row(
+      children: [
+        arrow(Icons.chevron_left_rounded, previousTooltip, onPrevious),
+        Expanded(
+          child: Semantics(
+            button: true,
+            label: semanticLabel,
+            value: label,
+            expanded: isOpen,
+            excludeSemantics: true,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(pickerRadius),
+              child: SizedBox(
+                height: _fieldHeight,
+                child: Center(
+                  // Scaled down rather than cut off: a long month name in a
+                  // narrow dialog.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          label,
+                          maxLines: 1,
+                          style: style.headersStyle.monthHeaderStyle.copyWith(
+                            fontSize: 15,
+                            fontWeight:
+                                isOpen ? FontWeight.w700 : FontWeight.w600,
+                            color: accent,
+                          ),
+                        ),
+                        AnimatedRotation(
+                          turns: isOpen ? 0.5 : 0,
+                          duration: _transition,
+                          child: Icon(
+                            Icons.arrow_drop_down_rounded,
+                            size: 20,
+                            color: accent ?? colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-              AnimatedRotation(
-                turns: isOpen ? 0.5 : 0,
-                duration: _transition,
-                child: Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: 18,
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// A navigation arrow.
-///
-/// A null [onPressed] renders it disabled rather than hiding it, so the header
-/// does not reflow at the ends of the range. Colours come from the theme; they
-/// used to be hard-coded greys.
-class _NavButton extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback? onPressed;
-
-  const _NavButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 22),
-      tooltip: tooltip,
-      constraints: const BoxConstraints(
-        minWidth: _minTouchTarget,
-        minHeight: _minTouchTarget,
-      ),
-      visualDensity: VisualDensity.compact,
+        arrow(Icons.chevron_right_rounded, nextTooltip, onNext),
+      ],
     );
   }
 }
@@ -893,6 +999,7 @@ class _DayGrid extends StatelessWidget {
   final NepaliDateTime displayed;
   final NepaliDateTime selected;
   final ValueChanged<NepaliDateTime> onSelect;
+  final DatePickerBuilder? builder;
 
   const _DayGrid({
     required this.style,
@@ -900,6 +1007,7 @@ class _DayGrid extends StatelessWidget {
     required this.displayed,
     required this.selected,
     required this.onSelect,
+    required this.builder,
   });
 
   @override
@@ -924,6 +1032,7 @@ class _DayGrid extends StatelessWidget {
       isToday: date.isSameDayAs(today),
       isDisabled: !bounds.contains(date),
       onTap: () => onSelect(date),
+      builder: builder,
     );
   }
 }
@@ -937,6 +1046,7 @@ class _DayCell extends StatelessWidget {
   final bool isToday;
   final bool isDisabled;
   final VoidCallback onTap;
+  final DatePickerBuilder? builder;
 
   const _DayCell({
     required this.style,
@@ -946,94 +1056,56 @@ class _DayCell extends StatelessWidget {
     required this.isToday,
     required this.isDisabled,
     required this.onTap,
+    required this.builder,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cells = style.cellsStyle;
     final config = style.effectiveConfig;
-    final isWeekend = WeekUtils.isWeekend(date.weekday, config.weekendType);
 
-    final label = NepaliNumberConverter.formattedNumber(
-      '${date.day}',
-      language: config.language,
+    // An out-of-range day and a neighbouring month's day are both inert: the
+    // screen reader must not offer either as a button it can press.
+    final inert = isDisabled || !isCurrentMonth;
+    final tap = pickerDayTap(config, onTap, enabled: !inert);
+    final custom = builder?.dayBuilder?.call(
+      PickerDayData(
+        date: date,
+        isToday: isToday,
+        isSelected: isSelected,
+        isDisabled: isDisabled,
+        isOtherMonth: !isCurrentMonth,
+        isWeekend: WeekUtils.isWeekend(date.weekday, config.weekendType),
+        rangePosition: PickerRangePosition.none,
+        onTap: tap,
+        style: style,
+        language: config.language,
+      ),
     );
 
     return Semantics(
-      button: !isDisabled,
-      enabled: !isDisabled,
+      button: !inert,
+      enabled: !inert,
       selected: isSelected,
       label: _semanticLabel(config.language),
       excludeSemantics: true,
-      child: InkResponse(
-        // A disabled cell gets no callback, so it neither responds nor ripples.
-        onTap: isDisabled || !isCurrentMonth
-            ? null
-            : () {
-                config.hapticFeedback.perform();
-                onTap();
-              },
-        containedInkWell: true,
-        customBorder: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(_radius),
-        ),
-        // The tap target is the whole cell; the square is only decoration.
-        child: Center(
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: _background(cells),
-                borderRadius: BorderRadius.circular(_radius),
-                border: isToday && !isSelected
-                    ? Border.all(color: cells.todayColor, width: 1.5)
-                    : null,
-              ),
-              child: Center(
-                child: FittedBox(
-                  // Devanagari digits run wider than Latin at the same size.
-                  fit: BoxFit.scaleDown,
-                  child: Padding(
-                    padding: const EdgeInsets.all(2),
-                    child: Text(
-                      label,
-                      style: cells.dayStyle.copyWith(
-                        fontSize: 14,
-                        fontWeight: isSelected || isToday
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: _foreground(cells, isWeekend),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+      child: custom ??
+          InkResponse(
+            onTap: tap,
+            containedInkWell: true,
+            customBorder: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(pickerRadius),
+            ),
+            // The tap target is the whole cell; the square is only decoration.
+            child: PickerDaySquare(
+              style: style,
+              date: date,
+              filled: isSelected,
+              isToday: isToday,
+              isDisabled: isDisabled,
+              isDimmed: !isCurrentMonth,
             ),
           ),
-        ),
-      ),
     );
-  }
-
-  Color _background(CellStyle cells) {
-    if (isSelected) return cells.selectedColor;
-    return Colors.transparent;
-  }
-
-  Color _foreground(CellStyle cells, bool isWeekend) {
-    if (isSelected) return cells.onHighlightColor;
-    // Adjacent-month days are dimmed; out-of-range days are dimmed further, so
-    // "not this month" and "not allowed" stay tellable apart.
-    if (!isCurrentMonth) {
-      return cells.dimmedDateTextColor.withValues(alpha: 0.4);
-    }
-    if (isDisabled) {
-      return (isWeekend ? cells.weekDayColor : cells.dateTextColor)
-          .withValues(alpha: 0.3);
-    }
-    if (isToday) return cells.todayColor;
-    if (isWeekend) return cells.weekDayColor;
-    return cells.dateTextColor;
   }
 
   /// What a screen reader announces.
@@ -1057,12 +1129,16 @@ class _DayCell extends StatelessWidget {
 /// One month or year on a page.
 @immutable
 class _Choice {
+  final int value;
+  final bool isYear;
   final String label;
   final bool isSelected;
   final bool isDisabled;
   final VoidCallback onTap;
 
   const _Choice({
+    required this.value,
+    required this.isYear,
     required this.label,
     required this.isSelected,
     required this.isDisabled,
@@ -1077,8 +1153,13 @@ class _Choice {
 class _ChoicePage extends StatelessWidget {
   final NepaliCalendarStyle style;
   final List<_Choice> choices;
+  final DatePickerBuilder? builder;
 
-  const _ChoicePage({required this.style, required this.choices});
+  const _ChoicePage({
+    required this.style,
+    required this.choices,
+    required this.builder,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1110,7 +1191,7 @@ class _ChoicePage extends StatelessWidget {
       child: SizedBox(
         height: _choiceHeight,
         width: double.infinity,
-        child: _ChoiceTile(style: style, choice: choice),
+        child: _ChoiceTile(style: style, choice: choice, builder: builder),
       ),
     );
   }
@@ -1129,6 +1210,7 @@ class _YearList extends StatelessWidget {
   final int selectedYear;
   final ScrollController controller;
   final ValueChanged<int> onSelect;
+  final DatePickerBuilder? builder;
 
   const _YearList({
     required this.style,
@@ -1137,6 +1219,7 @@ class _YearList extends StatelessWidget {
     required this.selectedYear,
     required this.controller,
     required this.onSelect,
+    required this.builder,
   });
 
   @override
@@ -1157,7 +1240,10 @@ class _YearList extends StatelessWidget {
         final year = firstYear + index;
         return _ChoiceTile(
           style: style,
+          builder: builder,
           choice: _Choice(
+            value: year,
+            isYear: true,
             label: NepaliNumberConverter.formattedNumber(
               '$year',
               language: language,
@@ -1177,11 +1263,40 @@ class _YearList extends StatelessWidget {
 class _ChoiceTile extends StatelessWidget {
   final NepaliCalendarStyle style;
   final _Choice choice;
+  final DatePickerBuilder? builder;
 
-  const _ChoiceTile({required this.style, required this.choice});
+  const _ChoiceTile({
+    required this.style,
+    required this.choice,
+    required this.builder,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final custom = builder?.choiceBuilder?.call(
+      PickerChoiceData(
+        value: choice.value,
+        isYear: choice.isYear,
+        label: choice.label,
+        isSelected: choice.isSelected,
+        isDisabled: choice.isDisabled,
+        onTap: choice.isDisabled ? null : choice.onTap,
+        style: style,
+        language: style.effectiveConfig.language,
+      ),
+    );
+    if (custom != null) {
+      // The picker's own label, so a custom tile is announced the same way.
+      return Semantics(
+        button: !choice.isDisabled,
+        enabled: !choice.isDisabled,
+        selected: choice.isSelected,
+        label: choice.label,
+        excludeSemantics: true,
+        child: custom,
+      );
+    }
+
     final cells = style.cellsStyle;
 
     final Color foreground;
@@ -1199,11 +1314,11 @@ class _ChoiceTile extends StatelessWidget {
       selected: choice.isSelected,
       child: InkWell(
         onTap: choice.isDisabled ? null : choice.onTap,
-        borderRadius: BorderRadius.circular(_radius),
+        borderRadius: BorderRadius.circular(pickerRadius),
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: choice.isSelected ? cells.selectedColor : null,
-            borderRadius: BorderRadius.circular(_radius),
+            borderRadius: BorderRadius.circular(pickerRadius),
           ),
           child: Center(
             child: FittedBox(
@@ -1232,91 +1347,23 @@ class _ChoiceTile extends StatelessWidget {
 // Footer and actions
 // ---------------------------------------------------------------------------
 
-/// The selected date in the Gregorian calendar, with Today beside it.
+/// Today on the left; Close -- or Cancel beside OK -- on the right.
 ///
-/// The AD date is the one most users cross-check a BS date against, so it
-/// sits where the eye lands after picking. It is always written in English:
-/// it is the Gregorian date, and the format matches what users see on their
-/// other devices.
-class _Footer extends StatelessWidget {
-  final NepaliCalendarStyle style;
-  final NepaliDateTime selected;
-  final bool showToday;
-  final VoidCallback onToday;
-
-  const _Footer({
-    required this.style,
-    required this.selected,
-    required this.showToday,
-    required this.onToday,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final nepali = style.effectiveConfig.language == Language.nepali;
-
-    return Column(
-      children: [
-        const Divider(
-          height: 1,
-          thickness: 1,
-          indent: _gutter,
-          endIndent: _gutter,
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(left: _gutter, right: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    pickerAdLabel(selected),
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                if (showToday)
-                  TextButton(
-                    onPressed: onToday,
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      minimumSize: const Size(0, _footerHeight - 9),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: VisualDensity.compact,
-                      foregroundColor: theme.colorScheme.onSurface,
-                      // Built on labelLarge: a bare TextStyle would replace
-                      // the theme's font family and size, not just the weight.
-                      textStyle: theme.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    child: Text(nepali ? 'आज' : 'Today', softWrap: false),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Cancel and confirm, right-aligned. Only shown without auto-confirm.
+/// OK only without auto-confirm, which is when [onConfirm] is set; Today only
+/// when today is in range, which is when [onToday] is set.
 class _Actions extends StatelessWidget {
   final NepaliCalendarStyle style;
   final String? confirmText;
   final String? cancelText;
+  final VoidCallback? onToday;
   final VoidCallback onCancel;
-  final VoidCallback onConfirm;
+  final VoidCallback? onConfirm;
 
   const _Actions({
     required this.style,
     required this.confirmText,
     required this.cancelText,
+    required this.onToday,
     required this.onCancel,
     required this.onConfirm,
   });
@@ -1329,38 +1376,57 @@ class _Actions extends StatelessWidget {
     // longer than the English ones.
     final buttonStyle = TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      minimumSize: const Size(0, _actionsHeight - 8),
+      minimumSize: const Size(0, datePickerActionsHeight - 8),
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: VisualDensity.compact,
     );
 
+    final onToday = this.onToday;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Flexible(
-            child: TextButton(
-              onPressed: onCancel,
+          if (onToday != null)
+            TextButton(
+              onPressed: onToday,
+              style: buttonStyle,
+              child: Text(nepali ? 'आज' : 'Today', softWrap: false),
+            ),
+          // All the free space goes to Close / Cancel, right-aligned, so a
+          // long Nepali label only ever ellipsizes when the row is truly full.
+          Expanded(
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton(
+                onPressed: onCancel,
+                style: buttonStyle,
+                child: Text(
+                  cancelText ?? _cancelLabel(nepali),
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                ),
+              ),
+            ),
+          ),
+          if (onConfirm != null)
+            TextButton(
+              onPressed: onConfirm,
               style: buttonStyle,
               child: Text(
-                cancelText ?? (nepali ? 'रद्द गर्नुहोस्' : 'Cancel'),
+                confirmText ?? (nepali ? 'ठीक छ' : 'OK'),
                 overflow: TextOverflow.ellipsis,
                 softWrap: false,
               ),
             ),
-          ),
-          TextButton(
-            onPressed: onConfirm,
-            style: buttonStyle,
-            child: Text(
-              confirmText ?? (nepali ? 'ठीक छ' : 'OK'),
-              overflow: TextOverflow.ellipsis,
-              softWrap: false,
-            ),
-          ),
         ],
       ),
     );
+  }
+
+  /// Close when it is the only action, Cancel when it sits beside OK.
+  String _cancelLabel(bool nepali) {
+    if (onConfirm == null) return nepali ? 'बन्द गर्नुहोस्' : 'Close';
+    return nepali ? 'रद्द गर्नुहोस्' : 'Cancel';
   }
 }

@@ -77,20 +77,17 @@ class CalendarCell<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Read once: effectiveConfig builds a new config each time it is asked
+    // when only the deprecated top-level options are set.
+    final config = calendarStyle.effectiveConfig;
     final cellEvents = _effectiveEvents;
 
-    // Check if the current date is today
     final isToday = CalendarUtils.isToday(date.toDateTime());
-    // Check if the current date is the selected date
-    final isSelected = _isSelectedDate(date);
-    // A date is a holiday if *any* of its events is one. Up to 0.0.7 only the
-    // first event on a date was consulted, so a date carrying an ordinary
-    // event ahead of a holiday did not read as a holiday.
+    final isSelected = date.isSameDayAs(selectedDate);
+    // A date is a holiday if *any* of its events is one, not just the first.
     final isHoliday = cellEvents.any((event) => event.isHoliday);
-    // Check if the current date is a weekend
-    final isWeekend = _isWeekend(date.weekday);
+    final isWeekend = WeekUtils.isWeekend(date.weekday, config.weekendType);
 
-    // If custom cellBuilder is provided, use it
     if (cellBuilder != null) {
       final cellData = CalendarCellData<T>(
         date: date,
@@ -111,7 +108,6 @@ class CalendarCell<T> extends StatelessWidget {
 
     // Default cell implementation
     // Note: Borders are handled by the grid container, not individual cells
-    final config = calendarStyle.effectiveConfig;
     final borderRadius = config.showBorder ? null : BorderRadius.circular(8);
 
     // A day cell is sized from the viewport width, not from its text, so it
@@ -140,7 +136,6 @@ class CalendarCell<T> extends StatelessWidget {
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          // Set the background color of the cell based on today and selected state
           color: _getCellColor(isToday, isSelected),
           // Rounded corners only when borders are disabled
           borderRadius: borderRadius,
@@ -164,20 +159,17 @@ class CalendarCell<T> extends StatelessWidget {
               children: [
                 Center(
                   child: Text(
-                    // Display the day in English or Nepali based on the calendar style
-                    calendarStyle.effectiveConfig.language == Language.english
-                        ? "$day"
-                        : NepaliNumberConverter.englishToNepali(day.toString()),
+                    NepaliNumberConverter.formattedNumber(
+                      '$day',
+                      language: config.language,
+                    ),
                     textScaler: dayScaler,
                     style: calendarStyle.cellsStyle.dayStyle.copyWith(
-                      // Set the text color based on today, selected, and weekday
-                      color:
-                          _getCellTextColor(isToday, isSelected, date.weekday),
+                      color: _getCellTextColor(isToday, isWeekend),
                     ),
                   ),
                 ),
-                // Show the English date if the calendar style specifies to show it
-                if (calendarStyle.effectiveConfig.showEnglishDate)
+                if (config.showEnglishDate)
                   Align(
                     alignment: Alignment.bottomRight,
                     child: Padding(
@@ -189,15 +181,13 @@ class CalendarCell<T> extends StatelessWidget {
                           fontSize: 10,
                           color: _getCellTextColor(
                             isToday,
-                            isSelected,
-                            date.weekday,
+                            isWeekend,
                             isBaseLine: true,
                           ),
                         ),
                       ),
                     ),
                   ),
-                // Show an event indicator if there is an event
                 if (cellEvents.isNotEmpty)
                   Positioned(
                     bottom: 5.0,
@@ -221,25 +211,19 @@ class CalendarCell<T> extends StatelessWidget {
     onDaySelected(date);
   }
 
-  // Method to get the cell background color based on today and selected state
   Color _getCellColor(bool isToday, bool isSelected) {
     // Dimmed cells should never have background highlighting
     if (isDimmed) return Colors.transparent;
-    if (isToday && isSelected) return calendarStyle.cellsStyle.todayColor;
-    if (isSelected) {
-      return calendarStyle.cellsStyle.selectedColor.withValues(
-        alpha: 0.2,
-      );
-    }
     if (isToday) return calendarStyle.cellsStyle.todayColor;
+    if (isSelected) {
+      return calendarStyle.cellsStyle.selectedColor.withValues(alpha: 0.2);
+    }
     return Colors.transparent;
   }
 
-  // Method to get the cell text color based on today, selected, and weekday
   Color _getCellTextColor(
     bool isToday,
-    bool isSelected,
-    int weekday, {
+    bool isWeekend, {
     bool isBaseLine = false,
   }) {
     final cellsStyle = calendarStyle.cellsStyle;
@@ -247,15 +231,13 @@ class CalendarCell<T> extends StatelessWidget {
     if (isDimmed) {
       // Dimmed cells: show dimmed weekend color for weekends, and the dimmed
       // date colour for regular days.
-      if (_isWeekend(weekday)) {
+      if (isWeekend) {
         return cellsStyle.weekDayColor.withValues(alpha: 0.4);
       }
       return cellsStyle.dimmedDateTextColor.withValues(alpha: 0.4);
     }
-    if (isToday && isSelected) return cellsStyle.onHighlightColor;
-    // if (isSelected) return onHighlightColor; // Commented out for now
     if (isToday) return cellsStyle.onHighlightColor;
-    if (_isWeekend(weekday)) return cellsStyle.weekDayColor;
+    if (isWeekend) return cellsStyle.weekDayColor;
     return isBaseLine ? cellsStyle.baseLineDateColor : cellsStyle.dateTextColor;
   }
 
@@ -274,20 +256,5 @@ class CalendarCell<T> extends StatelessWidget {
     // Regular events show their designated color regardless of weekend
     // This allows users to distinguish event types even on weekends
     return calendarStyle.cellsStyle.dotColor;
-  }
-
-  // Method to check if a weekday is a weekend based on the weekend type
-  bool _isWeekend(int weekday) {
-    return WeekUtils.isWeekend(
-      weekday,
-      calendarStyle.effectiveConfig.weekendType,
-    );
-  }
-
-  // Method to check if the current date is the selected date
-  bool _isSelectedDate(NepaliDateTime date) {
-    return date.year == selectedDate.year &&
-        date.month == selectedDate.month &&
-        date.day == selectedDate.day;
   }
 }

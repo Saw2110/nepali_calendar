@@ -116,6 +116,33 @@ void main() {
 
       expect(dayTextColour(tester, '12'), Colors.purple);
     });
+
+    /// HeaderStyle.weekTitleType is configuration that happens to live on a
+    /// style class. Setting it used to count as a custom appearance and
+    /// switch the theme off.
+    testWidgets('a header style that only sets weekTitleType is still themed',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NepaliCalendarTheme(
+            data: NepaliCalendarThemeData.legacy()
+                .copyWith(dateTextColor: Colors.purple),
+            child: Scaffold(
+              body: NepaliCalendar(
+                initialDate: baisakh2081,
+                calendarStyle: const NepaliCalendarStyle(
+                  config: CalendarConfig(language: Language.english),
+                  headersStyle: HeaderStyle(weekTitleType: TitleFormat.full),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(dayTextColour(tester, '12'), Colors.purple);
+    });
   });
 
   group('config survives resolution', () {
