@@ -17,6 +17,7 @@ folder_structure.md
 # GitHub by URL, so they need not travel inside the package -- they would only
 # add about half a megabyte to every download.
 /ref_image/
+/assets/
 
 # --- Mirrors .gitignore --------------------------------------------------
 # Miscellaneous

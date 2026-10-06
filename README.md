@@ -116,21 +116,23 @@ move between dates by position, and `Enter` or `Space` selects the focused
 date. This matters most on desktop and web, where the calendar was previously
 mouse-only.
 
-**Haptics.** Selecting a date answers the tap through touch. Choose how firmly:
+**Haptics.** Off by default, so upgrading never makes an app start vibrating.
+Opt in to have selecting a date answer the tap through touch — `light` is the
+recommended value:
 
 ```dart
 NepaliCalendar(
   calendarStyle: const NepaliCalendarStyle(
-    config: CalendarConfig(hapticFeedback: CalendarHaptics.medium),
+    config: CalendarConfig(hapticFeedback: CalendarHaptics.light),
   ),
 )
 ```
 
 | `CalendarHaptics` | Android | iOS |
 | --- | --- | --- |
-| `none` | nothing | nothing |
+| `none` *(default)* | nothing | nothing |
 | `selection` | `CLOCK_TICK` | selection generator |
-| `light` *(default)* | `VIRTUAL_KEY` | impact, light |
+| `light` *(recommended)* | `VIRTUAL_KEY` | impact, light |
 | `medium` | `KEYBOARD_TAP` | impact, medium |
 | `heavy` | `CONTEXT_CLICK` | impact, heavy |
 
@@ -318,6 +320,25 @@ ElevatedButton(
 )
 ```
 
+A coloured band at the top shows the selected date in BS and in AD. Below it,
+`‹ Month ▾ ›  ‹ Year ▾ ›` steps the grid by months or years; tap the month or
+the year to pick it from a page of months or a list of years. Today sits at
+the bottom left. On a phone in landscape the band moves beside the grid, so
+the days stay easy to tap.
+
+The dialog returns as soon as a date is tapped; Close, or tapping outside it,
+returns `null`. Pass `autoConfirm: false` to keep the selection pending behind
+Cancel / OK instead.
+
+The weekday names above the grid are initials (`आ सो मं`) by default. Pass
+`weekdayFormat: TitleFormat.half` (`आइत सोम मंगल`) or `TitleFormat.full` for
+longer names; they shrink to fit their column rather than being cut off. The
+same option exists on `showNepaliDateRangePicker`.
+
+`NepaliDatePicker` is the same picker as a widget, for embedding in a page. It
+waits for OK by default, so a tap never pops your page; pass `onConfirm` and
+`onCancel` to receive the result without touching the `Navigator`.
+
 ### Date Range Picker
 
 Pick a start and an end date. On a phone the picker opens full screen with
@@ -447,6 +468,45 @@ NepaliCalendar(
   ),
 )
 ```
+
+### Custom Picker Design
+
+Both pickers take a `DatePickerBuilder` to redesign any of their parts: the
+day cells, the weekday names, the title band, the navigation row, the action
+row, and the month and year tiles. Each builder gets a data object with the part's state and callbacks to
+call, so the picker still handles dates, bounds, paging and confirming. Return
+`null` -- or leave a builder unset -- to keep the default design.
+
+```dart
+final date = await showNepaliDatePicker(
+  context: context,
+  autoConfirm: false,
+  pickerBuilder: DatePickerBuilder(
+    // Round days; every other day keeps the default look.
+    dayBuilder: (day) {
+      if (!day.isSelected) return null;
+      return GestureDetector(
+        onTap: day.onTap,
+        child: CircleAvatar(child: Text(day.label)),
+      );
+    },
+    // Your own action row in place of Today and Cancel / OK.
+    footerBuilder: (footer) => Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(onPressed: footer.onToday, child: const Text('Today')),
+        FilledButton(onPressed: footer.onConfirm, child: const Text('Done')),
+      ],
+    ),
+  ),
+);
+```
+
+Pass the same builder to `showNepaliDateRangePicker`: its days also get a
+`rangePosition` (`start`, `middle`, `end`, `single` or `none`) to draw the
+range band from. A custom widget fills the same fixed slot as the default
+one, so the grid never resizes or scrolls; the picker keeps the screen-reader
+label around a custom day.
 
 ## Example Project
 
